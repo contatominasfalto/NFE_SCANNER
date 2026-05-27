@@ -1,0 +1,5 @@
+kivy>=2.3,<2.4
+kivymd==1.1.1
+requests==2.31.0
+Pillow>=10.4,<12
+plyer==2.1

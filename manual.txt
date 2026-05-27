@@ -1,0 +1,13 @@
+Rodar o Backend:
+
+cd backend
+..\venv\Scripts\activate
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+
+
+Rodar o Frontend
+
+cd mobile
+..\venv-mobile\Scripts\activate
+python main.py
