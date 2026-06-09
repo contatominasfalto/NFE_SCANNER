@@ -30,7 +30,22 @@ class APIClient:
     def request(method, path, **kwargs):
         url = f"{APIClient.get_base_url()}{path}"
         response = requests.request(method, url, timeout=30, **kwargs)
-        response.raise_for_status()
+        if not response.ok:
+            detail = None
+            try:
+                detail = response.json().get("detail")
+            except (ValueError, AttributeError):
+                detail = response.text.strip()
+
+            if isinstance(detail, list):
+                messages = []
+                for item in detail:
+                    location = ".".join(str(part) for part in item.get("loc", [])[1:])
+                    message = item.get("msg", "valor invalido")
+                    messages.append(f"{location}: {message}" if location else message)
+                detail = "; ".join(messages)
+
+            raise RuntimeError(detail or f"Erro HTTP {response.status_code} ao acessar {path}.")
         return response
 
     @staticmethod

@@ -61,14 +61,13 @@ class ConfirmScreen(Screen):
         form.add_widget(intro)
 
         fields = [
-            ("centro_custo", "Centro de custo", False),
+            ("local", "Local", False),
             ("chave_acesso", "Chave NF", True),
             ("data_emissao", "Data de emissao", False),
             ("numero_nf", "Numero da NF", False),
             ("serie", "Serie", False),
             ("produto", "Produto", True),
             ("quantidade", "Quantidade / Peso liquido", False),
-            ("local_areia", "Local da areia", False),
             ("transportador", "Transportador", False),
             ("faturista", "Faturista", False),
             ("lider_operacional", "Lider operacional", False),
@@ -85,7 +84,7 @@ class ConfirmScreen(Screen):
                 hint_text=label,
                 mode="rectangle",
                 multiline=multiline,
-                disabled=key in ("centro_custo", "faturista"),
+                disabled=key in ("local", "faturista"),
                 size_hint_y=None,
                 height=dp(168 if key == "observacao" else 88 if multiline else 56),
             )
@@ -115,6 +114,13 @@ class ConfirmScreen(Screen):
         if not chave_acesso:
             self.show_dialog("Chave invalida", "Nenhuma chave de acesso foi recebida.")
             self.manager.current = "scan"
+            return
+        if not nota_data.get("local"):
+            self.show_dialog(
+                "Local nao selecionado",
+                "Volte ao inicio, escolha o local e realize a leitura novamente.",
+            )
+            self.manager.current = "home"
             return
 
         self.set_edit_mode(None)
@@ -161,6 +167,10 @@ class ConfirmScreen(Screen):
         )
 
     def build_payload(self):
+        local = self.campos["local"].text.strip()
+        if not local:
+            raise ValueError("Local nao selecionado. Volte ao inicio e escolha o local antes de salvar.")
+
         valor_text = self.campos["valor_total"].text.strip()
         if "," in valor_text:
             valor_text = valor_text.replace(".", "").replace(",", ".")
@@ -182,10 +192,9 @@ class ConfirmScreen(Screen):
             "nome_fornecedor": self.campos["nome_fornecedor"].text.strip(),
             "valor_total": valor_total,
             "chave_acesso": self.campos["chave_acesso"].text.strip() or None,
-            "centro_custo": self.campos["centro_custo"].text.strip() or None,
+            "local": local,
             "produto": self.campos["produto"].text.strip() or None,
             "quantidade": quantidade,
-            "local_areia": self.campos["local_areia"].text.strip() or None,
             "transportador": self.campos["transportador"].text.strip() or None,
             "faturista": "BIPE",
             "lider_operacional": self.campos["lider_operacional"].text.strip() or None,
@@ -213,7 +222,7 @@ class ConfirmScreen(Screen):
                 self.manager.current = "list"
                 return
             APIClient.save_nota(self.build_payload())
-            self.manager.get_screen("scan").limpar_centro_custo()
+            self.manager.get_screen("scan").limpar_local()
             App.get_running_app().root.current = "list"
         except Exception as error:
             self.show_dialog("Erro ao salvar", str(error))
@@ -228,7 +237,7 @@ class ConfirmScreen(Screen):
             self.editing_nota_id = None
             self.manager.current = "list"
         else:
-            self.manager.get_screen("scan").limpar_centro_custo()
+            self.manager.get_screen("scan").limpar_local()
             self.manager.current = "home"
 
     def show_dialog(self, title, message):

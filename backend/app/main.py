@@ -1,10 +1,14 @@
 from datetime import datetime
 import os
+from pathlib import Path
 from time import perf_counter
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -35,13 +39,17 @@ tags_metadata = [
         "name": "Notas fiscais",
         "description": (
             "Cadastro e consulta das notas fiscais salvas no banco. "
-            "Cada nota conferida no app e gravada individualmente com o centro de custo "
+            "Cada nota conferida no app e gravada individualmente com o local "
             "A1BR, A1BR/PRU ou A2BR escolhido antes da bipagem."
         ),
     },
     {
         "name": "XML",
         "description": "Geracao de arquivo XML para uma nota especifica ou para notas filtradas.",
+    },
+    {
+        "name": "Faturistas",
+        "description": "Cadastro e administracao dos faturistas disponiveis no painel operacional.",
     },
 ]
 
@@ -52,13 +60,12 @@ app = FastAPI(
         "listagem e geracao de XML das notas fiscais.\n\n"
         "Fluxo mobile atual: o operador bipa o codigo de barras da NF-e, o app chama "
         "/barcode-nf/, consulta a API fiscal particular e abre a conferencia preenchida. "
-        "Antes da leitura, o operador escolhe o centro de custo A1BR, A1BR/PRU ou A2BR. "
+        "Antes da leitura, o operador escolhe o local A1BR, A1BR/PRU ou A2BR. "
         "Produto, peso liquido e transportador sao obtidos do XML quando disponiveis. "
-        "Local da areia e informado manualmente, e o faturista dos lancamentos do app e BIPE. "
-        "Ao escolher 'Salvar e proxima', o app grava a nota atual no centro escolhido "
+        "Ao escolher 'Salvar e proxima', o app grava a nota atual no local escolhido "
         "e volta ao leitor. Ao escolher 'Salvar e finalizar', grava a nota atual e encerra o processo."
     ),
-    version="0.11.0",
+    version="0.13.1",
     openapi_tags=tags_metadata,
 )
 
@@ -69,6 +76,21 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, error: RequestValidationError):
+    logger.warning(
+        "Payload invalido | metodo=%s | rota=%s | erros=%s",
+        request.method,
+        request.url.path,
+        error.errors(),
+    )
+    return JSONResponse(status_code=422, content=jsonable_encoder({"detail": error.errors()}))
+
+
+PANEL_DIR = Path(__file__).resolve().parents[1] / "panel"
+app.mount("/painel-assets", StaticFiles(directory=PANEL_DIR), name="painel-assets")
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
@@ -105,6 +127,16 @@ async def log_requests(request: Request, call_next):
 )
 def health_check():
     return {"status": "ok"}
+
+
+@app.get("/painel", include_in_schema=False, response_class=FileResponse)
+def painel():
+    return FileResponse(PANEL_DIR / "index.html")
+
+
+@app.get("/", include_in_schema=False, response_class=RedirectResponse)
+def root():
+    return RedirectResponse("/painel")
 
 
 @app.post(
@@ -154,7 +186,7 @@ def read_barcode(barcode_data: schemas.BarcodeInput):
     description=(
         "Executa o fluxo completo para testes pelo Swagger: valida o codigo de barras, "
         "consulta a API fiscal particular e salva os dados retornados no banco com o "
-        "centro de custo informado.\n\n"
+        "local informado.\n\n"
         "No aplicativo mobile, o fluxo permanece em duas etapas para permitir que o "
         "operador confira os dados antes de salvar."
     ),
@@ -169,8 +201,8 @@ def read_barcode(barcode_data: schemas.BarcodeInput):
 def importar_barcode(barcode_data: schemas.BarcodeImportInput, db: Session = Depends(get_db)):
     barcode_result = read_barcode(barcode_data)
     nota_data = schemas.NotaFiscalCreate(
-        **barcode_result.nota.model_dump(exclude={"centro_custo"}),
-        centro_custo=barcode_data.centro_custo,
+        **barcode_result.nota.model_dump(exclude={"local"}),
+        local=barcode_data.local,
     )
 
     try:
@@ -178,7 +210,7 @@ def importar_barcode(barcode_data: schemas.BarcodeImportInput, db: Session = Dep
     except IntegrityError as error:
         logger.warning("Importacao duplicada | chave=%s", mask_access_key(nota_data.chave_acesso))
         raise HTTPException(status_code=409, detail="Nota fiscal ja cadastrada para esta chave de acesso.") from error
-    logger.info("Nota importada | id=%s | numero=%s | centro_custo=%s", nota.id, nota.numero_nf, nota.centro_custo)
+    logger.info("Nota importada | id=%s | numero=%s | local=%s", nota.id, nota.numero_nf, nota.local)
     return nota
 
 
@@ -189,7 +221,7 @@ def importar_barcode(barcode_data: schemas.BarcodeImportInput, db: Session = Dep
     summary="Cadastrar nota fiscal",
     description=(
         "Grava no banco uma nota fiscal ja conferida pelo usuario no aplicativo. "
-        "O centro_custo e obrigatorio e aceita A1BR, A1BR/PRU ou A2BR. "
+        "O local e obrigatorio e aceita A1BR, A1BR/PRU ou A2BR. "
         "Nos lancamentos feitos pelo app, faturista deve ser BIPE. "
         "No fluxo principal, use este endpoint depois da leitura por /barcode-nf/ "
         "e da confirmacao manual dos dados.\n\n"
@@ -204,7 +236,7 @@ def create_nota(nota_data: schemas.NotaFiscalCreate, db: Session = Depends(get_d
     except IntegrityError as error:
         logger.warning("Cadastro duplicado | chave=%s", mask_access_key(nota_data.chave_acesso))
         raise HTTPException(status_code=409, detail="Nota fiscal ja cadastrada para esta chave de acesso.") from error
-    logger.info("Nota cadastrada | id=%s | numero=%s | centro_custo=%s", nota.id, nota.numero_nf, nota.centro_custo)
+    logger.info("Nota cadastrada | id=%s | numero=%s | local=%s", nota.id, nota.numero_nf, nota.local)
     return nota
 
 
@@ -216,7 +248,7 @@ def create_nota(nota_data: schemas.NotaFiscalCreate, db: Session = Depends(get_d
     description=(
         "Retorna as notas fiscais salvas no banco. O aplicativo usa este endpoint "
         "para preencher a tela Notas escaneadas. Registros antigos podem retornar "
-        "centro_custo vazio."
+        "local vazio."
     ),
 )
 def list_notas(
@@ -234,7 +266,7 @@ def list_notas(
     summary="Editar nota fiscal",
     description=(
         "Atualiza os dados de uma nota fiscal cadastrada pelo ID. "
-        "O centro de custo tambem pode ser atualizado. "
+        "O local tambem pode ser atualizado. "
         "O aplicativo usa este endpoint quando o operador edita uma nota "
         "pela tela Detalhes da nota."
     ),
@@ -252,7 +284,7 @@ def update_nota(nota_id: int, nota_data: schemas.NotaFiscalUpdate, db: Session =
     if not nota:
         logger.warning("Edicao recusada: nota nao encontrada | id=%s", nota_id)
         raise HTTPException(status_code=404, detail="Nota fiscal nao encontrada.")
-    logger.info("Nota atualizada | id=%s | numero=%s | centro_custo=%s", nota.id, nota.numero_nf, nota.centro_custo)
+    logger.info("Nota atualizada | id=%s | numero=%s | local=%s", nota.id, nota.numero_nf, nota.local)
     return nota
 
 
@@ -281,6 +313,82 @@ def delete_nota(nota_id: int, db: Session = Depends(get_db)):
         numero_nf=nota.numero_nf,
         chave_acesso=nota.chave_acesso,
         mensagem="Nota fiscal excluida com sucesso.",
+    )
+
+
+@app.post(
+    "/faturistas/",
+    response_model=schemas.FaturistaResponse,
+    tags=["Faturistas"],
+    summary="Cadastrar faturista",
+    responses={409: {"description": "Faturista ja cadastrado."}},
+)
+def create_faturista(faturista_data: schemas.FaturistaCreate, db: Session = Depends(get_db)):
+    try:
+        faturista = crud.create_faturista(db, faturista_data)
+    except IntegrityError as error:
+        raise HTTPException(status_code=409, detail="Faturista ja cadastrado.") from error
+    logger.info("Faturista cadastrado | id=%s | nome=%s", faturista.id, faturista.nome)
+    return faturista
+
+
+@app.get(
+    "/faturistas/",
+    response_model=list[schemas.FaturistaResponse],
+    tags=["Faturistas"],
+    summary="Listar faturistas",
+)
+def list_faturistas(
+    incluir_inativos: bool = Query(False, description="Inclui faturistas desativados."),
+    db: Session = Depends(get_db),
+):
+    return crud.get_faturistas(db, incluir_inativos)
+
+
+@app.put(
+    "/faturistas/{faturista_id}/",
+    response_model=schemas.FaturistaResponse,
+    tags=["Faturistas"],
+    summary="Editar faturista",
+    responses={404: {"description": "Faturista nao encontrado."}, 409: {"description": "Nome ja cadastrado."}},
+)
+def update_faturista(
+    faturista_id: int,
+    faturista_data: schemas.FaturistaUpdate,
+    db: Session = Depends(get_db),
+):
+    atual = crud.get_faturista(db, faturista_id)
+    if not atual:
+        raise HTTPException(status_code=404, detail="Faturista nao encontrado.")
+    if atual.nome == "BIPE" and (faturista_data.nome != "BIPE" or not faturista_data.ativo):
+        raise HTTPException(status_code=409, detail="O faturista padrao BIPE nao pode ser renomeado ou desativado.")
+    try:
+        faturista = crud.update_faturista(db, faturista_id, faturista_data)
+    except IntegrityError as error:
+        raise HTTPException(status_code=409, detail="Ja existe um faturista com este nome.") from error
+    logger.info("Faturista atualizado | id=%s | nome=%s | ativo=%s", faturista.id, faturista.nome, faturista.ativo)
+    return faturista
+
+
+@app.delete(
+    "/faturistas/{faturista_id}/",
+    response_model=schemas.FaturistaDeleteResponse,
+    tags=["Faturistas"],
+    summary="Desativar faturista",
+    responses={404: {"description": "Faturista nao encontrado."}, 409: {"description": "BIPE nao pode ser desativado."}},
+)
+def delete_faturista(faturista_id: int, db: Session = Depends(get_db)):
+    atual = crud.get_faturista(db, faturista_id)
+    if not atual:
+        raise HTTPException(status_code=404, detail="Faturista nao encontrado.")
+    if atual.nome == "BIPE":
+        raise HTTPException(status_code=409, detail="O faturista padrao BIPE nao pode ser desativado.")
+    faturista = crud.deactivate_faturista(db, faturista_id)
+    logger.info("Faturista desativado | id=%s | nome=%s", faturista.id, faturista.nome)
+    return schemas.FaturistaDeleteResponse(
+        id=faturista.id,
+        nome=faturista.nome,
+        mensagem="Faturista desativado com sucesso.",
     )
 
 

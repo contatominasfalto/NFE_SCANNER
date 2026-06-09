@@ -1,11 +1,20 @@
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import create_engine, event, inspect, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 from .config import DATABASE_URL
 
-connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+connect_args = {"check_same_thread": False, "timeout": 30} if DATABASE_URL.startswith("sqlite") else {}
 engine = create_engine(DATABASE_URL, connect_args=connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+
+if DATABASE_URL.startswith("sqlite"):
+    @event.listens_for(engine, "connect")
+    def configure_sqlite_connection(dbapi_connection, _connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA busy_timeout=30000")
+        cursor.close()
+
 
 def ensure_schema():
     inspector = inspect(engine)
@@ -14,10 +23,9 @@ def ensure_schema():
 
     columns = {column["name"] for column in inspector.get_columns("notas_fiscais")}
     migrations = {
-        "centro_custo": "ALTER TABLE notas_fiscais ADD COLUMN centro_custo VARCHAR",
+        "local": "ALTER TABLE notas_fiscais ADD COLUMN local VARCHAR",
         "produto": "ALTER TABLE notas_fiscais ADD COLUMN produto TEXT",
         "quantidade": "ALTER TABLE notas_fiscais ADD COLUMN quantidade FLOAT",
-        "local_areia": "ALTER TABLE notas_fiscais ADD COLUMN local_areia VARCHAR",
         "transportador": "ALTER TABLE notas_fiscais ADD COLUMN transportador VARCHAR",
         "faturista": "ALTER TABLE notas_fiscais ADD COLUMN faturista VARCHAR DEFAULT 'BIPE'",
         "lider_operacional": "ALTER TABLE notas_fiscais ADD COLUMN lider_operacional VARCHAR",
@@ -26,10 +34,37 @@ def ensure_schema():
         for column, statement in migrations.items():
             if column not in columns:
                 connection.execute(text(statement))
+        if "centro_custo" in columns and "local_areia" in columns:
+            connection.execute(
+                text(
+                    "UPDATE notas_fiscais SET local = "
+                    "COALESCE(NULLIF(local, ''), NULLIF(centro_custo, ''), NULLIF(local_areia, ''))"
+                )
+            )
+        elif "centro_custo" in columns:
+            connection.execute(
+                text("UPDATE notas_fiscais SET local = COALESCE(NULLIF(local, ''), NULLIF(centro_custo, ''))")
+            )
+        elif "local_areia" in columns:
+            connection.execute(
+                text("UPDATE notas_fiscais SET local = COALESCE(NULLIF(local, ''), NULLIF(local_areia, ''))")
+            )
+        connection.execute(text("DROP INDEX IF EXISTS ix_notas_fiscais_centro_custo"))
+        if "centro_custo" in columns:
+            connection.execute(text("ALTER TABLE notas_fiscais DROP COLUMN centro_custo"))
+        if "local_areia" in columns:
+            connection.execute(text("ALTER TABLE notas_fiscais DROP COLUMN local_areia"))
         connection.execute(
             text(
-                "CREATE INDEX IF NOT EXISTS ix_notas_fiscais_centro_custo "
-                "ON notas_fiscais (centro_custo)"
+                "CREATE INDEX IF NOT EXISTS ix_notas_fiscais_local "
+                "ON notas_fiscais (local)"
+            )
+        )
+        connection.execute(
+            text(
+                "INSERT INTO faturistas (nome, ativo, data_cadastro) "
+                "SELECT 'BIPE', 1, CURRENT_TIMESTAMP "
+                "WHERE NOT EXISTS (SELECT 1 FROM faturistas WHERE nome = 'BIPE')"
             )
         )
 

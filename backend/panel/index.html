@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Painel NF-e</title>
+  <link rel="stylesheet" href="/painel-assets/styles.css">
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-mark"><img src="/painel-assets/logo.jpg" alt="Logo Minasfalto"></span>
+      <div><strong>MINASFALTO</strong><small>Painel NF-e</small></div>
+    </div>
+    <nav>
+      <button class="nav-item active" data-view="notas"><span>▦</span> Notas fiscais</button>
+      <button class="nav-item" id="openFaturistas"><span>◉</span> Faturistas</button>
+      <a class="nav-item" href="/docs" target="_blank"><span>↗</span> Swagger API</a>
+    </nav>
+    <div class="connection"><i></i><span>Atualização automática ativa</span></div>
+  </aside>
+
+  <main>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">OPERAÇÃO E CONTROLE</p>
+        <h1>Notas fiscais</h1>
+      </div>
+      <div class="top-actions">
+        <span id="lastUpdate">Aguardando atualização</span>
+        <button class="icon-button" id="refreshButton" title="Atualizar tabela">↻</button>
+        <button class="primary" id="openScan">＋ Bipar nota</button>
+      </div>
+    </header>
+
+    <section class="metrics">
+      <article><span>Total cadastrado</span><strong id="metricTotal">0</strong><small>notas fiscais</small></article>
+      <article><span>Peso líquido</span><strong id="metricWeight">0</strong><small>kg registrados</small></article>
+      <article><span>Valor total</span><strong id="metricValue">R$ 0,00</strong><small>somatório da base</small></article>
+      <article><span>Sem líder operacional</span><strong id="metricPending">0</strong><small>pendências</small></article>
+    </section>
+
+    <section class="workspace">
+      <div class="toolbar">
+        <label class="search"><span>⌕</span><input id="searchInput" placeholder="Buscar NF, chave, produto, fornecedor, transportador..."></label>
+        <select id="localFilter" aria-label="Filtrar por local">
+          <option value="">Todos os locais</option>
+          <option>A1BR</option><option>A1BR/PRU</option><option>A2BR</option>
+        </select>
+        <select id="billingFilter" aria-label="Filtrar por faturista"><option value="">Todos os faturistas</option></select>
+        <button class="secondary" id="downloadAll">↓ Gerar XML geral</button>
+      </div>
+      <div class="table-summary"><strong id="resultCount">0 registros</strong><span>Arraste horizontalmente para visualizar todos os campos</span></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th class="sticky">Ações</th><th>ID</th><th>Chave NF</th><th>Data/hora do bip</th><th>Data emissão</th>
+            <th>NF</th><th>Local</th><th>Produto</th><th>Quantidade</th>
+            <th>Transportador</th><th>Faturista</th><th>Líder operacional</th><th>Fornecedor</th><th>CNPJ</th>
+            <th>Valor total</th><th>Observação</th>
+          </tr></thead>
+          <tbody id="notesTable"></tbody>
+        </table>
+        <div class="empty-state" id="emptyState" hidden>Nenhuma nota encontrada com os filtros atuais.</div>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="scanDialog">
+    <form method="dialog" class="modal compact" id="scanForm">
+      <header><div><p class="eyebrow">NOVA LEITURA</p><h2>Bipar nota fiscal</h2></div><button class="icon-button close" type="button" data-close="scanDialog">×</button></header>
+      <p class="modal-copy">Informe a chave de acesso e o local onde o material será alocado.</p>
+      <label>Local<select id="scanLocal" required><option value="">Selecione</option><option>A1BR</option><option>A1BR/PRU</option><option>A2BR</option></select></label>
+      <label>Chave NF<input id="scanKey" required inputmode="numeric" maxlength="44" placeholder="44 dígitos"></label>
+      <footer><button class="secondary" type="button" data-close="scanDialog">Cancelar</button><button class="primary" type="submit">Consultar nota</button></footer>
+    </form>
+  </dialog>
+
+  <dialog id="noteDialog">
+    <form method="dialog" class="modal wide" id="noteForm">
+      <header><div><p class="eyebrow" id="noteMode">EDIÇÃO</p><h2 id="noteTitle">Editar nota fiscal</h2></div><button class="icon-button close" type="button" data-close="noteDialog">×</button></header>
+      <input type="hidden" id="noteId">
+      <div class="form-section"><h3>Identificação e alocação</h3><div class="form-grid">
+        <label>Chave NF<input id="chave_acesso" required maxlength="44"></label><label>Local<select id="local" required><option>A1BR</option><option>A1BR/PRU</option><option>A2BR</option></select></label>
+        <label>Número da NF<input id="numero_nf" required></label><label>Série<input id="serie" required></label><label>Data de emissão<input id="data_emissao" type="datetime-local" required></label>
+      </div></div>
+      <div class="form-section"><h3>Dados operacionais</h3><div class="form-grid">
+        <label class="span-2">Produto<input id="produto"></label><label>Quantidade / peso líquido<input id="quantidade" type="number" step="0.01"></label>
+        <label>Transportador<input id="transportador"></label><label>Faturista<select id="faturista"></select></label><label>Líder operacional<input id="lider_operacional"></label>
+      </div></div>
+      <div class="form-section"><h3>Fornecedor e complemento</h3><div class="form-grid">
+        <label>Fornecedor<input id="nome_fornecedor" required></label><label>CNPJ<input id="cnpj_fornecedor" required></label><label>Valor total<input id="valor_total" type="number" step="0.01" required></label>
+        <label class="span-3">Observação / informação adicional<textarea id="observacao" rows="3"></textarea></label>
+      </div></div>
+      <footer><button class="secondary" type="button" data-close="noteDialog">Cancelar</button><button class="primary" type="submit">Salvar nota</button></footer>
+    </form>
+  </dialog>
+
+  <dialog id="faturistasDialog">
+    <section class="modal medium">
+      <header><div><p class="eyebrow">CADASTRO AUXILIAR</p><h2>Faturistas</h2></div><button class="icon-button close" data-close="faturistasDialog">×</button></header>
+      <form id="billingForm" class="inline-form"><input id="billingName" placeholder="Nome do novo faturista" required minlength="2"><button class="primary">＋ Cadastrar</button></form>
+      <div class="billing-list" id="billingList"></div>
+    </section>
+  </dialog>
+
+  <dialog id="confirmDialog">
+    <section class="modal compact">
+      <header><div><p class="eyebrow">CONFIRMAÇÃO</p><h2 id="confirmTitle">Confirmar ação</h2></div></header>
+      <p class="modal-copy" id="confirmMessage"></p>
+      <footer><button class="secondary" id="confirmCancel">Cancelar</button><button class="danger" id="confirmAction">Confirmar</button></footer>
+    </section>
+  </dialog>
+  <div id="toast" role="status"></div>
+  <script src="/painel-assets/app.js"></script>
+</body>
+</html>

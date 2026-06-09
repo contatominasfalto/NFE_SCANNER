@@ -99,9 +99,8 @@ class ListScreen(Screen):
             or query in str(nota.get("numero_nf", "")).lower()
             or query in str(nota.get("nome_fornecedor", "")).lower()
             or query in str(nota.get("cnpj_fornecedor", "")).lower()
-            or query in str(nota.get("centro_custo", "")).lower()
+            or query in str(nota.get("local", "")).lower()
             or query in str(nota.get("produto", "")).lower()
-            or query in str(nota.get("local_areia", "")).lower()
             or query in str(nota.get("transportador", "")).lower()
         ]
 
@@ -229,10 +228,9 @@ class ListScreen(Screen):
                 f"Numero: {nota.get('numero_nf', '')}\n"
                 f"Fornecedor: {nota.get('nome_fornecedor', '')}\n"
                 f"CNPJ: {nota.get('cnpj_fornecedor', '')}\n"
-                f"Centro de custo: {nota.get('centro_custo') or 'Nao informado'}\n"
+                f"Local: {nota.get('local') or 'Nao informado'}\n"
                 f"Produto: {nota.get('produto') or 'Nao informado'}\n"
                 f"Quantidade: {nota.get('quantidade') or 'Nao informada'}\n"
-                f"Local da areia: {nota.get('local_areia') or 'Nao informado'}\n"
                 f"Transportador: {nota.get('transportador') or 'Nao informado'}\n"
                 f"Faturista: {nota.get('faturista') or 'BIPE'}\n"
                 f"Lider operacional: {nota.get('lider_operacional') or 'Nao informado'}\n"

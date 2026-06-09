@@ -115,7 +115,7 @@ ScreenManager:
                             md_bg_color: app.primary_color
                             text_color: app.text_color
                             icon_color: app.text_color
-                            on_release: app.abrir_selecao_setor()
+                            on_release: app.abrir_selecao_local()
 
                         MDRectangleFlatIconButton:
                             icon: "file-document-outline"
@@ -168,7 +168,7 @@ ScreenManager:
 
 
 class NFeApp(MDApp):
-    SETORES = ("A1BR", "A1BR/PRU", "A2BR")
+    LOCAIS = ("A1BR", "A1BR/PRU", "A2BR")
     primary_color = (0.95, 0.57, 0.16, 1)
     accent_color = (0.20, 0.20, 0.22, 1)
     bg_color = (0.97, 0.97, 0.96, 1)
@@ -183,10 +183,10 @@ class NFeApp(MDApp):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.setor_dialog = None
-        self.setor_selecionado = None
-        self.setor_buttons = {}
-        self.continuar_setor_button = None
+        self.local_dialog = None
+        self.local_selecionado = None
+        self.local_buttons = {}
+        self.continuar_local_button = None
 
     def build(self):
         self.title = "NF-e Scanner"
@@ -195,9 +195,9 @@ class NFeApp(MDApp):
         self.theme_cls.accent_palette = "Gray"
         return Builder.load_string(KV)
 
-    def abrir_selecao_setor(self):
-        self.setor_selecionado = None
-        self.setor_buttons = {}
+    def abrir_selecao_local(self):
+        self.local_selecionado = None
+        self.local_buttons = {}
 
         content = MDBoxLayout(
             orientation="vertical",
@@ -215,9 +215,9 @@ class NFeApp(MDApp):
             )
         )
 
-        for setor in self.SETORES:
+        for local in self.LOCAIS:
             button = MDRectangleFlatIconButton(
-                text=setor,
+                text=local,
                 icon="checkbox-blank-outline",
                 size_hint_x=1,
                 height=dp(48),
@@ -226,19 +226,19 @@ class NFeApp(MDApp):
                 icon_color=self.accent_color,
                 line_color=self.border_color,
             )
-            button.bind(on_release=lambda _, value=setor: self.selecionar_setor(value))
-            self.setor_buttons[setor] = button
+            button.bind(on_release=lambda _, value=local: self.selecionar_local(value))
+            self.local_buttons[local] = button
             content.add_widget(button)
 
-        self.continuar_setor_button = MDFlatButton(
+        self.continuar_local_button = MDFlatButton(
             text="CONTINUAR",
             disabled=True,
             theme_text_color="Custom",
             text_color=self.primary_color,
-            on_release=lambda *_: self.confirmar_setor(),
+            on_release=lambda *_: self.confirmar_local(),
         )
-        self.setor_dialog = MDDialog(
-            title="Centro de custo",
+        self.local_dialog = MDDialog(
+            title="Local",
             type="custom",
             content_cls=content,
             buttons=[
@@ -246,28 +246,28 @@ class NFeApp(MDApp):
                     text="CANCELAR",
                     theme_text_color="Custom",
                     text_color=self.accent_color,
-                    on_release=lambda *_: self.setor_dialog.dismiss(),
+                    on_release=lambda *_: self.local_dialog.dismiss(),
                 ),
-                self.continuar_setor_button,
+                self.continuar_local_button,
             ],
         )
-        self.setor_dialog.open()
+        self.local_dialog.open()
 
-    def selecionar_setor(self, setor):
-        self.setor_selecionado = setor
-        self.continuar_setor_button.disabled = False
-        for value, button in self.setor_buttons.items():
-            selected = value == setor
+    def selecionar_local(self, local):
+        self.local_selecionado = local
+        self.continuar_local_button.disabled = False
+        for value, button in self.local_buttons.items():
+            selected = value == local
             button.icon = "check-circle-outline" if selected else "checkbox-blank-outline"
             button.text_color = self.primary_color if selected else self.accent_color
             button.icon_color = self.primary_color if selected else self.accent_color
             button.line_color = self.primary_color if selected else self.border_color
 
-    def confirmar_setor(self):
-        if not self.setor_selecionado:
+    def confirmar_local(self):
+        if not self.local_selecionado:
             return
-        self.root.get_screen("scan").set_centro_custo(self.setor_selecionado)
-        self.setor_dialog.dismiss()
+        self.root.get_screen("scan").set_local(self.local_selecionado)
+        self.local_dialog.dismiss()
         self.root.current = "scan"
 
 

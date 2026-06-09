@@ -15,7 +15,7 @@ class ScanScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.chave_acesso = None
-        self.centro_custo = None
+        self.local = None
         self.build_ui()
 
     def build_ui(self):
@@ -71,7 +71,7 @@ class ScanScreen(Screen):
         )
         content.add_widget(hero)
 
-        setor_card = MDCard(
+        local_card = MDCard(
             orientation="horizontal",
             radius=[8, 8, 8, 8],
             elevation=0,
@@ -80,16 +80,16 @@ class ScanScreen(Screen):
             size_hint_y=None,
             height=dp(64),
         )
-        setor_card.add_widget(
+        local_card.add_widget(
             MDLabel(
-                text="Centro de custo",
+                text="Local",
                 font_style="Caption",
                 bold=True,
                 theme_text_color="Custom",
                 text_color=TEXT,
             )
         )
-        self.setor_label = MDLabel(
+        self.local_label = MDLabel(
             text="Nao selecionado",
             font_style="H6",
             bold=True,
@@ -97,8 +97,8 @@ class ScanScreen(Screen):
             theme_text_color="Custom",
             text_color=TEXT,
         )
-        setor_card.add_widget(self.setor_label)
-        content.add_widget(setor_card)
+        local_card.add_widget(self.local_label)
+        content.add_widget(local_card)
 
         self.barcode_input = MDTextField(
             hint_text="Chave de acesso com 44 digitos",
@@ -127,24 +127,24 @@ class ScanScreen(Screen):
     def preparar_nova_leitura(self):
         self.chave_acesso = None
         self.barcode_input.text = ""
-        if self.centro_custo:
-            self.status_label.text = f"Pronto para bipar para {self.centro_custo}."
+        if self.local:
+            self.status_label.text = f"Pronto para bipar para {self.local}."
         else:
-            self.status_label.text = "Selecione um centro de custo antes de bipar."
+            self.status_label.text = "Selecione um local antes de bipar."
         Clock.schedule_once(lambda *_: setattr(self.barcode_input, "focus", True), 0.2)
 
-    def set_centro_custo(self, centro_custo):
-        self.centro_custo = centro_custo
-        self.setor_label.text = centro_custo
+    def set_local(self, local):
+        self.local = local
+        self.local_label.text = local
         self.preparar_nova_leitura()
 
-    def limpar_centro_custo(self):
-        self.centro_custo = None
-        self.setor_label.text = "Nao selecionado"
+    def limpar_local(self):
+        self.local = None
+        self.local_label.text = "Nao selecionado"
 
     def processar_codigo_barras(self, instance):
-        if not self.centro_custo:
-            self.status_label.text = "Volte e selecione o centro de custo antes da leitura."
+        if not self.local:
+            self.status_label.text = "Volte e selecione o local antes da leitura."
             return
 
         codigo_barras = self.barcode_input.text.strip()
@@ -165,10 +165,10 @@ class ScanScreen(Screen):
 
     def ir_confirmar(self, nota_data):
         nota_data = dict(nota_data)
-        nota_data["centro_custo"] = self.centro_custo
+        nota_data["local"] = self.local
         self.manager.get_screen("confirm").set_nota_data(nota_data)
         self.manager.current = "confirm"
 
     def voltar(self, instance):
-        self.limpar_centro_custo()
+        self.limpar_local()
         self.manager.current = "home"

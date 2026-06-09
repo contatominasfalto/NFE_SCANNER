@@ -66,3 +66,50 @@ def filter_notas(db: Session, data_inicio=None, data_fim=None, fornecedor=None, 
         query = query.filter(models.NotaFiscal.valor_total <= valor_max)
     
     return query.all()
+
+
+def create_faturista(db: Session, faturista: schemas.FaturistaCreate):
+    db_faturista = models.Faturista(nome=faturista.nome.strip(), ativo=True)
+    db.add(db_faturista)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise
+    db.refresh(db_faturista)
+    return db_faturista
+
+
+def get_faturistas(db: Session, incluir_inativos: bool = False):
+    query = db.query(models.Faturista)
+    if not incluir_inativos:
+        query = query.filter(models.Faturista.ativo.is_(True))
+    return query.order_by(models.Faturista.nome).all()
+
+
+def get_faturista(db: Session, faturista_id: int):
+    return db.query(models.Faturista).filter(models.Faturista.id == faturista_id).first()
+
+
+def update_faturista(db: Session, faturista_id: int, faturista_data: schemas.FaturistaUpdate):
+    faturista = get_faturista(db, faturista_id)
+    if not faturista:
+        return None
+    faturista.nome = faturista_data.nome.strip()
+    faturista.ativo = faturista_data.ativo
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise
+    db.refresh(faturista)
+    return faturista
+
+
+def deactivate_faturista(db: Session, faturista_id: int):
+    faturista = get_faturista(db, faturista_id)
+    if faturista:
+        faturista.ativo = False
+        db.commit()
+        db.refresh(faturista)
+    return faturista

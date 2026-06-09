@@ -7,8 +7,18 @@ BACKEND_DIR = Path(__file__).resolve().parents[1]
 load_dotenv(BACKEND_DIR / ".env")
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./nfe_scanner.db")
-REPORT_DIR = os.getenv("REPORT_DIR", str(BACKEND_DIR / "reports"))
-LOG_DIR = os.getenv("LOG_DIR", str(BACKEND_DIR / "logs"))
+if DATABASE_URL.startswith("sqlite:///./"):
+    database_name = DATABASE_URL.removeprefix("sqlite:///./")
+    DATABASE_URL = f"sqlite:///{(BACKEND_DIR / database_name).as_posix()}"
+
+
+def resolve_backend_path(value: str, default_name: str) -> str:
+    path = Path(value or default_name)
+    return str(path if path.is_absolute() else BACKEND_DIR / path)
+
+
+REPORT_DIR = resolve_backend_path(os.getenv("REPORT_DIR", ""), "reports")
+LOG_DIR = resolve_backend_path(os.getenv("LOG_DIR", ""), "logs")
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 MEUDANFE_API_BASE_URL = os.getenv(
     "MEUDANFE_API_BASE_URL",

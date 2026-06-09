@@ -34,3 +34,11 @@ WARNING = nota nao encontrada, dados invalidos e conflitos
 ERROR = falhas de conexao, configuracao ou integracao
 
 As chaves de acesso das notas sao mascaradas nos logs e a chave privada da API fiscal nao e registrada.
+
+
+Painel Web:
+
+http://127.0.0.1:8000/painel
+
+O painel apresenta a tabela completa de notas com atualizacao automatica, filtros,
+leitura por chave, conferencia, edicao, exclusao, geracao de XML e cadastro de faturistas.

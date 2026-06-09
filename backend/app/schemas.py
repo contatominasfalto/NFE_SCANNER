@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 from datetime import datetime
 from typing import Optional
 
-class CentroCusto(str, Enum):
+class Local(str, Enum):
     A1BR = "A1BR"
     A1BR_PRU = "A1BR/PRU"
     A2BR = "A2BR"
@@ -18,17 +18,16 @@ class NotaFiscalBase(BaseModel):
     nome_fornecedor: str
     valor_total: float
     chave_acesso: Optional[str] = None
-    centro_custo: Optional[CentroCusto] = None
+    local: Optional[Local] = None
     produto: Optional[str] = None
     quantidade: Optional[float] = None
-    local_areia: Optional[str] = None
     transportador: Optional[str] = None
     faturista: str = "BIPE"
     lider_operacional: Optional[str] = None
     observacao: Optional[str] = None
 
 class NotaFiscalCreate(NotaFiscalBase):
-    centro_custo: CentroCusto
+    local: Local
     caminho_arquivo_imagem: Optional[str] = None
 
 class NotaFiscalUpdate(NotaFiscalBase):
@@ -50,8 +49,8 @@ class BarcodeInput(BaseModel):
     )
 
 class BarcodeImportInput(BarcodeInput):
-    centro_custo: CentroCusto = Field(
-        description="Centro de custo onde o material da nota sera alocado.",
+    local: Local = Field(
+        description="Local onde o material da nota sera alocado.",
         examples=["A1BR"],
     )
 
@@ -64,4 +63,26 @@ class NotaFiscalDeleteResponse(BaseModel):
     id: int
     numero_nf: str
     chave_acesso: Optional[str] = None
+    mensagem: str
+
+
+class FaturistaCreate(BaseModel):
+    nome: str = Field(min_length=2, max_length=100, examples=["Maria Silva"])
+
+
+class FaturistaUpdate(FaturistaCreate):
+    ativo: bool = True
+
+
+class FaturistaResponse(FaturistaUpdate):
+    id: int
+    data_cadastro: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class FaturistaDeleteResponse(BaseModel):
+    id: int
+    nome: str
     mensagem: str
