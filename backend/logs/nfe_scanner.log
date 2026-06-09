@@ -1,0 +1,156 @@
+2026-06-09 13:57:55,786 | INFO | nfe_scanner | Requisicao concluida | metodo=GET | rota=/openapi.json | status=200 | duracao_ms=30.1
+2026-06-09 13:59:06,171 | INFO | nfe_scanner.integracao | Consultando API fiscal | chave=312606...216840
+2026-06-09 13:59:06,353 | WARNING | nfe_scanner.integracao | Nota nao encontrada na API fiscal | chave=312606...216840 | status=404
+2026-06-09 13:59:06,355 | WARNING | nfe_scanner | Requisicao concluida | metodo=POST | rota=/barcode-nf/ | status=404 | duracao_ms=186.0
+2026-06-09 14:00:24,863 | INFO | nfe_scanner.integracao | Consultando API fiscal | chave=312606...161708
+2026-06-09 14:00:24,981 | INFO | nfe_scanner.integracao | API fiscal respondeu | chave=312606...161708 | status=200 | bytes=4744
+2026-06-09 14:00:24,987 | INFO | nfe_scanner.integracao | Nota fiscal consultada | chave=312606...161708 | numero=277620 | fornecedor=Vale S.A.
+2026-06-09 14:00:24,988 | INFO | nfe_scanner | Leitura concluida | chave=312606...161708 | numero=277620
+2026-06-09 14:00:24,996 | INFO | nfe_scanner | Requisicao concluida | metodo=POST | rota=/barcode-nf/ | status=200 | duracao_ms=134.9
+2026-06-09 14:00:49,315 | WARNING | nfe_scanner | Cadastro duplicado | chave=312606...161708
+2026-06-09 14:00:49,319 | WARNING | nfe_scanner | Requisicao concluida | metodo=POST | rota=/notas/ | status=409 | duracao_ms=24.1
+2026-06-09 14:01:16,685 | INFO | nfe_scanner | Requisicao concluida | metodo=GET | rota=/notas/ | status=200 | duracao_ms=15.9
+2026-06-09 14:01:28,928 | INFO | nfe_scanner.integracao | Consultando API fiscal | chave=312606...161708
+2026-06-09 14:01:29,020 | INFO | nfe_scanner.integracao | API fiscal respondeu | chave=312606...161708 | status=200 | bytes=4744
+2026-06-09 14:01:29,022 | INFO | nfe_scanner.integracao | Nota fiscal consultada | chave=312606...161708 | numero=277620 | fornecedor=Vale S.A.
+2026-06-09 14:01:29,022 | INFO | nfe_scanner | Leitura concluida | chave=312606...161708 | numero=277620
+2026-06-09 14:01:29,024 | INFO | nfe_scanner | Requisicao concluida | metodo=POST | rota=/barcode-nf/ | status=200 | duracao_ms=98.4
+2026-06-09 14:01:41,504 | INFO | nfe_scanner | Requisicao concluida | metodo=GET | rota=/notas/ | status=200 | duracao_ms=5.6
+2026-06-09 14:01:54,369 | INFO | nfe_scanner | Nota excluida | id=6 | numero=275399
+2026-06-09 14:01:54,372 | INFO | nfe_scanner | Requisicao concluida | metodo=DELETE | rota=/notas/6/ | status=200 | duracao_ms=29.8
+2026-06-09 14:01:54,395 | INFO | nfe_scanner | Requisicao concluida | metodo=GET | rota=/notas/ | status=200 | duracao_ms=6.9
+2026-06-09 14:02:00,028 | INFO | nfe_scanner | Nota excluida | id=7 | numero=277620
+2026-06-09 14:02:00,032 | INFO | nfe_scanner | Requisicao concluida | metodo=DELETE | rota=/notas/7/ | status=200 | duracao_ms=24.1
+2026-06-09 14:02:00,060 | INFO | nfe_scanner | Requisicao concluida | metodo=GET | rota=/notas/ | status=200 | duracao_ms=8.4
+2026-06-09 14:02:24,853 | INFO | nfe_scanner.integracao | Consultando API fiscal | chave=312606...161708
+2026-06-09 14:02:24,920 | INFO | nfe_scanner.integracao | API fiscal respondeu | chave=312606...161708 | status=200 | bytes=4744
+2026-06-09 14:02:24,922 | INFO | nfe_scanner.integracao | Nota fiscal consultada | chave=312606...161708 | numero=277620 | fornecedor=Vale S.A.
+2026-06-09 14:02:24,923 | INFO | nfe_scanner | Leitura concluida | chave=312606...161708 | numero=277620
+2026-06-09 14:02:24,926 | INFO | nfe_scanner | Requisicao concluida | metodo=POST | rota=/barcode-nf/ | status=200 | duracao_ms=74.9
+2026-06-09 14:02:26,990 | INFO | nfe_scanner | Nota cadastrada | id=16 | numero=277620 | centro_custo=A1BR
+2026-06-09 14:02:26,992 | INFO | nfe_scanner | Requisicao concluida | metodo=POST | rota=/notas/ | status=200 | duracao_ms=21.8
+2026-06-09 14:02:33,870 | INFO | nfe_scanner.integracao | Consultando API fiscal | chave=312606...161708
+2026-06-09 14:02:33,946 | INFO | nfe_scanner.integracao | API fiscal respondeu | chave=312606...161708 | status=200 | bytes=4744
+2026-06-09 14:02:33,948 | INFO | nfe_scanner.integracao | Nota fiscal consultada | chave=312606...161708 | numero=277620 | fornecedor=Vale S.A.
+2026-06-09 14:02:33,949 | INFO | nfe_scanner | Leitura concluida | chave=312606...161708 | numero=277620
+2026-06-09 14:02:33,951 | INFO | nfe_scanner | Requisicao concluida | metodo=POST | rota=/barcode-nf/ | status=200 | duracao_ms=83.4
+2026-06-09 14:02:40,782 | WARNING | nfe_scanner | Cadastro duplicado | chave=312606...161708
+2026-06-09 14:02:40,785 | WARNING | nfe_scanner | Requisicao concluida | metodo=POST | rota=/notas/ | status=409 | duracao_ms=5.5
+2026-06-09 14:02:55,228 | WARNING | nfe_scanner | Cadastro duplicado | chave=312606...161708
+2026-06-09 14:02:55,232 | WARNING | nfe_scanner | Requisicao concluida | metodo=POST | rota=/notas/ | status=409 | duracao_ms=11.4
+2026-06-09 14:03:01,474 | WARNING | nfe_scanner | Cadastro duplicado | chave=312606...161708
+2026-06-09 14:03:01,476 | WARNING | nfe_scanner | Requisicao concluida | metodo=POST | rota=/notas/ | status=409 | duracao_ms=5.9
+2026-06-09 14:03:09,563 | INFO | nfe_scanner.integracao | Consultando API fiscal | chave=312606...161708
+2026-06-09 14:03:09,822 | INFO | nfe_scanner.integracao | API fiscal respondeu | chave=312606...161708 | status=200 | bytes=4744
+2026-06-09 14:03:09,824 | INFO | nfe_scanner.integracao | Nota fiscal consultada | chave=312606...161708 | numero=277620 | fornecedor=Vale S.A.
+2026-06-09 14:03:09,825 | INFO | nfe_scanner | Leitura concluida | chave=312606...161708 | numero=277620
+2026-06-09 14:03:09,826 | INFO | nfe_scanner | Requisicao concluida | metodo=POST | rota=/barcode-nf/ | status=200 | duracao_ms=264.8
+2026-06-09 14:03:12,181 | WARNING | nfe_scanner | Cadastro duplicado | chave=312606...161708
+2026-06-09 14:03:12,183 | WARNING | nfe_scanner | Requisicao concluida | metodo=POST | rota=/notas/ | status=409 | duracao_ms=10.2
+2026-06-09 14:03:14,603 | WARNING | nfe_scanner | Cadastro duplicado | chave=312606...161708
+2026-06-09 14:03:14,605 | WARNING | nfe_scanner | Requisicao concluida | metodo=POST | rota=/notas/ | status=409 | duracao_ms=6.6
+2026-06-09 14:03:28,525 | INFO | nfe_scanner | Requisicao concluida | metodo=GET | rota=/notas/ | status=200 | duracao_ms=12.6
+2026-06-09 14:03:40,449 | INFO | nfe_scanner | Nota excluida | id=16 | numero=277620
+2026-06-09 14:03:40,454 | INFO | nfe_scanner | Requisicao concluida | metodo=DELETE | rota=/notas/16/ | status=200 | duracao_ms=22.0
+2026-06-09 14:03:40,472 | INFO | nfe_scanner | Requisicao concluida | metodo=GET | rota=/notas/ | status=200 | duracao_ms=5.5
+2026-06-09 14:03:54,702 | INFO | nfe_scanner.integracao | Consultando API fiscal | chave=312606...161708
+2026-06-09 14:03:54,785 | INFO | nfe_scanner.integracao | API fiscal respondeu | chave=312606...161708 | status=200 | bytes=4744
+2026-06-09 14:03:54,787 | INFO | nfe_scanner.integracao | Nota fiscal consultada | chave=312606...161708 | numero=277620 | fornecedor=Vale S.A.
+2026-06-09 14:03:54,788 | INFO | nfe_scanner | Leitura concluida | chave=312606...161708 | numero=277620
+2026-06-09 14:03:54,790 | INFO | nfe_scanner | Requisicao concluida | metodo=POST | rota=/barcode-nf/ | status=200 | duracao_ms=89.9
+2026-06-09 14:03:58,190 | INFO | nfe_scanner | Nota cadastrada | id=16 | numero=277620 | centro_custo=A2BR
+2026-06-09 14:03:58,195 | INFO | nfe_scanner | Requisicao concluida | metodo=POST | rota=/notas/ | status=200 | duracao_ms=23.3
+2026-06-09 14:04:09,540 | INFO | nfe_scanner.integracao | Consultando API fiscal | chave=312606...161708
+2026-06-09 14:04:09,664 | INFO | nfe_scanner.integracao | API fiscal respondeu | chave=312606...161708 | status=200 | bytes=4744
+2026-06-09 14:04:09,666 | INFO | nfe_scanner.integracao | Nota fiscal consultada | chave=312606...161708 | numero=277620 | fornecedor=Vale S.A.
+2026-06-09 14:04:09,667 | INFO | nfe_scanner | Leitura concluida | chave=312606...161708 | numero=277620
+2026-06-09 14:04:09,669 | INFO | nfe_scanner | Requisicao concluida | metodo=POST | rota=/barcode-nf/ | status=200 | duracao_ms=131.1
+2026-06-09 14:04:17,114 | INFO | nfe_scanner.integracao | Consultando API fiscal | chave=312606...161708
+2026-06-09 14:04:17,263 | INFO | nfe_scanner.integracao | API fiscal respondeu | chave=312606...161708 | status=200 | bytes=4744
+2026-06-09 14:04:17,264 | INFO | nfe_scanner.integracao | Nota fiscal consultada | chave=312606...161708 | numero=277620 | fornecedor=Vale S.A.
+2026-06-09 14:04:17,264 | INFO | nfe_scanner | Leitura concluida | chave=312606...161708 | numero=277620
+2026-06-09 14:04:17,265 | INFO | nfe_scanner | Requisicao concluida | metodo=POST | rota=/barcode-nf/ | status=200 | duracao_ms=153.2
+2026-06-09 14:04:18,479 | WARNING | nfe_scanner | Cadastro duplicado | chave=312606...161708
+2026-06-09 14:04:18,481 | WARNING | nfe_scanner | Requisicao concluida | metodo=POST | rota=/notas/ | status=409 | duracao_ms=8.8
+2026-06-09 14:04:32,313 | INFO | nfe_scanner.integracao | Consultando API fiscal | chave=312606...161708
+2026-06-09 14:04:32,380 | INFO | nfe_scanner.integracao | API fiscal respondeu | chave=312606...161708 | status=200 | bytes=4744
+2026-06-09 14:04:32,382 | INFO | nfe_scanner.integracao | Nota fiscal consultada | chave=312606...161708 | numero=277620 | fornecedor=Vale S.A.
+2026-06-09 14:04:32,382 | INFO | nfe_scanner | Leitura concluida | chave=312606...161708 | numero=277620
+2026-06-09 14:04:32,384 | INFO | nfe_scanner | Requisicao concluida | metodo=POST | rota=/barcode-nf/ | status=200 | duracao_ms=72.9
+2026-06-09 14:04:40,305 | INFO | nfe_scanner.integracao | Consultando API fiscal | chave=312606...161708
+2026-06-09 14:04:40,387 | INFO | nfe_scanner.integracao | API fiscal respondeu | chave=312606...161708 | status=200 | bytes=4744
+2026-06-09 14:04:40,389 | INFO | nfe_scanner.integracao | Nota fiscal consultada | chave=312606...161708 | numero=277620 | fornecedor=Vale S.A.
+2026-06-09 14:04:40,390 | INFO | nfe_scanner | Leitura concluida | chave=312606...161708 | numero=277620
+2026-06-09 14:04:40,392 | INFO | nfe_scanner | Requisicao concluida | metodo=POST | rota=/barcode-nf/ | status=200 | duracao_ms=88.9
+2026-06-09 14:04:41,594 | WARNING | nfe_scanner | Cadastro duplicado | chave=312606...161708
+2026-06-09 14:04:41,597 | WARNING | nfe_scanner | Requisicao concluida | metodo=POST | rota=/notas/ | status=409 | duracao_ms=8.2
+2026-06-09 14:04:50,828 | INFO | nfe_scanner.integracao | Consultando API fiscal | chave=312606...161708
+2026-06-09 14:04:50,904 | INFO | nfe_scanner.integracao | API fiscal respondeu | chave=312606...161708 | status=200 | bytes=4744
+2026-06-09 14:04:50,909 | INFO | nfe_scanner.integracao | Nota fiscal consultada | chave=312606...161708 | numero=277620 | fornecedor=Vale S.A.
+2026-06-09 14:04:50,910 | INFO | nfe_scanner | Leitura concluida | chave=312606...161708 | numero=277620
+2026-06-09 14:04:50,912 | INFO | nfe_scanner | Requisicao concluida | metodo=POST | rota=/barcode-nf/ | status=200 | duracao_ms=85.8
+2026-06-09 14:04:52,484 | WARNING | nfe_scanner | Cadastro duplicado | chave=312606...161708
+2026-06-09 14:04:52,485 | WARNING | nfe_scanner | Requisicao concluida | metodo=POST | rota=/notas/ | status=409 | duracao_ms=7.3
+2026-06-09 14:05:11,506 | INFO | nfe_scanner | Requisicao concluida | metodo=GET | rota=/notas/ | status=200 | duracao_ms=8.9
+2026-06-09 14:05:15,833 | INFO | nfe_scanner | Nota excluida | id=16 | numero=277620
+2026-06-09 14:05:15,836 | INFO | nfe_scanner | Requisicao concluida | metodo=DELETE | rota=/notas/16/ | status=200 | duracao_ms=20.9
+2026-06-09 14:05:15,859 | INFO | nfe_scanner | Requisicao concluida | metodo=GET | rota=/notas/ | status=200 | duracao_ms=6.2
+2026-06-09 14:10:25,458 | INFO | nfe_scanner | Requisicao concluida | metodo=GET | rota=/notas/ | status=200 | duracao_ms=6.8
+2026-06-09 14:10:25,675 | WARNING | nfe_scanner | Requisicao concluida | metodo=GET | rota=/favicon.ico | status=404 | duracao_ms=3.6
+2026-06-09 14:26:44,530 | INFO | nfe_scanner | Requisicao concluida | metodo=GET | rota=/notas/ | status=200 | duracao_ms=100.2
+2026-06-09 14:27:17,978 | INFO | nfe_scanner.integracao | Consultando API fiscal | chave=312605...130860
+2026-06-09 14:27:18,161 | INFO | nfe_scanner.integracao | API fiscal respondeu | chave=312605...130860 | status=200 | bytes=4744
+2026-06-09 14:27:18,170 | INFO | nfe_scanner.integracao | Nota fiscal consultada | chave=312605...130860 | numero=275399 | fornecedor=Vale S.A.
+2026-06-09 14:27:18,172 | INFO | nfe_scanner | Leitura concluida | chave=312605...130860 | numero=275399
+2026-06-09 14:27:18,182 | INFO | nfe_scanner | Requisicao concluida | metodo=POST | rota=/barcode-nf/ | status=200 | duracao_ms=228.6
+2026-06-09 14:27:21,808 | INFO | nfe_scanner | Nota cadastrada | id=16 | numero=275399 | centro_custo=A1BR
+2026-06-09 14:27:21,812 | INFO | nfe_scanner | Requisicao concluida | metodo=POST | rota=/notas/ | status=200 | duracao_ms=54.4
+2026-06-09 14:27:33,812 | INFO | nfe_scanner | Requisicao concluida | metodo=GET | rota=/notas/ | status=200 | duracao_ms=5.1
+2026-06-09 14:27:40,525 | INFO | nfe_scanner | Nota excluida | id=16 | numero=275399
+2026-06-09 14:27:40,527 | INFO | nfe_scanner | Requisicao concluida | metodo=DELETE | rota=/notas/16/ | status=200 | duracao_ms=27.6
+2026-06-09 14:27:40,553 | INFO | nfe_scanner | Requisicao concluida | metodo=GET | rota=/notas/ | status=200 | duracao_ms=7.8
+2026-06-09 14:35:30,221 | INFO | nfe_scanner | Requisicao concluida | metodo=GET | rota=/openapi.json | status=200 | duracao_ms=28.2
+2026-06-09 14:35:30,281 | INFO | nfe_scanner | Requisicao concluida | metodo=GET | rota=/notas/ | status=200 | duracao_ms=6.5
+2026-06-09 14:37:21,083 | INFO | nfe_scanner | Requisicao concluida | metodo=GET | rota=/notas/ | status=200 | duracao_ms=4.1
+2026-06-09 14:37:56,821 | INFO | nfe_scanner | Requisicao concluida | metodo=GET | rota=/notas/ | status=200 | duracao_ms=6.2
+2026-06-09 14:37:56,856 | INFO | nfe_scanner | Nota excluida | id=4 | numero=1006
+2026-06-09 14:37:56,857 | INFO | nfe_scanner | Requisicao concluida | metodo=DELETE | rota=/notas/4/ | status=200 | duracao_ms=12.4
+2026-06-09 14:37:56,887 | INFO | nfe_scanner | Nota excluida | id=5 | numero=1007
+2026-06-09 14:37:56,888 | INFO | nfe_scanner | Requisicao concluida | metodo=DELETE | rota=/notas/5/ | status=200 | duracao_ms=9.7
+2026-06-09 14:37:56,921 | INFO | nfe_scanner | Nota excluida | id=8 | numero=TESTE-CC-001
+2026-06-09 14:37:56,922 | INFO | nfe_scanner | Requisicao concluida | metodo=DELETE | rota=/notas/8/ | status=200 | duracao_ms=13.0
+2026-06-09 14:37:56,957 | INFO | nfe_scanner | Nota excluida | id=9 | numero=TESTE-CC-002
+2026-06-09 14:37:56,960 | INFO | nfe_scanner | Requisicao concluida | metodo=DELETE | rota=/notas/9/ | status=200 | duracao_ms=14.8
+2026-06-09 14:37:56,988 | INFO | nfe_scanner | Nota excluida | id=10 | numero=TESTE-CC-003
+2026-06-09 14:37:56,989 | INFO | nfe_scanner | Requisicao concluida | metodo=DELETE | rota=/notas/10/ | status=200 | duracao_ms=14.0
+2026-06-09 14:37:57,016 | INFO | nfe_scanner | Nota excluida | id=11 | numero=TESTE-CC-004
+2026-06-09 14:37:57,017 | INFO | nfe_scanner | Requisicao concluida | metodo=DELETE | rota=/notas/11/ | status=200 | duracao_ms=9.1
+2026-06-09 14:37:57,046 | INFO | nfe_scanner | Nota excluida | id=12 | numero=TESTE-CC-005
+2026-06-09 14:37:57,047 | INFO | nfe_scanner | Requisicao concluida | metodo=DELETE | rota=/notas/12/ | status=200 | duracao_ms=8.2
+2026-06-09 14:37:57,069 | INFO | nfe_scanner | Nota excluida | id=13 | numero=TESTE-CC-006
+2026-06-09 14:37:57,070 | INFO | nfe_scanner | Requisicao concluida | metodo=DELETE | rota=/notas/13/ | status=200 | duracao_ms=8.0
+2026-06-09 14:37:57,101 | INFO | nfe_scanner | Nota excluida | id=14 | numero=TESTE-CC-007
+2026-06-09 14:37:57,102 | INFO | nfe_scanner | Requisicao concluida | metodo=DELETE | rota=/notas/14/ | status=200 | duracao_ms=10.0
+2026-06-09 14:37:57,137 | INFO | nfe_scanner | Nota excluida | id=15 | numero=TESTE-VIRGEM-021
+2026-06-09 14:37:57,138 | INFO | nfe_scanner | Requisicao concluida | metodo=DELETE | rota=/notas/15/ | status=200 | duracao_ms=14.7
+2026-06-09 14:37:57,165 | INFO | nfe_scanner | Requisicao concluida | metodo=GET | rota=/notas/ | status=200 | duracao_ms=4.5
+2026-06-09 14:38:02,945 | INFO | nfe_scanner | Requisicao concluida | metodo=GET | rota=/notas/ | status=200 | duracao_ms=2.4
+2026-06-09 14:38:14,966 | INFO | nfe_scanner | Requisicao concluida | metodo=GET | rota=/notas/ | status=200 | duracao_ms=2.6
+2026-06-09 14:38:35,461 | INFO | nfe_scanner | Nota cadastrada | id=1 | numero=MASSA-001 | centro_custo=A1BR
+2026-06-09 14:38:35,466 | INFO | nfe_scanner | Requisicao concluida | metodo=POST | rota=/notas/ | status=200 | duracao_ms=19.0
+2026-06-09 14:38:35,490 | INFO | nfe_scanner | Nota cadastrada | id=2 | numero=MASSA-002 | centro_custo=A1BR
+2026-06-09 14:38:35,494 | INFO | nfe_scanner | Requisicao concluida | metodo=POST | rota=/notas/ | status=200 | duracao_ms=22.9
+2026-06-09 14:38:35,516 | INFO | nfe_scanner | Nota cadastrada | id=3 | numero=MASSA-003 | centro_custo=A1BR/PRU
+2026-06-09 14:38:35,517 | INFO | nfe_scanner | Requisicao concluida | metodo=POST | rota=/notas/ | status=200 | duracao_ms=19.6
+2026-06-09 14:38:35,549 | INFO | nfe_scanner | Nota cadastrada | id=4 | numero=MASSA-004 | centro_custo=A1BR/PRU
+2026-06-09 14:38:35,550 | INFO | nfe_scanner | Requisicao concluida | metodo=POST | rota=/notas/ | status=200 | duracao_ms=7.6
+2026-06-09 14:38:35,580 | INFO | nfe_scanner | Nota cadastrada | id=5 | numero=MASSA-005 | centro_custo=A2BR
+2026-06-09 14:38:35,580 | INFO | nfe_scanner | Requisicao concluida | metodo=POST | rota=/notas/ | status=200 | duracao_ms=6.7
+2026-06-09 14:38:35,615 | INFO | nfe_scanner | Nota cadastrada | id=6 | numero=MASSA-006 | centro_custo=A2BR
+2026-06-09 14:38:35,616 | INFO | nfe_scanner | Requisicao concluida | metodo=POST | rota=/notas/ | status=200 | duracao_ms=8.6
+2026-06-09 14:39:13,406 | INFO | nfe_scanner | Requisicao concluida | metodo=GET | rota=/notas/ | status=200 | duracao_ms=3.3
+2026-06-09 14:39:13,428 | INFO | nfe_scanner | XML gerado | nota_id=1 | quantidade=1 | arquivo=nota_fiscal_1_20260609_143913.xml
+2026-06-09 14:39:13,430 | INFO | nfe_scanner | Requisicao concluida | metodo=POST | rota=/relatorio/ | status=200 | duracao_ms=10.7
+2026-06-09 14:39:27,966 | INFO | nfe_scanner | Requisicao concluida | metodo=GET | rota=/notas/ | status=200 | duracao_ms=3.6
+2026-06-09 14:39:43,343 | INFO | nfe_scanner | Requisicao concluida | metodo=GET | rota=/notas/ | status=200 | duracao_ms=5.4
+2026-06-09 14:39:54,248 | INFO | nfe_scanner | Requisicao concluida | metodo=GET | rota=/notas/ | status=200 | duracao_ms=5.2

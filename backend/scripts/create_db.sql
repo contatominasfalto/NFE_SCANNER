@@ -8,6 +8,13 @@ CREATE TABLE IF NOT EXISTS notas_fiscais (
     nome_fornecedor VARCHAR(200),
     valor_total DECIMAL(10,2),
     chave_acesso VARCHAR(44) UNIQUE,
+    centro_custo VARCHAR(20),
+    produto TEXT,
+    quantidade REAL,
+    local_areia VARCHAR(255),
+    transportador VARCHAR(255),
+    faturista VARCHAR(100) DEFAULT 'BIPE',
+    lider_operacional VARCHAR(255),
     observacao TEXT,
     caminho_arquivo_imagem VARCHAR(500),
     data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP

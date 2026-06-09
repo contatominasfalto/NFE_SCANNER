@@ -1,16 +1,21 @@
+import os
+import re
+
 from kivy.metrics import dp
+from kivy.utils import platform
 from kivy.uix.screenmanager import Screen
 from kivy.uix.scrollview import ScrollView
 from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.button import MDFlatButton
+from kivymd.uix.button import MDFlatButton, MDIconButton
 from kivymd.uix.card import MDCard
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.label import MDLabel
 from kivymd.uix.textfield import MDTextField
 from kivymd.uix.toolbar import MDTopAppBar
+from plyer import storagepath
 
 from services.api_client import APIClient
-from ui import ACCENT, BG, MUTED, PRIMARY, SURFACE, TEXT, WHITE, outline_button
+from ui import ACCENT, BG, DANGER, MUTED, PRIMARY, SURFACE, TEXT, WHITE, outline_button, primary_button
 
 
 class ListScreen(Screen):
@@ -94,6 +99,10 @@ class ListScreen(Screen):
             or query in str(nota.get("numero_nf", "")).lower()
             or query in str(nota.get("nome_fornecedor", "")).lower()
             or query in str(nota.get("cnpj_fornecedor", "")).lower()
+            or query in str(nota.get("centro_custo", "")).lower()
+            or query in str(nota.get("produto", "")).lower()
+            or query in str(nota.get("local_areia", "")).lower()
+            or query in str(nota.get("transportador", "")).lower()
         ]
 
         self.status_label.text = f"{len(notas)} nota(s) encontrada(s)"
@@ -175,14 +184,226 @@ class ListScreen(Screen):
         return card
 
     def ver_detalhe(self, nota):
-        message = (
-            f"Numero: {nota.get('numero_nf', '')}\n"
-            f"Fornecedor: {nota.get('nome_fornecedor', '')}\n"
-            f"CNPJ: {nota.get('cnpj_fornecedor', '')}\n"
-            f"Valor: R$ {nota.get('valor_total', '')}\n"
-            f"Data: {nota.get('data_emissao', '')}"
+        if self.dialog:
+            self.dialog.dismiss()
+
+        content = MDBoxLayout(
+            orientation="vertical",
+            adaptive_height=True,
+            spacing=dp(14),
         )
-        self.show_dialog("Detalhes da nota", message)
+        header = MDBoxLayout(
+            orientation="horizontal",
+            adaptive_height=True,
+            spacing=dp(4),
+        )
+        header.add_widget(
+            MDLabel(
+                text="Detalhes da nota",
+                font_style="H6",
+                bold=True,
+                theme_text_color="Custom",
+                text_color=TEXT,
+                size_hint_y=None,
+                height=dp(48),
+            )
+        )
+        edit_button = MDIconButton(
+            icon="pencil-outline",
+            theme_text_color="Custom",
+            text_color=PRIMARY,
+        )
+        edit_button.bind(on_release=lambda *_: self.editar_nota(nota))
+        header.add_widget(edit_button)
+        delete_button = MDIconButton(
+            icon="delete-outline",
+            theme_text_color="Custom",
+            text_color=DANGER,
+        )
+        delete_button.bind(on_release=lambda *_: self.confirmar_exclusao(nota))
+        header.add_widget(delete_button)
+        content.add_widget(header)
+
+        detalhe = MDLabel(
+            text=(
+                f"Numero: {nota.get('numero_nf', '')}\n"
+                f"Fornecedor: {nota.get('nome_fornecedor', '')}\n"
+                f"CNPJ: {nota.get('cnpj_fornecedor', '')}\n"
+                f"Centro de custo: {nota.get('centro_custo') or 'Nao informado'}\n"
+                f"Produto: {nota.get('produto') or 'Nao informado'}\n"
+                f"Quantidade: {nota.get('quantidade') or 'Nao informada'}\n"
+                f"Local da areia: {nota.get('local_areia') or 'Nao informado'}\n"
+                f"Transportador: {nota.get('transportador') or 'Nao informado'}\n"
+                f"Faturista: {nota.get('faturista') or 'BIPE'}\n"
+                f"Lider operacional: {nota.get('lider_operacional') or 'Nao informado'}\n"
+                f"Valor: R$ {nota.get('valor_total', '')}\n"
+                f"Data emissao: {nota.get('data_emissao', '')}\n"
+                f"Data/hora do bip: {nota.get('data_cadastro', '')}"
+            ),
+            font_style="Body1",
+            theme_text_color="Custom",
+            text_color=MUTED,
+            size_hint_y=None,
+            height=dp(286),
+        )
+        content.add_widget(detalhe)
+        content.add_widget(
+            primary_button(
+                "Gerar XML",
+                "file-code-outline",
+                lambda *_: self.gerar_xml_nota(nota),
+            )
+        )
+
+        self.dialog = MDDialog(
+            type="custom",
+            content_cls=content,
+            buttons=[
+                MDFlatButton(
+                    text="FECHAR",
+                    theme_text_color="Custom",
+                    text_color=PRIMARY,
+                    on_release=lambda *_: self.dialog.dismiss(),
+                )
+            ],
+        )
+        self.dialog.open()
+
+    def editar_nota(self, nota):
+        if self.dialog:
+            self.dialog.dismiss()
+        confirm_screen = self.manager.get_screen("confirm")
+        confirm_screen.set_nota_para_edicao(nota)
+        self.manager.current = "confirm"
+
+    def confirmar_exclusao(self, nota):
+        if self.dialog:
+            self.dialog.dismiss()
+
+        numero = nota.get("numero_nf") or "sem numero"
+        self.dialog = MDDialog(
+            title="Excluir nota fiscal?",
+            text=f"A NF {numero} sera removida permanentemente.",
+            buttons=[
+                MDFlatButton(
+                    text="CANCELAR",
+                    theme_text_color="Custom",
+                    text_color=PRIMARY,
+                    on_release=lambda *_: self.dialog.dismiss(),
+                ),
+                MDFlatButton(
+                    text="EXCLUIR",
+                    theme_text_color="Custom",
+                    text_color=DANGER,
+                    on_release=lambda *_: self.excluir_nota(nota),
+                ),
+            ],
+        )
+        self.dialog.open()
+
+    def excluir_nota(self, nota):
+        nota_id = nota.get("id")
+        if self.dialog:
+            self.dialog.dismiss()
+        if not nota_id:
+            self.show_dialog("Erro ao excluir", "Nota sem ID para exclusao.")
+            return
+
+        try:
+            APIClient.delete_nota(nota_id)
+            self.carregar_notas()
+            self.show_dialog("Nota excluida", "A nota fiscal foi excluida com sucesso.")
+        except Exception as error:
+            self.show_dialog("Erro ao excluir", str(error))
+
+    def gerar_xml_nota(self, nota):
+        nota_id = nota.get("id")
+        numero = nota.get("numero_nf") or nota_id
+
+        if not nota_id:
+            self.show_dialog("Erro ao gerar XML", "Nota sem ID para gerar o XML.")
+            return
+
+        try:
+            response = APIClient.gerar_xml_nota(nota_id)
+            filename = self.build_xml_filename(numero)
+            filepath = self.save_xml_to_downloads(filename, response.content)
+
+            self.show_dialog("XML gerado", f"Arquivo XML salvo em:\n{filepath}")
+        except Exception as error:
+            self.show_dialog("Erro ao gerar XML", str(error))
+
+    def save_xml_to_downloads(self, filename, content):
+        if platform == "android":
+            try:
+                return self.save_xml_to_android_downloads(filename, content)
+            except Exception:
+                pass
+
+        downloads_dir = self.get_downloads_dir()
+        filepath = os.path.join(downloads_dir, filename)
+
+        with open(filepath, "wb") as file_obj:
+            file_obj.write(content)
+
+        return filepath
+
+    def save_xml_to_android_downloads(self, filename, content):
+        from android import mActivity
+        from jnius import autoclass
+
+        BuildVersion = autoclass("android.os.Build$VERSION")
+        Environment = autoclass("android.os.Environment")
+
+        if BuildVersion.SDK_INT < 29:
+            downloads_dir = self.get_downloads_dir()
+            filepath = os.path.join(downloads_dir, filename)
+            with open(filepath, "wb") as file_obj:
+                file_obj.write(content)
+            return filepath
+
+        ContentValues = autoclass("android.content.ContentValues")
+        Downloads = autoclass("android.provider.MediaStore$Downloads")
+        MediaColumns = autoclass("android.provider.MediaStore$MediaColumns")
+
+        values = ContentValues()
+        values.put(MediaColumns.DISPLAY_NAME, filename)
+        values.put(MediaColumns.MIME_TYPE, "application/xml")
+        values.put(MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+        values.put(MediaColumns.IS_PENDING, 1)
+
+        resolver = mActivity.getContentResolver()
+        uri = resolver.insert(Downloads.EXTERNAL_CONTENT_URI, values)
+        if uri is None:
+            raise RuntimeError("Nao foi possivel criar o arquivo em Downloads.")
+
+        output_stream = resolver.openOutputStream(uri)
+        try:
+            output_stream.write(bytearray(content))
+        finally:
+            output_stream.close()
+
+        values.clear()
+        values.put(MediaColumns.IS_PENDING, 0)
+        resolver.update(uri, values, None, None)
+
+        return f"{Environment.DIRECTORY_DOWNLOADS}/{filename}"
+
+    def get_downloads_dir(self):
+        try:
+            downloads_dir = storagepath.get_downloads_dir()
+        except Exception:
+            downloads_dir = None
+
+        if not downloads_dir or downloads_dir.startswith("Method not implemented"):
+            downloads_dir = os.path.join(os.path.expanduser("~"), "Downloads")
+
+        os.makedirs(downloads_dir, exist_ok=True)
+        return downloads_dir
+
+    def build_xml_filename(self, numero):
+        safe_numero = re.sub(r"[^A-Za-z0-9_-]+", "_", str(numero)).strip("_")
+        return f"nota_fiscal_{safe_numero or 'sem_numero'}.xml"
 
     def show_dialog(self, title, message):
         if self.dialog:

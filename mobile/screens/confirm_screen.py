@@ -16,23 +16,21 @@ from ui import ACCENT, BG, DANGER, MUTED, PRIMARY, TEXT, WHITE, outline_button, 
 class ConfirmScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.foto_path = None
-        self.ocr_data = {}
         self.dialog = None
         self.campos = {}
+        self.editing_nota_id = None
         self.build_ui()
 
     def build_ui(self):
         root = MDBoxLayout(orientation="vertical", md_bg_color=BG)
-        root.add_widget(
-            MDTopAppBar(
-                title="Conferir dados da nota",
-                elevation=0,
-                md_bg_color=PRIMARY,
-                specific_text_color=WHITE,
-                left_action_items=[["arrow-left", lambda *_: self.cancelar(None)]],
-            )
+        self.toolbar = MDTopAppBar(
+            title="Conferir dados da nota",
+            elevation=0,
+            md_bg_color=PRIMARY,
+            specific_text_color=WHITE,
+            left_action_items=[["arrow-left", lambda *_: self.cancelar(None)]],
         )
+        root.add_widget(self.toolbar)
 
         scroll = ScrollView()
         form = MDBoxLayout(
@@ -43,86 +41,138 @@ class ConfirmScreen(Screen):
         )
 
         intro = section_card(104)
-        intro.add_widget(
-            MDLabel(
-                text="Revise antes de salvar",
-                font_style="H6",
-                bold=True,
-                theme_text_color="Custom",
-                text_color=TEXT,
-                size_hint_y=None,
-                height=dp(30),
-            )
+        self.intro_title = MDLabel(
+            text="Revise antes de salvar",
+            font_style="H6",
+            bold=True,
+            theme_text_color="Custom",
+            text_color=TEXT,
+            size_hint_y=None,
+            height=dp(30),
         )
-        intro.add_widget(
-            MDLabel(
-                text="O OCR pode errar numeros e valores. Confira os campos principais antes de enviar para o banco.",
-                font_style="Body2",
-                theme_text_color="Custom",
-                text_color=MUTED,
-            )
+        intro.add_widget(self.intro_title)
+        self.intro_text = MDLabel(
+            text="Confira os campos da nota antes de enviar para o banco.",
+            font_style="Body2",
+            theme_text_color="Custom",
+            text_color=MUTED,
         )
+        intro.add_widget(self.intro_text)
         form.add_widget(intro)
 
         fields = [
-            ("numero_nf", "Numero da NF", "Ex.: 12345", False),
-            ("serie", "Serie", "Ex.: 1", False),
-            ("data_emissao", "Data de emissao", "YYYY-MM-DD", False),
-            ("cnpj_fornecedor", "CNPJ do fornecedor", "00.000.000/0000-00", False),
-            ("nome_fornecedor", "Fornecedor", "Razao social", False),
-            ("valor_total", "Valor total", "0,00", False),
-            ("chave_acesso", "Chave de acesso", "44 digitos", True),
-            ("observacao", "Observacao", "Informacoes adicionais", True),
+            ("centro_custo", "Centro de custo", False),
+            ("chave_acesso", "Chave NF", True),
+            ("data_emissao", "Data de emissao", False),
+            ("numero_nf", "Numero da NF", False),
+            ("serie", "Serie", False),
+            ("produto", "Produto", True),
+            ("quantidade", "Quantidade / Peso liquido", False),
+            ("local_areia", "Local da areia", False),
+            ("transportador", "Transportador", False),
+            ("faturista", "Faturista", False),
+            ("lider_operacional", "Lider operacional", False),
+            ("cnpj_fornecedor", "CNPJ do fornecedor", False),
+            ("nome_fornecedor", "Fornecedor", False),
+            ("valor_total", "Valor total", False),
+            ("observacao", "Observacao / Informacao adicional", True),
         ]
 
         card = section_card()
-        for key, label, hint, multiline in fields:
+        card.spacing = dp(18)
+        for key, label, multiline in fields:
             field = MDTextField(
-                hint_text=hint,
-                helper_text=label,
-                helper_text_mode="persistent",
+                hint_text=label,
                 mode="rectangle",
                 multiline=multiline,
+                disabled=key in ("centro_custo", "faturista"),
                 size_hint_y=None,
-                height=dp(88 if multiline else 64),
+                height=dp(168 if key == "observacao" else 88 if multiline else 56),
             )
             self.campos[key] = field
             card.add_widget(field)
         form.add_widget(card)
 
         actions = MDBoxLayout(
-            orientation="horizontal",
+            orientation="vertical",
             adaptive_height=True,
             spacing=dp(10),
             padding=(0, dp(2), 0, 0),
         )
+        self.primary_action = primary_button("Salvar e proxima", "barcode-scan", self.salvar_e_proxima)
+        self.finish_action = outline_button("Salvar e finalizar", "check-circle-outline", self.salvar_e_finalizar)
+        actions.add_widget(self.primary_action)
+        actions.add_widget(self.finish_action)
         actions.add_widget(outline_button("Cancelar", "close", self.cancelar))
-        actions.add_widget(primary_button("Salvar nota", "content-save-outline", self.salvar_nota))
         form.add_widget(actions)
 
         scroll.add_widget(form)
         root.add_widget(scroll)
         self.add_widget(root)
 
-    def set_foto_path(self, path):
-        self.foto_path = path
-        self.processar_ocr()
+    def set_nota_data(self, nota_data):
+        chave_acesso = nota_data.get("chave_acesso")
+        if not chave_acesso:
+            self.show_dialog("Chave invalida", "Nenhuma chave de acesso foi recebida.")
+            self.manager.current = "scan"
+            return
 
-    def processar_ocr(self):
-        try:
-            self.ocr_data = APIClient.ocr_nf(self.foto_path)
-            for campo, valor in self.ocr_data.items():
-                if campo in self.campos:
-                    self.campos[campo].text = str(valor or "")
-        except Exception as error:
-            self.show_dialog("Erro no OCR", f"Nao foi possivel processar a imagem.\n\n{error}")
+        self.set_edit_mode(None)
+        self.preencher_campos(nota_data)
+
+        self.intro_title.text = "Nota fiscal consultada"
+        self.intro_text.text = (
+            "Confira os dados retornados pela API. Use Salvar e proxima para gravar "
+            "e voltar ao leitor, ou Salvar e finalizar para encerrar."
+        )
+
+    def set_nota_para_edicao(self, nota_data):
+        self.set_edit_mode(nota_data.get("id"))
+        self.preencher_campos(nota_data)
+        self.intro_title.text = "Editar nota fiscal"
+        self.intro_text.text = "Altere os campos necessarios e salve para atualizar a nota cadastrada."
+
+    def preencher_campos(self, nota_data):
+        self.limpar_campos()
+        self.campos["faturista"].text = "BIPE"
+        for campo, valor in nota_data.items():
+            if campo in self.campos:
+                self.campos[campo].text = str(valor or "")
+
+    def set_edit_mode(self, nota_id):
+        self.editing_nota_id = nota_id
+        editing = nota_id is not None
+        self.toolbar.title = "Editar nota fiscal" if editing else "Conferir dados da nota"
+        self.primary_action.text = "Salvar alteracoes" if editing else "Salvar e proxima"
+        self.primary_action.icon = "content-save-outline" if editing else "barcode-scan"
+        self.finish_action.disabled = editing
+        self.finish_action.opacity = 0 if editing else 1
+        self.finish_action.height = dp(0 if editing else 48)
+
+    def limpar_campos(self):
+        for field in self.campos.values():
+            field.text = ""
+
+    def atualizar_progresso(self):
+        self.intro_title.text = "Revise antes de salvar"
+        self.intro_text.text = (
+            "Confira esta nota. Use Salvar e proxima para gravar e voltar ao leitor, "
+            "ou Salvar e finalizar para encerrar o processo."
+        )
 
     def build_payload(self):
-        valor_text = self.campos["valor_total"].text.strip().replace(".", "").replace(",", ".")
+        valor_text = self.campos["valor_total"].text.strip()
+        if "," in valor_text:
+            valor_text = valor_text.replace(".", "").replace(",", ".")
         try:
             valor_total = float(valor_text or 0)
         except ValueError:
             valor_total = 0.0
+        quantidade_text = self.campos["quantidade"].text.strip().replace(",", ".")
+        try:
+            quantidade = float(quantidade_text) if quantidade_text else None
+        except ValueError:
+            quantidade = None
 
         return {
             "numero_nf": self.campos["numero_nf"].text.strip(),
@@ -132,19 +182,54 @@ class ConfirmScreen(Screen):
             "nome_fornecedor": self.campos["nome_fornecedor"].text.strip(),
             "valor_total": valor_total,
             "chave_acesso": self.campos["chave_acesso"].text.strip() or None,
+            "centro_custo": self.campos["centro_custo"].text.strip() or None,
+            "produto": self.campos["produto"].text.strip() or None,
+            "quantidade": quantidade,
+            "local_areia": self.campos["local_areia"].text.strip() or None,
+            "transportador": self.campos["transportador"].text.strip() or None,
+            "faturista": "BIPE",
+            "lider_operacional": self.campos["lider_operacional"].text.strip() or None,
             "observacao": self.campos["observacao"].text.strip() or None,
-            "caminho_arquivo_imagem": self.ocr_data.get("caminho_arquivo_imagem"),
+            "caminho_arquivo_imagem": None,
         }
 
-    def salvar_nota(self, instance):
+    def salvar_e_proxima(self, instance):
         try:
+            if self.editing_nota_id is not None:
+                APIClient.update_nota(self.editing_nota_id, self.build_payload())
+                self.editing_nota_id = None
+                self.manager.current = "list"
+                return
             APIClient.save_nota(self.build_payload())
+            self.preparar_leitor_para_proxima()
+        except Exception as error:
+            self.show_dialog("Erro ao salvar", str(error))
+
+    def salvar_e_finalizar(self, instance):
+        try:
+            if self.editing_nota_id is not None:
+                APIClient.update_nota(self.editing_nota_id, self.build_payload())
+                self.editing_nota_id = None
+                self.manager.current = "list"
+                return
+            APIClient.save_nota(self.build_payload())
+            self.manager.get_screen("scan").limpar_centro_custo()
             App.get_running_app().root.current = "list"
         except Exception as error:
             self.show_dialog("Erro ao salvar", str(error))
 
+    def preparar_leitor_para_proxima(self):
+        self.manager.current = "scan"
+        scan_screen = self.manager.get_screen("scan")
+        scan_screen.preparar_nova_leitura()
+
     def cancelar(self, instance):
-        self.manager.current = "home"
+        if self.editing_nota_id is not None:
+            self.editing_nota_id = None
+            self.manager.current = "list"
+        else:
+            self.manager.get_screen("scan").limpar_centro_custo()
+            self.manager.current = "home"
 
     def show_dialog(self, title, message):
         if self.dialog:

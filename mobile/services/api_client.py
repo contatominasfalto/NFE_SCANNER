@@ -34,10 +34,12 @@ class APIClient:
         return response
 
     @staticmethod
-    def ocr_nf(image_path):
-        with open(image_path, "rb") as file_obj:
-            files = {"file": ("nota.jpg", file_obj, "image/jpeg")}
-            response = APIClient.request("POST", "/ocr-nf/", files=files)
+    def ler_codigo_barras(codigo_barras):
+        response = APIClient.request(
+            "POST",
+            "/barcode-nf/",
+            json={"codigo_barras": codigo_barras},
+        )
         return response.json()
 
     @staticmethod
@@ -46,10 +48,13 @@ class APIClient:
         return response.json()
 
     @staticmethod
-    def upload_nf(image_path):
-        with open(image_path, "rb") as file_obj:
-            files = {"file": ("nota.jpg", file_obj, "image/jpeg")}
-            response = APIClient.request("POST", "/upload-nf/", files=files)
+    def update_nota(nota_id, nota_data):
+        response = APIClient.request("PUT", f"/notas/{nota_id}/", json=nota_data)
+        return response.json()
+
+    @staticmethod
+    def delete_nota(nota_id):
+        response = APIClient.request("DELETE", f"/notas/{nota_id}/")
         return response.json()
 
     @staticmethod
@@ -60,6 +65,7 @@ class APIClient:
     @staticmethod
     def gerar_relatorio(filtros, formato="xml"):
         params = {
+            "nota_id": filtros.get("nota_id"),
             "data_inicio": filtros.get("data_inicio"),
             "data_fim": filtros.get("data_fim"),
             "fornecedor": filtros.get("fornecedor"),
@@ -69,3 +75,7 @@ class APIClient:
         }
 
         return APIClient.request("POST", "/relatorio/", params=params)
+
+    @staticmethod
+    def gerar_xml_nota(nota_id):
+        return APIClient.gerar_relatorio({"nota_id": nota_id}, "xml")

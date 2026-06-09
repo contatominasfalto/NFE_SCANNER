@@ -11,3 +11,26 @@ Rodar o Frontend
 cd mobile
 ..\venv-mobile\Scripts\activate
 python main.py
+
+
+"base_url": "http://127.0.0.1:8000"
+
+
+Logs do Backend:
+
+Os eventos da API sao exibidos no terminal e gravados em:
+
+backend/logs/nfe_scanner.log
+
+Configuracoes opcionais no backend/.env:
+
+LOG_LEVEL=INFO
+LOG_DIR=logs
+
+Niveis recomendados:
+
+INFO = operacoes normais, consultas, cadastros e tempo das requisicoes
+WARNING = nota nao encontrada, dados invalidos e conflitos
+ERROR = falhas de conexao, configuracao ou integracao
+
+As chaves de acesso das notas sao mascaradas nos logs e a chave privada da API fiscal nao e registrada.
