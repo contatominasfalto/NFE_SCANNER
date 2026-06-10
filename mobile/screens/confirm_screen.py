@@ -18,7 +18,6 @@ class ConfirmScreen(Screen):
         super().__init__(**kwargs)
         self.dialog = None
         self.campos = {}
-        self.editing_nota_id = None
         self.build_ui()
 
     def build_ui(self):
@@ -123,7 +122,6 @@ class ConfirmScreen(Screen):
             self.manager.current = "home"
             return
 
-        self.set_edit_mode(None)
         self.preencher_campos(nota_data)
 
         self.intro_title.text = "Nota fiscal consultada"
@@ -132,28 +130,12 @@ class ConfirmScreen(Screen):
             "e voltar ao leitor, ou Salvar e finalizar para encerrar."
         )
 
-    def set_nota_para_edicao(self, nota_data):
-        self.set_edit_mode(nota_data.get("id"))
-        self.preencher_campos(nota_data)
-        self.intro_title.text = "Editar nota fiscal"
-        self.intro_text.text = "Altere os campos necessarios e salve para atualizar a nota cadastrada."
-
     def preencher_campos(self, nota_data):
         self.limpar_campos()
         self.campos["faturista"].text = "BIPE"
         for campo, valor in nota_data.items():
             if campo in self.campos:
                 self.campos[campo].text = str(valor or "")
-
-    def set_edit_mode(self, nota_id):
-        self.editing_nota_id = nota_id
-        editing = nota_id is not None
-        self.toolbar.title = "Editar nota fiscal" if editing else "Conferir dados da nota"
-        self.primary_action.text = "Salvar alteracoes" if editing else "Salvar e proxima"
-        self.primary_action.icon = "content-save-outline" if editing else "barcode-scan"
-        self.finish_action.disabled = editing
-        self.finish_action.opacity = 0 if editing else 1
-        self.finish_action.height = dp(0 if editing else 48)
 
     def limpar_campos(self):
         for field in self.campos.values():
@@ -204,11 +186,6 @@ class ConfirmScreen(Screen):
 
     def salvar_e_proxima(self, instance):
         try:
-            if self.editing_nota_id is not None:
-                APIClient.update_nota(self.editing_nota_id, self.build_payload())
-                self.editing_nota_id = None
-                self.manager.current = "list"
-                return
             APIClient.save_nota(self.build_payload())
             self.preparar_leitor_para_proxima()
         except Exception as error:
@@ -216,11 +193,6 @@ class ConfirmScreen(Screen):
 
     def salvar_e_finalizar(self, instance):
         try:
-            if self.editing_nota_id is not None:
-                APIClient.update_nota(self.editing_nota_id, self.build_payload())
-                self.editing_nota_id = None
-                self.manager.current = "list"
-                return
             APIClient.save_nota(self.build_payload())
             self.manager.get_screen("scan").limpar_local()
             App.get_running_app().root.current = "list"
@@ -233,12 +205,8 @@ class ConfirmScreen(Screen):
         scan_screen.preparar_nova_leitura()
 
     def cancelar(self, instance):
-        if self.editing_nota_id is not None:
-            self.editing_nota_id = None
-            self.manager.current = "list"
-        else:
-            self.manager.get_screen("scan").limpar_local()
-            self.manager.current = "home"
+        self.manager.get_screen("scan").limpar_local()
+        self.manager.current = "home"
 
     def show_dialog(self, title, message):
         if self.dialog:

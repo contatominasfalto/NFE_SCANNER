@@ -7,6 +7,10 @@ import requests
 
 class APIClient:
     DEFAULT_BASE_URL = "http://192.168.1.100:8000"
+    APP_USERNAME = "BIPE"
+    APP_PASSWORD = "BIPE"
+    session = requests.Session()
+    authenticated_base_url = None
 
     @staticmethod
     def get_base_url():
@@ -14,7 +18,8 @@ class APIClient:
         if env_url:
             return env_url.rstrip("/")
 
-        config_path = os.path.join(os.getcwd(), "api_config.json")
+        mobile_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        config_path = os.path.join(mobile_dir, "api_config.json")
 
         if os.path.exists(config_path):
             try:
@@ -26,10 +31,26 @@ class APIClient:
 
         return APIClient.DEFAULT_BASE_URL
 
+    @classmethod
+    def authenticate(cls, force=False):
+        base_url = cls.get_base_url()
+        if not force and cls.authenticated_base_url == base_url:
+            return
+
+        if force or cls.authenticated_base_url != base_url:
+            cls.session.cookies.clear()
+
+        response = cls.session.post(
+            f"{base_url}/auth/login/",
+            json={"username": cls.APP_USERNAME, "password": cls.APP_PASSWORD},
+            timeout=30,
+        )
+        cls.raise_for_error(response, "/auth/login/")
+        cls.authenticated_base_url = base_url
+        Logger.info("APIClient: aplicativo autenticado automaticamente como BIPE")
+
     @staticmethod
-    def request(method, path, **kwargs):
-        url = f"{APIClient.get_base_url()}{path}"
-        response = requests.request(method, url, timeout=30, **kwargs)
+    def raise_for_error(response, path):
         if not response.ok:
             detail = None
             try:
@@ -46,6 +67,18 @@ class APIClient:
                 detail = "; ".join(messages)
 
             raise RuntimeError(detail or f"Erro HTTP {response.status_code} ao acessar {path}.")
+
+    @classmethod
+    def request(cls, method, path, **kwargs):
+        cls.authenticate()
+        url = f"{cls.get_base_url()}{path}"
+        response = cls.session.request(method, url, timeout=30, **kwargs)
+
+        if response.status_code == 401:
+            cls.authenticate(force=True)
+            response = cls.session.request(method, url, timeout=30, **kwargs)
+
+        cls.raise_for_error(response, path)
         return response
 
     @staticmethod
@@ -60,16 +93,6 @@ class APIClient:
     @staticmethod
     def save_nota(nota_data):
         response = APIClient.request("POST", "/notas/", json=nota_data)
-        return response.json()
-
-    @staticmethod
-    def update_nota(nota_id, nota_data):
-        response = APIClient.request("PUT", f"/notas/{nota_id}/", json=nota_data)
-        return response.json()
-
-    @staticmethod
-    def delete_nota(nota_id):
-        response = APIClient.request("DELETE", f"/notas/{nota_id}/")
         return response.json()
 
     @staticmethod

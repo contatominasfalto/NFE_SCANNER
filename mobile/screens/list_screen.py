@@ -6,7 +6,7 @@ from kivy.utils import platform
 from kivy.uix.screenmanager import Screen
 from kivy.uix.scrollview import ScrollView
 from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.button import MDFlatButton, MDIconButton
+from kivymd.uix.button import MDFlatButton
 from kivymd.uix.card import MDCard
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.label import MDLabel
@@ -15,7 +15,7 @@ from kivymd.uix.toolbar import MDTopAppBar
 from plyer import storagepath
 
 from services.api_client import APIClient
-from ui import ACCENT, BG, DANGER, MUTED, PRIMARY, SURFACE, TEXT, WHITE, outline_button, primary_button
+from ui import ACCENT, BG, MUTED, PRIMARY, SURFACE, TEXT, WHITE, outline_button, primary_button
 
 
 class ListScreen(Screen):
@@ -103,6 +103,13 @@ class ListScreen(Screen):
             or query in str(nota.get("produto", "")).lower()
             or query in str(nota.get("transportador", "")).lower()
         ]
+        notas.sort(
+            key=lambda nota: (
+                str(nota.get("data_cadastro") or ""),
+                int(nota.get("id") or 0),
+            ),
+            reverse=True,
+        )
 
         self.status_label.text = f"{len(notas)} nota(s) encontrada(s)"
 
@@ -207,20 +214,6 @@ class ListScreen(Screen):
                 height=dp(48),
             )
         )
-        edit_button = MDIconButton(
-            icon="pencil-outline",
-            theme_text_color="Custom",
-            text_color=PRIMARY,
-        )
-        edit_button.bind(on_release=lambda *_: self.editar_nota(nota))
-        header.add_widget(edit_button)
-        delete_button = MDIconButton(
-            icon="delete-outline",
-            theme_text_color="Custom",
-            text_color=DANGER,
-        )
-        delete_button.bind(on_release=lambda *_: self.confirmar_exclusao(nota))
-        header.add_widget(delete_button)
         content.add_widget(header)
 
         detalhe = MDLabel(
@@ -266,53 +259,6 @@ class ListScreen(Screen):
             ],
         )
         self.dialog.open()
-
-    def editar_nota(self, nota):
-        if self.dialog:
-            self.dialog.dismiss()
-        confirm_screen = self.manager.get_screen("confirm")
-        confirm_screen.set_nota_para_edicao(nota)
-        self.manager.current = "confirm"
-
-    def confirmar_exclusao(self, nota):
-        if self.dialog:
-            self.dialog.dismiss()
-
-        numero = nota.get("numero_nf") or "sem numero"
-        self.dialog = MDDialog(
-            title="Excluir nota fiscal?",
-            text=f"A NF {numero} sera removida permanentemente.",
-            buttons=[
-                MDFlatButton(
-                    text="CANCELAR",
-                    theme_text_color="Custom",
-                    text_color=PRIMARY,
-                    on_release=lambda *_: self.dialog.dismiss(),
-                ),
-                MDFlatButton(
-                    text="EXCLUIR",
-                    theme_text_color="Custom",
-                    text_color=DANGER,
-                    on_release=lambda *_: self.excluir_nota(nota),
-                ),
-            ],
-        )
-        self.dialog.open()
-
-    def excluir_nota(self, nota):
-        nota_id = nota.get("id")
-        if self.dialog:
-            self.dialog.dismiss()
-        if not nota_id:
-            self.show_dialog("Erro ao excluir", "Nota sem ID para exclusao.")
-            return
-
-        try:
-            APIClient.delete_nota(nota_id)
-            self.carregar_notas()
-            self.show_dialog("Nota excluida", "A nota fiscal foi excluida com sucesso.")
-        except Exception as error:
-            self.show_dialog("Erro ao excluir", str(error))
 
     def gerar_xml_nota(self, nota):
         nota_id = nota.get("id")

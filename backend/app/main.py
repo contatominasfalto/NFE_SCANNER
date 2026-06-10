@@ -281,7 +281,10 @@ def auth_me(current_user: models.User = Depends(get_current_user)):
         503: {"description": "Integracao fiscal indisponivel ou nao configurada."},
     },
 )
-def read_barcode(barcode_data: schemas.BarcodeInput):
+def read_barcode(
+    barcode_data: schemas.BarcodeInput,
+    current_user: models.User = Depends(get_current_user),
+):
     try:
         chave_acesso = barcode_service.extract_access_key(barcode_data.codigo_barras)
     except ValueError as error:
@@ -321,8 +324,12 @@ def read_barcode(barcode_data: schemas.BarcodeInput):
         503: {"description": "Integracao fiscal indisponivel ou nao configurada."},
     },
 )
-def importar_barcode(barcode_data: schemas.BarcodeImportInput, db: Session = Depends(get_db)):
-    barcode_result = read_barcode(barcode_data)
+def importar_barcode(
+    barcode_data: schemas.BarcodeImportInput,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    barcode_result = read_barcode(barcode_data, current_user)
     nota_data = schemas.NotaFiscalCreate(
         **barcode_result.nota.model_dump(exclude={"local"}),
         local=barcode_data.local,
@@ -353,7 +360,11 @@ def importar_barcode(barcode_data: schemas.BarcodeImportInput, db: Session = Dep
         "tambem chama este endpoint e encerra o fluxo."
     ),
 )
-def create_nota(nota_data: schemas.NotaFiscalCreate, db: Session = Depends(get_db)):
+def create_nota(
+    nota_data: schemas.NotaFiscalCreate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     try:
         nota = crud.create_nota(db, nota_data, nota_data.caminho_arquivo_imagem)
     except IntegrityError as error:
