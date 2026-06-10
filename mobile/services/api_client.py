@@ -5,6 +5,12 @@ from kivy.logger import Logger
 import requests
 
 
+class APIError(RuntimeError):
+    def __init__(self, message, status_code=None):
+        super().__init__(message)
+        self.status_code = status_code
+
+
 class APIClient:
     DEFAULT_BASE_URL = "http://192.168.1.100:8000"
     APP_USERNAME = "BIPE"
@@ -66,7 +72,10 @@ class APIClient:
                     messages.append(f"{location}: {message}" if location else message)
                 detail = "; ".join(messages)
 
-            raise RuntimeError(detail or f"Erro HTTP {response.status_code} ao acessar {path}.")
+            raise APIError(
+                detail or f"Erro HTTP {response.status_code} ao acessar {path}.",
+                response.status_code,
+            )
 
     @classmethod
     def request(cls, method, path, **kwargs):
@@ -83,6 +92,7 @@ class APIClient:
 
     @staticmethod
     def ler_codigo_barras(codigo_barras):
+        APIClient.sync_pending_errors()
         response = APIClient.request(
             "POST",
             "/barcode-nf/",
@@ -96,7 +106,107 @@ class APIClient:
         return response.json()
 
     @staticmethod
+    def save_nota_com_fallback(nota_data):
+        try:
+            return APIClient.save_nota(nota_data)
+        except APIError as error:
+            if error.status_code == 409:
+                raise
+            detalhe = str(error)
+        except Exception as error:
+            detalhe = str(error)
+
+        return APIClient.save_nota_erro_com_fallback(
+            {
+                "chave_acesso": nota_data.get("chave_acesso"),
+                "local": nota_data.get("local"),
+                "detalhe": detalhe[:2000],
+            }
+        )
+
+    @staticmethod
+    def save_nota_erro_com_fallback(erro_data):
+        erro_data = {
+            "chave_acesso": erro_data.get("chave_acesso"),
+            "local": erro_data.get("local"),
+            "detalhe": (erro_data.get("detalhe") or "Falha ao consultar ou salvar a nota.")[:2000],
+        }
+        try:
+            response = APIClient.request("POST", "/notas/erro/", json=erro_data)
+            return response.json()
+        except APIError as error:
+            if error.status_code == 409:
+                raise
+            APIClient.queue_pending_error(erro_data)
+        except Exception:
+            APIClient.queue_pending_error(erro_data)
+
+        return {"chave_acesso": erro_data["chave_acesso"], "erro_salvamento": True}
+
+    @staticmethod
+    def get_pending_errors_path():
+        configured_path = os.environ.get("NFE_PENDING_ERRORS_PATH")
+        if configured_path:
+            return configured_path
+        try:
+            from kivy.app import App
+
+            app = App.get_running_app()
+            base_dir = app.user_data_dir if app else os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        except Exception:
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        os.makedirs(base_dir, exist_ok=True)
+        return os.path.join(base_dir, "pending_save_errors.json")
+
+    @staticmethod
+    def load_pending_errors():
+        path = APIClient.get_pending_errors_path()
+        if not os.path.exists(path):
+            return []
+        try:
+            with open(path, "r", encoding="utf-8") as pending_file:
+                data = json.load(pending_file)
+            return data if isinstance(data, list) else []
+        except Exception as error:
+            Logger.warning(f"APIClient: erro ao ler fila de falhas: {error}")
+            return []
+
+    @staticmethod
+    def save_pending_errors(errors):
+        path = APIClient.get_pending_errors_path()
+        with open(path, "w", encoding="utf-8") as pending_file:
+            json.dump(errors, pending_file, ensure_ascii=True, indent=2)
+
+    @staticmethod
+    def queue_pending_error(erro_data):
+        errors = APIClient.load_pending_errors()
+        errors = [item for item in errors if item.get("chave_acesso") != erro_data.get("chave_acesso")]
+        errors.append(erro_data)
+        APIClient.save_pending_errors(errors)
+        Logger.warning(f"APIClient: falha enfileirada para sincronizacao: {erro_data.get('chave_acesso')}")
+
+    @staticmethod
+    def sync_pending_errors():
+        errors = APIClient.load_pending_errors()
+        if not errors:
+            return
+
+        remaining = []
+        for index, erro_data in enumerate(errors):
+            try:
+                APIClient.request("POST", "/notas/erro/", json=erro_data)
+            except APIError as error:
+                if error.status_code != 409:
+                    remaining.append(erro_data)
+            except Exception:
+                remaining.append(erro_data)
+                remaining.extend(errors[index + 1 :])
+                break
+        APIClient.save_pending_errors(remaining)
+
+    @staticmethod
     def list_notas():
+        APIClient.sync_pending_errors()
         response = APIClient.request("GET", "/notas/")
         return response.json()
 

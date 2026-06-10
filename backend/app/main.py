@@ -67,7 +67,7 @@ tags_metadata = [
         "description": (
             "Cadastro e consulta das notas fiscais salvas no banco. "
             "Cada nota conferida no app e gravada individualmente com o local "
-            "A1BR, A1BR/PRU ou A2BR escolhido antes da bipagem."
+            "CDMA ou PRU escolhido antes da bipagem."
         ),
     },
     {
@@ -87,7 +87,7 @@ app = FastAPI(
         "listagem e geracao de XML das notas fiscais.\n\n"
         "Fluxo mobile atual: o operador bipa o codigo de barras da NF-e, o app chama "
         "/barcode-nf/, consulta a API fiscal particular e abre a conferencia preenchida. "
-        "Antes da leitura, o operador escolhe o local A1BR, A1BR/PRU ou A2BR. "
+        "Antes da leitura, o operador escolhe o local CDMA ou PRU. "
         "Produto, peso liquido e transportador sao obtidos do XML quando disponiveis. "
         "Ao escolher 'Salvar e proxima', o app grava a nota atual no local escolhido "
         "e volta ao leitor. Ao escolher 'Salvar e finalizar', grava a nota atual e encerra o processo."
@@ -351,7 +351,7 @@ def importar_barcode(
     summary="Cadastrar nota fiscal",
     description=(
         "Grava no banco uma nota fiscal ja conferida pelo usuario no aplicativo. "
-        "O local e obrigatorio e aceita A1BR, A1BR/PRU ou A2BR. "
+        "O local e obrigatorio e aceita CDMA ou PRU. "
         "Nos lancamentos feitos pelo app, faturista deve ser BIPE. "
         "No fluxo principal, use este endpoint depois da leitura por /barcode-nf/ "
         "e da confirmacao manual dos dados.\n\n"
@@ -372,6 +372,94 @@ def create_nota(
         raise HTTPException(status_code=409, detail="Nota fiscal ja cadastrada para esta chave de acesso.") from error
     logger.info("Nota cadastrada | id=%s | numero=%s | local=%s", nota.id, nota.numero_nf, nota.local)
     return nota
+
+
+@app.post(
+    "/notas/erro/",
+    response_model=schemas.NotaFiscalResponse,
+    tags=["Notas fiscais"],
+    summary="Registrar nota que falhou ao salvar",
+    description=(
+        "Registra a chave de uma nota que nao pode ser salva normalmente. "
+        "O painel identifica o registro e apresenta os demais campos como ERRO. "
+        "Uma chave ja cadastrada continua retornando conflito."
+    ),
+    responses={409: {"description": "Nota fiscal ja cadastrada para esta chave de acesso."}},
+)
+def create_nota_erro(
+    erro_data: schemas.NotaFiscalErrorCreate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        nota = crud.create_nota_erro(db, erro_data)
+    except IntegrityError as error:
+        logger.warning("Registro de erro duplicado | chave=%s", mask_access_key(erro_data.chave_acesso))
+        raise HTTPException(status_code=409, detail="Nota fiscal ja cadastrada para esta chave de acesso.") from error
+    logger.error(
+        "Falha de salvamento registrada | id=%s | chave=%s | detalhe=%s",
+        nota.id,
+        mask_access_key(nota.chave_acesso),
+        erro_data.detalhe,
+    )
+    return nota
+
+
+@app.post(
+    "/notas/erro/refresh/",
+    response_model=schemas.NotaFiscalErrorRefreshResponse,
+    tags=["Notas fiscais"],
+    summary="Atualizar notas sinalizadas com erro",
+    description=(
+        "Consulta novamente na API fiscal somente as chaves dos registros cujo campo "
+        "Produto contenha ERRO. Quando a consulta tem sucesso, atualiza a mesma linha "
+        "e preserva o local selecionado originalmente."
+    ),
+)
+def refresh_notas_erro(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    ensure_admin(current_user)
+    notas_erro = crud.get_notas_erro(db)
+    itens = []
+    atualizadas = 0
+
+    for nota in notas_erro:
+        chave_acesso = nota.chave_acesso or ""
+        try:
+            chave_acesso = barcode_service.extract_access_key(chave_acesso)
+            nota_data = integra_api.consultar_nfe(chave_acesso)
+            crud.resolve_nota_erro(db, nota, nota_data)
+            atualizadas += 1
+            detalhe = "Atualizada com sucesso."
+            atualizado = True
+            logger.info("Nota com erro atualizada | id=%s | chave=%s", nota.id, mask_access_key(chave_acesso))
+        except Exception as error:
+            detalhe = str(error)
+            atualizado = False
+            db.rollback()
+            crud.update_nota_erro_detalhe(db, nota, detalhe)
+            logger.warning(
+                "Nota com erro permaneceu pendente | id=%s | chave=%s | motivo=%s",
+                nota.id,
+                mask_access_key(chave_acesso),
+                detalhe,
+            )
+        itens.append(
+            schemas.NotaFiscalErrorRefreshItem(
+                chave_acesso=chave_acesso,
+                atualizado=atualizado,
+                detalhe=detalhe,
+            )
+        )
+
+    return schemas.NotaFiscalErrorRefreshResponse(
+        encontradas=len(notas_erro),
+        atualizadas=atualizadas,
+        falhas=len(notas_erro) - atualizadas,
+        itens=itens,
+    )
 
 
 @app.get(

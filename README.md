@@ -12,18 +12,21 @@ O projeto possui três interfaces que utilizam o mesmo backend:
 
 ## Funcionalidades atuais
 
-- Seleção obrigatória do local de alocação antes da leitura:
-  - `A1BR`
-  - `A1BR/PRU`
-  - `A2BR`
+- Seleção direta do local de alocação na tela inicial:
+  - `CDMA`
+  - `PRU`
 - Leitura da chave NF-e por leitor de código de barras.
 - Validação da chave com 44 dígitos.
 - Consulta dos dados reais da nota pela API MeuDanfe.
+- Avanço para a conferência mesmo quando a API fiscal não retornar os dados, registrando a chave como erro.
 - Conferência e edição dos dados antes do cadastro.
 - Fluxo contínuo com `Salvar e próxima` ou encerramento com `Salvar e finalizar`.
+- Registro da chave no painel com campos `ERRO` quando o salvamento falhar por qualquer motivo diferente de duplicidade.
+- Fila local no app para sincronizar registros de erro quando o backend voltar a ficar disponível.
 - Cadastro individual das notas no backend.
 - Listagem, busca, edição, exclusão e geração de XML no app.
 - Painel web com atualização automática da tabela.
+- Botão `Refresh NFes Erro` no painel para consultar novamente somente as chaves cujo campo Produto contenha `ERRO`.
 - Filtros por texto, local e faturista no painel.
 - Cadastro, ativação e desativação de faturistas.
 - Faturista padrão `BIPE` nos lançamentos realizados pelo app.
@@ -124,7 +127,7 @@ nfe_scanner/
 | `data_emissao` | Data de emissão da NF-e |
 | `numero_nf` | Número da nota |
 | `serie` | Série da nota |
-| `local` | Local selecionado: A1BR, A1BR/PRU ou A2BR |
+| `local` | Local selecionado: CDMA ou PRU |
 | `produto` | Produto obtido do XML fiscal |
 | `quantidade` | Quantidade ou peso líquido |
 | `transportador` | Nome do transportador |
@@ -234,8 +237,8 @@ O APK será gerado na pasta `mobile/bin/`.
 
 ## Fluxo operacional do app
 
-1. O operador seleciona `Bipar nota`.
-2. Escolhe o local de alocação.
+1. O operador seleciona `CDMA` ou `PRU` na tela inicial.
+2. O app abre a leitura com o local escolhido.
 3. O local escolhido permanece visível na tela de leitura.
 4. Bipa ou digita a chave de acesso da NF-e.
 5. O app chama `POST /barcode-nf/`.

@@ -23,11 +23,74 @@ def create_nota(db: Session, nota: schemas.NotaFiscalCreate, imagem_path: str | 
     db.refresh(db_nota)
     return db_nota
 
+
+def create_nota_erro(db: Session, erro: schemas.NotaFiscalErrorCreate):
+    db_nota = models.NotaFiscal(
+        numero_nf="ERRO",
+        serie="ERRO",
+        data_emissao=datetime.now(),
+        cnpj_fornecedor="ERRO",
+        nome_fornecedor="ERRO",
+        valor_total=0,
+        chave_acesso=erro.chave_acesso.strip(),
+        local=erro.local if erro.local in {local.value for local in schemas.Local} else None,
+        produto="ERRO",
+        quantidade=None,
+        transportador="ERRO",
+        faturista="ERRO",
+        lider_operacional="ERRO",
+        observacao="ERRO",
+        erro_salvamento=True,
+        erro_detalhe=erro.detalhe,
+        data_cadastro=datetime.now(),
+    )
+    db.add(db_nota)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise
+    db.refresh(db_nota)
+    return db_nota
+
 def get_notas(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.NotaFiscal).offset(skip).limit(limit).all()
 
 def get_nota(db: Session, nota_id: int):
     return db.query(models.NotaFiscal).filter(models.NotaFiscal.id == nota_id).first()
+
+
+def get_notas_erro(db: Session):
+    return (
+        db.query(models.NotaFiscal)
+        .filter(models.NotaFiscal.produto.ilike("%ERRO%"))
+        .order_by(models.NotaFiscal.id)
+        .all()
+    )
+
+
+def resolve_nota_erro(db: Session, nota: models.NotaFiscal, nota_data: dict):
+    local_original = nota.local
+    for field, value in nota_data.items():
+        if hasattr(nota, field) and field not in {"id", "local", "data_cadastro"}:
+            setattr(nota, field, value)
+    nota.local = local_original
+    nota.faturista = nota_data.get("faturista") or "BIPE"
+    nota.lider_operacional = None
+    nota.caminho_arquivo_imagem = None
+    nota.erro_salvamento = False
+    nota.erro_detalhe = None
+    db.commit()
+    db.refresh(nota)
+    return nota
+
+
+def update_nota_erro_detalhe(db: Session, nota: models.NotaFiscal, detalhe: str):
+    nota.erro_detalhe = detalhe[:2000]
+    db.commit()
+    db.refresh(nota)
+    return nota
+
 
 def update_nota(db: Session, nota_id: int, nota_data: schemas.NotaFiscalUpdate):
     nota = get_nota(db, nota_id)

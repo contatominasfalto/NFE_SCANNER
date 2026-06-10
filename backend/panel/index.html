@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Painel NF-e</title>
-  <link rel="stylesheet" href="/painel-assets/styles.css?v=20260610-1">
+  <link rel="stylesheet" href="/painel-assets/styles.css?v=20260610-5">
 </head>
 <body>
   <dialog class="modal compact" id="loginDialog">
@@ -47,9 +47,10 @@
       <div class="top-actions">
         <span id="lastUpdate">Aguardando atualização</span>
         <span class="user-badge" id="userBadge"></span>
-        <button class="secondary" id="logoutButton" hidden>Sair</button>
-        <button class="icon-button" id="refreshButton" title="Atualizar tabela">↻</button>
         <button class="primary" id="openScan">＋ Bipar nota</button>
+        <button class="icon-button" id="refreshButton" title="Atualizar tabela">↻</button>
+        <button class="secondary refresh-errors" id="refreshErrorsButton">Refresh NFes Erro</button>
+        <button class="secondary" id="logoutButton" hidden>Sair</button>
       </div>
     </header>
 
@@ -65,7 +66,7 @@
         <label class="search"><span>⌕</span><input id="searchInput" placeholder="Buscar NF, chave, produto, fornecedor, transportador..."></label>
         <select id="localFilter" aria-label="Filtrar por local">
           <option value="">Todos os locais</option>
-          <option>A1BR</option><option>A1BR/PRU</option><option>A2BR</option>
+          <option>CDMA</option><option>PRU</option>
         </select>
         <select id="billingFilter" aria-label="Filtrar por faturista"><option value="">Todos os faturistas</option></select>
         <button class="secondary" id="downloadAll">↓ Gerar XML geral</button>
@@ -89,7 +90,7 @@
     <form method="dialog" class="modal compact" id="scanForm">
       <header><div><p class="eyebrow">NOVA LEITURA</p><h2>Bipar nota fiscal</h2></div><button class="icon-button close" type="button" data-close="scanDialog">×</button></header>
       <p class="modal-copy">Informe a chave de acesso e o local onde o material será alocado.</p>
-      <label>Local<select id="scanLocal" required><option value="">Selecione</option><option>A1BR</option><option>A1BR/PRU</option><option>A2BR</option></select></label>
+      <label>Local<select id="scanLocal" required><option value="">Selecione</option><option>CDMA</option><option>PRU</option></select></label>
       <label>Chave NF<input id="scanKey" required inputmode="numeric" maxlength="44" placeholder="44 dígitos"></label>
       <footer><button class="secondary" type="button" data-close="scanDialog">Cancelar</button><button class="primary" type="submit">Consultar nota</button></footer>
     </form>
@@ -100,7 +101,7 @@
       <header><div><p class="eyebrow" id="noteMode">EDIÇÃO</p><h2 id="noteTitle">Editar nota fiscal</h2></div><button class="icon-button close" type="button" data-close="noteDialog">×</button></header>
       <input type="hidden" id="noteId">
       <div class="form-section"><h3>Identificação e alocação</h3><div class="form-grid">
-        <label>Chave NF<input id="chave_acesso" required maxlength="44"></label><label>Local<select id="local" required><option>A1BR</option><option>A1BR/PRU</option><option>A2BR</option></select></label>
+        <label>Chave NF<input id="chave_acesso" required maxlength="44"></label><label>Local<select id="local" required><option>CDMA</option><option>PRU</option></select></label>
         <label>Número da NF<input id="numero_nf" required></label><label>Série<input id="serie" required></label><label>Data de emissão<input id="data_emissao" type="datetime-local" required></label>
       </div></div>
       <div class="form-section"><h3>Dados operacionais</h3><div class="form-grid">
@@ -145,8 +146,16 @@
       <footer><button class="secondary" id="confirmCancel">Cancelar</button><button class="danger" id="confirmAction">Confirmar</button></footer>
     </section>
   </dialog>
+  <dialog id="refreshErrorsDialog">
+    <section class="modal medium">
+      <header><div><p class="eyebrow">LOG DE ATUALIZAÇÃO</p><h2>Refresh NFes Erro</h2></div><button class="icon-button close" type="button" data-close="refreshErrorsDialog">×</button></header>
+      <div class="refresh-log-summary" id="refreshErrorsSummary"></div>
+      <div class="refresh-log-list" id="refreshErrorsLog"></div>
+      <footer><button class="primary" type="button" data-close="refreshErrorsDialog">Fechar</button></footer>
+    </section>
+  </dialog>
   <div id="toast" role="status"></div>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="/painel-assets/app.js?v=20260610-1"></script>
+  <script src="/painel-assets/app.js?v=20260610-5"></script>
 </body>
 </html>

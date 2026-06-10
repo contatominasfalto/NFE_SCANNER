@@ -18,6 +18,7 @@ class ConfirmScreen(Screen):
         super().__init__(**kwargs)
         self.dialog = None
         self.campos = {}
+        self.erro_consulta = None
         self.build_ui()
 
     def build_ui(self):
@@ -124,11 +125,18 @@ class ConfirmScreen(Screen):
 
         self.preencher_campos(nota_data)
 
-        self.intro_title.text = "Nota fiscal consultada"
-        self.intro_text.text = (
-            "Confira os dados retornados pela API. Use Salvar e proxima para gravar "
-            "e voltar ao leitor, ou Salvar e finalizar para encerrar."
-        )
+        self.erro_consulta = nota_data.get("erro_consulta")
+        if self.erro_consulta:
+            self.intro_title.text = "Consulta fiscal nao concluida"
+            self.intro_text.text = (
+                "A chave sera registrada no painel e os demais campos serao marcados como ERRO."
+            )
+        else:
+            self.intro_title.text = "Nota fiscal consultada"
+            self.intro_text.text = (
+                "Confira os dados retornados pela API. Use Salvar e proxima para gravar "
+                "e voltar ao leitor, ou Salvar e finalizar para encerrar."
+            )
 
     def preencher_campos(self, nota_data):
         self.limpar_campos()
@@ -149,9 +157,7 @@ class ConfirmScreen(Screen):
         )
 
     def build_payload(self):
-        local = self.campos["local"].text.strip()
-        if not local:
-            raise ValueError("Local nao selecionado. Volte ao inicio e escolha o local antes de salvar.")
+        local = self.campos["local"].text.strip() or None
 
         valor_text = self.campos["valor_total"].text.strip()
         if "," in valor_text:
@@ -184,16 +190,28 @@ class ConfirmScreen(Screen):
             "caminho_arquivo_imagem": None,
         }
 
+    def salvar_nota_atual(self):
+        payload = self.build_payload()
+        if self.erro_consulta:
+            return APIClient.save_nota_erro_com_fallback(
+                {
+                    "chave_acesso": payload["chave_acesso"],
+                    "local": payload["local"],
+                    "detalhe": self.erro_consulta,
+                }
+            )
+        return APIClient.save_nota_com_fallback(payload)
+
     def salvar_e_proxima(self, instance):
         try:
-            APIClient.save_nota(self.build_payload())
+            self.salvar_nota_atual()
             self.preparar_leitor_para_proxima()
         except Exception as error:
             self.show_dialog("Erro ao salvar", str(error))
 
     def salvar_e_finalizar(self, instance):
         try:
-            APIClient.save_nota(self.build_payload())
+            self.salvar_nota_atual()
             self.manager.get_screen("scan").limpar_local()
             App.get_running_app().root.current = "list"
         except Exception as error:

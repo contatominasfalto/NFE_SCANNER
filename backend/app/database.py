@@ -29,6 +29,8 @@ def ensure_schema():
         "transportador": "ALTER TABLE notas_fiscais ADD COLUMN transportador VARCHAR",
         "faturista": "ALTER TABLE notas_fiscais ADD COLUMN faturista VARCHAR DEFAULT 'BIPE'",
         "lider_operacional": "ALTER TABLE notas_fiscais ADD COLUMN lider_operacional VARCHAR",
+        "erro_salvamento": "ALTER TABLE notas_fiscais ADD COLUMN erro_salvamento BOOLEAN DEFAULT 0 NOT NULL",
+        "erro_detalhe": "ALTER TABLE notas_fiscais ADD COLUMN erro_detalhe TEXT",
     }
     with engine.begin() as connection:
         for column, statement in migrations.items():
@@ -49,6 +51,14 @@ def ensure_schema():
             connection.execute(
                 text("UPDATE notas_fiscais SET local = COALESCE(NULLIF(local, ''), NULLIF(local_areia, ''))")
             )
+        connection.execute(
+            text(
+                "UPDATE notas_fiscais SET local = CASE "
+                "WHEN local = 'A1BR/PRU' THEN 'PRU' "
+                "WHEN local IN ('A1BR', 'A2BR') THEN 'CDMA' "
+                "ELSE local END"
+            )
+        )
         connection.execute(text("DROP INDEX IF EXISTS ix_notas_fiscais_centro_custo"))
         if "centro_custo" in columns:
             connection.execute(text("ALTER TABLE notas_fiscais DROP COLUMN centro_custo"))
@@ -60,13 +70,14 @@ def ensure_schema():
                 "ON notas_fiscais (local)"
             )
         )
-        connection.execute(
-            text(
-                "INSERT INTO faturistas (nome, ativo, data_cadastro) "
-                "SELECT 'BIPE', 1, CURRENT_TIMESTAMP "
-                "WHERE NOT EXISTS (SELECT 1 FROM faturistas WHERE nome = 'BIPE')"
+        if "faturistas" in inspector.get_table_names():
+            connection.execute(
+                text(
+                    "INSERT INTO faturistas (nome, ativo, data_cadastro) "
+                    "SELECT 'BIPE', 1, CURRENT_TIMESTAMP "
+                    "WHERE NOT EXISTS (SELECT 1 FROM faturistas WHERE nome = 'BIPE')"
+                )
             )
-        )
     if "users" in inspector.get_table_names():
         user_columns = {column["name"] for column in inspector.get_columns("users")}
         if "role" not in user_columns:

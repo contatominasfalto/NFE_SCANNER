@@ -20,6 +20,8 @@ class NotaFiscal(Base):
     faturista = Column(String, default="BIPE")
     lider_operacional = Column(String)
     observacao = Column(Text)
+    erro_salvamento = Column(Boolean, default=False, nullable=False)
+    erro_detalhe = Column(Text)
     caminho_arquivo_imagem = Column(String)
     data_cadastro = Column(DateTime, default=datetime.now)
 

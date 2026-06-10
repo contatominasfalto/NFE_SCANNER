@@ -1,11 +1,6 @@
 from kivy.core.window import Window
 from kivy.lang import Builder
-from kivy.metrics import dp
 from kivymd.app import MDApp
-from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.button import MDFlatButton, MDRectangleFlatIconButton
-from kivymd.uix.dialog import MDDialog
-from kivymd.uix.label import MDLabel
 from pathlib import Path
 
 from screens.confirm_screen import ConfirmScreen
@@ -107,15 +102,27 @@ ScreenManager:
                         spacing: "10dp"
                         md_bg_color: app.surface_color
 
-                        MDFillRoundFlatIconButton:
-                            icon: "barcode-scan"
-                            text: "Bipar nota"
-                            size_hint_x: 1
+                        MDBoxLayout:
+                            orientation: "horizontal"
+                            spacing: "10dp"
+                            size_hint_y: None
                             height: "52dp"
-                            md_bg_color: app.primary_color
-                            text_color: app.text_color
-                            icon_color: app.text_color
-                            on_release: app.abrir_selecao_local()
+
+                            MDFillRoundFlatButton:
+                                text: "CDMA"
+                                size_hint_x: 1
+                                height: "52dp"
+                                md_bg_color: app.primary_color
+                                text_color: app.text_color
+                                on_release: app.iniciar_leitura("CDMA")
+
+                            MDFillRoundFlatButton:
+                                text: "PRU"
+                                size_hint_x: 1
+                                height: "52dp"
+                                md_bg_color: app.primary_color
+                                text_color: app.text_color
+                                on_release: app.iniciar_leitura("PRU")
 
                         MDRectangleFlatIconButton:
                             icon: "file-document-outline"
@@ -168,7 +175,6 @@ ScreenManager:
 
 
 class NFeApp(MDApp):
-    LOCAIS = ("A1BR", "A1BR/PRU", "A2BR")
     primary_color = (0.95, 0.57, 0.16, 1)
     accent_color = (0.20, 0.20, 0.22, 1)
     bg_color = (0.97, 0.97, 0.96, 1)
@@ -181,13 +187,6 @@ class NFeApp(MDApp):
     soft_white = (1.0, 0.95, 0.87, 1)
     logo_path = str(BASE_DIR / "assets" / "logo.jpg")
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.local_dialog = None
-        self.local_selecionado = None
-        self.local_buttons = {}
-        self.continuar_local_button = None
-
     def build(self):
         self.title = "NF-e Scanner"
         self.theme_cls.theme_style = "Light"
@@ -195,79 +194,8 @@ class NFeApp(MDApp):
         self.theme_cls.accent_palette = "Gray"
         return Builder.load_string(KV)
 
-    def abrir_selecao_local(self):
-        self.local_selecionado = None
-        self.local_buttons = {}
-
-        content = MDBoxLayout(
-            orientation="vertical",
-            adaptive_height=True,
-            spacing=dp(12),
-        )
-        content.add_widget(
-            MDLabel(
-                text="Selecione onde o material das notas sera alocado.",
-                font_style="Body1",
-                theme_text_color="Custom",
-                text_color=self.muted_text_color,
-                size_hint_y=None,
-                height=dp(48),
-            )
-        )
-
-        for local in self.LOCAIS:
-            button = MDRectangleFlatIconButton(
-                text=local,
-                icon="checkbox-blank-outline",
-                size_hint_x=1,
-                height=dp(48),
-                theme_text_color="Custom",
-                text_color=self.accent_color,
-                icon_color=self.accent_color,
-                line_color=self.border_color,
-            )
-            button.bind(on_release=lambda _, value=local: self.selecionar_local(value))
-            self.local_buttons[local] = button
-            content.add_widget(button)
-
-        self.continuar_local_button = MDFlatButton(
-            text="CONTINUAR",
-            disabled=True,
-            theme_text_color="Custom",
-            text_color=self.primary_color,
-            on_release=lambda *_: self.confirmar_local(),
-        )
-        self.local_dialog = MDDialog(
-            title="Local",
-            type="custom",
-            content_cls=content,
-            buttons=[
-                MDFlatButton(
-                    text="CANCELAR",
-                    theme_text_color="Custom",
-                    text_color=self.accent_color,
-                    on_release=lambda *_: self.local_dialog.dismiss(),
-                ),
-                self.continuar_local_button,
-            ],
-        )
-        self.local_dialog.open()
-
-    def selecionar_local(self, local):
-        self.local_selecionado = local
-        self.continuar_local_button.disabled = False
-        for value, button in self.local_buttons.items():
-            selected = value == local
-            button.icon = "check-circle-outline" if selected else "checkbox-blank-outline"
-            button.text_color = self.primary_color if selected else self.accent_color
-            button.icon_color = self.primary_color if selected else self.accent_color
-            button.line_color = self.primary_color if selected else self.border_color
-
-    def confirmar_local(self):
-        if not self.local_selecionado:
-            return
-        self.root.get_screen("scan").set_local(self.local_selecionado)
-        self.local_dialog.dismiss()
+    def iniciar_leitura(self, local):
+        self.root.get_screen("scan").set_local(local)
         self.root.current = "scan"
 
 

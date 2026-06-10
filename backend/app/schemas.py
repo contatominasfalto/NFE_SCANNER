@@ -5,9 +5,8 @@ from datetime import datetime
 from typing import Optional
 
 class Local(str, Enum):
-    A1BR = "A1BR"
-    A1BR_PRU = "A1BR/PRU"
-    A2BR = "A2BR"
+    CDMA = "CDMA"
+    PRU = "PRU"
 
 
 class NotaFiscalBase(BaseModel):
@@ -36,6 +35,8 @@ class NotaFiscalUpdate(NotaFiscalBase):
 class NotaFiscalResponse(NotaFiscalBase):
     id: int
     data_cadastro: datetime
+    erro_salvamento: bool = False
+    erro_detalhe: Optional[str] = None
     caminho_arquivo_imagem: Optional[str] = None
 
     class Config:
@@ -51,13 +52,33 @@ class BarcodeInput(BaseModel):
 class BarcodeImportInput(BarcodeInput):
     local: Local = Field(
         description="Local onde o material da nota sera alocado.",
-        examples=["A1BR"],
+        examples=["CDMA"],
     )
 
 class BarcodeResult(BaseModel):
     chave_acesso: str = Field(description="Chave de acesso NF-e validada com 44 digitos.")
     quantidade_digitos: int
     nota: NotaFiscalBase
+
+
+class NotaFiscalErrorCreate(BaseModel):
+    chave_acesso: str = Field(min_length=1, max_length=100)
+    local: Optional[str] = None
+    detalhe: Optional[str] = Field(None, max_length=2000)
+
+
+class NotaFiscalErrorRefreshItem(BaseModel):
+    chave_acesso: str
+    atualizado: bool
+    detalhe: str
+
+
+class NotaFiscalErrorRefreshResponse(BaseModel):
+    encontradas: int
+    atualizadas: int
+    falhas: int
+    itens: list[NotaFiscalErrorRefreshItem]
+
 
 class NotaFiscalDeleteResponse(BaseModel):
     id: int

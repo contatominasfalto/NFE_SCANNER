@@ -6,6 +6,7 @@ from kivymd.uix.card import MDCard
 from kivymd.uix.label import MDLabel
 from kivymd.uix.textfield import MDTextField
 from kivymd.uix.toolbar import MDTopAppBar
+import re
 
 from services.api_client import APIClient
 from ui import BG, INFO, MUTED, PRIMARY, TEXT, WHITE, body_label, outline_button, primary_button
@@ -153,15 +154,26 @@ class ScanScreen(Screen):
             self.barcode_input.focus = True
             return
 
+        chave_acesso = re.sub(r"\D", "", codigo_barras)
+        if len(chave_acesso) != 44:
+            self.status_label.text = "Codigo invalido: a chave deve conter exatamente 44 digitos."
+            self.barcode_input.select_all()
+            self.barcode_input.focus = True
+            return
+
         try:
             result = APIClient.ler_codigo_barras(codigo_barras)
             self.chave_acesso = result["chave_acesso"]
             self.status_label.text = "Nota consultada. Abrindo conferencia..."
             Clock.schedule_once(lambda *_: self.ir_confirmar(result["nota"]), 0.3)
         except Exception as error:
-            self.status_label.text = f"Codigo invalido: {error}"
-            self.barcode_input.select_all()
-            self.barcode_input.focus = True
+            self.chave_acesso = chave_acesso
+            self.status_label.text = "API fiscal indisponivel. Abrindo registro de erro..."
+            nota_erro = {
+                "chave_acesso": chave_acesso,
+                "erro_consulta": str(error),
+            }
+            Clock.schedule_once(lambda *_: self.ir_confirmar(nota_erro), 0.3)
 
     def ir_confirmar(self, nota_data):
         nota_data = dict(nota_data)
