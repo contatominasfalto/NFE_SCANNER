@@ -24,10 +24,25 @@ class NotaFiscal(Base):
     data_cadastro = Column(DateTime, default=datetime.now)
 
 
-class Faturista(Base):
-    __tablename__ = "faturistas"
+class User(Base):
+    __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
-    nome = Column(String, unique=True, index=True, nullable=False)
-    ativo = Column(Boolean, default=True, nullable=False)
-    data_cadastro = Column(DateTime, default=datetime.now)
+    username = Column(String, unique=True, index=True, nullable=False)
+    password_hash = Column(String, nullable=False)
+    salt = Column(String, nullable=False)
+    role = Column(String, default="user", nullable=False)
+    active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.now)
+
+    @property
+    def nome(self):
+        return self.username
+
+    @property
+    def ativo(self):
+        return self.active
+
+    @property
+    def data_cadastro(self):
+        return self.created_at

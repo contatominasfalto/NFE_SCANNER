@@ -66,15 +66,20 @@ class NotaFiscalDeleteResponse(BaseModel):
     mensagem: str
 
 
-class FaturistaCreate(BaseModel):
+class FaturistaBase(BaseModel):
     nome: str = Field(min_length=2, max_length=100, examples=["Maria Silva"])
-
-
-class FaturistaUpdate(FaturistaCreate):
     ativo: bool = True
 
 
-class FaturistaResponse(FaturistaUpdate):
+class FaturistaCreate(FaturistaBase):
+    senha: str = Field(min_length=6, max_length=100, examples=["senha123"])
+
+
+class FaturistaUpdate(FaturistaBase):
+    senha: Optional[str] = Field(None, min_length=6, max_length=100)
+
+
+class FaturistaResponse(FaturistaBase):
     id: int
     data_cadastro: datetime
 
@@ -86,3 +91,23 @@ class FaturistaDeleteResponse(BaseModel):
     id: int
     nome: str
     mensagem: str
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class AuthResponse(BaseModel):
+    access_token: str
+
+
+class UserResponse(BaseModel):
+    id: int
+    username: str
+    role: str
+    active: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

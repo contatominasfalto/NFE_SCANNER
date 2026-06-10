@@ -1,25 +1,52 @@
 from datetime import datetime
+import base64
+import hashlib
+import hmac
 import os
+import time
 from pathlib import Path
 from time import perf_counter
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, Security
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.security import APIKeyCookie
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from . import barcode_service, crud, integra_api, models, report_service, schemas
+from . import barcode_service, crud, integra_api, models, report_service, schemas, config
 from .config import REPORT_DIR
-from .database import engine, ensure_schema, get_db
+from .database import engine, ensure_schema, get_db, SessionLocal
 from .logging_config import configure_logging, mask_access_key
 
 logger = configure_logging()
 models.Base.metadata.create_all(bind=engine)
 ensure_schema()
+
+
+def initialize_default_users():
+    with SessionLocal() as db:
+        defaults = [
+            ("adm", "t@pfacil", "admin"),
+            ("BIPE", "BIPE", "user"),
+            ("faturista01", "faturista01", "user"),
+            ("faturista02", "faturista02", "user"),
+        ]
+        for username, password, role in defaults:
+            user = crud.get_user_by_username(db, username)
+            if not user:
+                try:
+                    crud.create_user(db, username, password, role=role)
+                except Exception:
+                    pass
+            elif user.role != role:
+                user.role = role
+                db.commit()
+
+initialize_default_users()
 
 tags_metadata = [
     {
@@ -77,6 +104,52 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Expose cookie-based session in OpenAPI (Swagger) so the panel can authorize via cookie
+api_key_cookie = APIKeyCookie(name="session", auto_error=False)
+
+
+def create_session_token(username: str, expires_in: int = 8 * 3600) -> str:
+    expires = str(int(time.time()) + expires_in)
+    payload = f"{username}|{expires}"
+    signature = hmac.new(config.SECRET_KEY.encode(), payload.encode(), hashlib.sha256).hexdigest()
+    return base64.urlsafe_b64encode(f"{payload}|{signature}".encode()).decode()
+
+
+def decode_session_token(token: str) -> dict[str, str] | None:
+    try:
+        raw = base64.urlsafe_b64decode(token.encode()).decode()
+        username, expires, signature = raw.split("|")
+        expected = hmac.new(config.SECRET_KEY.encode(), f"{username}|{expires}".encode(), hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(signature, expected):
+            return None
+        if int(expires) < int(time.time()):
+            return None
+        return {"username": username}
+    except Exception:
+        return None
+
+
+def get_current_user(request: Request, db: Session = Depends(get_db), session_token: str | None = Security(api_key_cookie)):
+    # Prefer explicit Security-injected cookie (so OpenAPI shows the cookie scheme),
+    # but fallback to existing cookie/header behavior if not provided by the docs/ui.
+    token = session_token or request.cookies.get("session") or (request.headers.get("Authorization") or "").removeprefix("Bearer ").strip()
+    if not token:
+        raise HTTPException(status_code=401, detail="Autenticacao exigida.")
+
+    session_data = decode_session_token(token)
+    if not session_data:
+        raise HTTPException(status_code=401, detail="Sessao invalida ou expirada.")
+
+    user = crud.get_user_by_username(db, session_data["username"])
+    if not user or not user.active:
+        raise HTTPException(status_code=401, detail="Usuario invalido.")
+    return user
+
+
+def ensure_admin(user: models.User):
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Acesso restrito ao usuario administrador.")
+
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, error: RequestValidationError):
@@ -94,6 +167,19 @@ app.mount("/painel-assets", StaticFiles(directory=PANEL_DIR), name="painel-asset
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
+    # Restrict access to API docs/openapi to admin users only
+    docs_paths = {"/docs", "/redoc", app.openapi_url, "/docs/oauth2-redirect"}
+    if request.url.path in docs_paths:
+        token = request.cookies.get("session") or (request.headers.get("Authorization") or "").removeprefix("Bearer ").strip()
+        if not token:
+            return JSONResponse(status_code=401, content={"detail": "Autenticacao exigida."})
+        session_data = decode_session_token(token)
+        if not session_data:
+            return JSONResponse(status_code=401, content={"detail": "Sessao invalida ou expirada."})
+        with SessionLocal() as db:
+            user = crud.get_user_by_username(db, session_data["username"])
+            if not user or not user.active or user.role != "admin":
+                return JSONResponse(status_code=403, content={"detail": "Acesso restrito ao usuario administrador."})
     started_at = perf_counter()
     try:
         response = await call_next(request)
@@ -137,6 +223,43 @@ def painel():
 @app.get("/", include_in_schema=False, response_class=RedirectResponse)
 def root():
     return RedirectResponse("/painel")
+
+
+@app.post(
+    "/auth/login/",
+    response_model=schemas.AuthResponse,
+    tags=["Sistema"],
+    summary="Autenticar usuario do painel",
+)
+def auth_login(login_data: schemas.LoginRequest, response: Response, db: Session = Depends(get_db)):
+    user = crud.authenticate_user(db, login_data.username, login_data.password)
+    if not user:
+        raise HTTPException(status_code=401, detail="Usuario ou senha invalidos.")
+
+    token = create_session_token(user.username)
+    response.set_cookie("session", token, httponly=True, samesite="lax")
+    logger.info("Login realizado | username=%s", user.username)
+    return {"access_token": token}
+
+
+@app.post(
+    "/auth/logout/",
+    tags=["Sistema"],
+    summary="Encerrar sessao do painel",
+)
+def auth_logout(response: Response):
+    response.delete_cookie("session")
+    return {"detail": "Sessao encerrada."}
+
+
+@app.get(
+    "/auth/me/",
+    response_model=schemas.UserResponse,
+    tags=["Sistema"],
+    summary="Informacoes do usuario autenticado",
+)
+def auth_me(current_user: models.User = Depends(get_current_user)):
+    return current_user
 
 
 @app.post(
@@ -254,6 +377,7 @@ def create_nota(nota_data: schemas.NotaFiscalCreate, db: Session = Depends(get_d
 def list_notas(
     skip: int = Query(0, ge=0, description="Quantidade de registros a ignorar."),
     limit: int = Query(100, ge=1, le=500, description="Quantidade maxima de notas retornadas."),
+    current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     return crud.get_notas(db, skip=skip, limit=limit)
@@ -275,7 +399,7 @@ def list_notas(
         409: {"description": "A chave de acesso informada ja pertence a outra nota."},
     },
 )
-def update_nota(nota_id: int, nota_data: schemas.NotaFiscalUpdate, db: Session = Depends(get_db)):
+def update_nota(nota_id: int, nota_data: schemas.NotaFiscalUpdate, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     try:
         nota = crud.update_nota(db, nota_id, nota_data)
     except IntegrityError as error:
@@ -301,7 +425,7 @@ def update_nota(nota_id: int, nota_data: schemas.NotaFiscalUpdate, db: Session =
         404: {"description": "Nota fiscal nao encontrada."},
     },
 )
-def delete_nota(nota_id: int, db: Session = Depends(get_db)):
+def delete_nota(nota_id: int, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     nota = crud.delete_nota(db, nota_id)
     if not nota:
         logger.warning("Exclusao recusada: nota nao encontrada | id=%s", nota_id)
@@ -323,12 +447,13 @@ def delete_nota(nota_id: int, db: Session = Depends(get_db)):
     summary="Cadastrar faturista",
     responses={409: {"description": "Faturista ja cadastrado."}},
 )
-def create_faturista(faturista_data: schemas.FaturistaCreate, db: Session = Depends(get_db)):
+def create_faturista(faturista_data: schemas.FaturistaCreate, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    ensure_admin(current_user)
     try:
         faturista = crud.create_faturista(db, faturista_data)
     except IntegrityError as error:
         raise HTTPException(status_code=409, detail="Faturista ja cadastrado.") from error
-    logger.info("Faturista cadastrado | id=%s | nome=%s", faturista.id, faturista.nome)
+    logger.info("Faturista cadastrado | id=%s | nome=%s | admin=%s", faturista.id, faturista.nome, current_user.username)
     return faturista
 
 
@@ -340,6 +465,7 @@ def create_faturista(faturista_data: schemas.FaturistaCreate, db: Session = Depe
 )
 def list_faturistas(
     incluir_inativos: bool = Query(False, description="Inclui faturistas desativados."),
+    current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     return crud.get_faturistas(db, incluir_inativos)
@@ -355,8 +481,10 @@ def list_faturistas(
 def update_faturista(
     faturista_id: int,
     faturista_data: schemas.FaturistaUpdate,
+    current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    ensure_admin(current_user)
     atual = crud.get_faturista(db, faturista_id)
     if not atual:
         raise HTTPException(status_code=404, detail="Faturista nao encontrado.")
@@ -366,7 +494,7 @@ def update_faturista(
         faturista = crud.update_faturista(db, faturista_id, faturista_data)
     except IntegrityError as error:
         raise HTTPException(status_code=409, detail="Ja existe um faturista com este nome.") from error
-    logger.info("Faturista atualizado | id=%s | nome=%s | ativo=%s", faturista.id, faturista.nome, faturista.ativo)
+    logger.info("Faturista atualizado | id=%s | nome=%s | ativo=%s | admin=%s", faturista.id, faturista.nome, faturista.ativo, current_user.username)
     return faturista
 
 
@@ -374,21 +502,22 @@ def update_faturista(
     "/faturistas/{faturista_id}/",
     response_model=schemas.FaturistaDeleteResponse,
     tags=["Faturistas"],
-    summary="Desativar faturista",
-    responses={404: {"description": "Faturista nao encontrado."}, 409: {"description": "BIPE nao pode ser desativado."}},
+    summary="Excluir faturista",
+    responses={404: {"description": "Faturista nao encontrado."}, 409: {"description": "BIPE nao pode ser excluido."}},
 )
-def delete_faturista(faturista_id: int, db: Session = Depends(get_db)):
+def delete_faturista(faturista_id: int, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    ensure_admin(current_user)
     atual = crud.get_faturista(db, faturista_id)
     if not atual:
         raise HTTPException(status_code=404, detail="Faturista nao encontrado.")
     if atual.nome == "BIPE":
-        raise HTTPException(status_code=409, detail="O faturista padrao BIPE nao pode ser desativado.")
-    faturista = crud.deactivate_faturista(db, faturista_id)
-    logger.info("Faturista desativado | id=%s | nome=%s", faturista.id, faturista.nome)
+        raise HTTPException(status_code=409, detail="O faturista padrao BIPE nao pode ser excluido.")
+    faturista = crud.delete_faturista(db, faturista_id)
+    logger.info("Faturista excluido | id=%s | nome=%s | admin=%s", faturista.id, faturista.nome, current_user.username)
     return schemas.FaturistaDeleteResponse(
         id=faturista.id,
         nome=faturista.nome,
-        mensagem="Faturista desativado com sucesso.",
+        mensagem="Faturista excluido com sucesso.",
     )
 
 
@@ -417,6 +546,7 @@ def gerar_relatorio(
         ge=1,
         description="ID da nota fiscal. Quando informado, gera XML apenas desta nota.",
     ),
+    current_user: models.User = Depends(get_current_user),
     data_inicio: str | None = Query(
         None,
         description="Data inicial do filtro no formato YYYY-MM-DD. Usado apenas quando nota_id nao for informado.",

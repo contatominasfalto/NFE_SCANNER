@@ -25,6 +25,7 @@ MEUDANFE_API_BASE_URL = os.getenv(
     "https://api.meudanfe.com.br/v2/fd/get/xml",
 )
 MEUDANFE_API_KEY = os.getenv("MEUDANFE_API_KEY", "")
+SECRET_KEY = os.getenv("SECRET_KEY", "nfe_scanner_default_secret_2026")
 
 os.makedirs(REPORT_DIR, exist_ok=True)
 os.makedirs(LOG_DIR, exist_ok=True)

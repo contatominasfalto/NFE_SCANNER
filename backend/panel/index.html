@@ -4,9 +4,26 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Painel NF-e</title>
-  <link rel="stylesheet" href="/painel-assets/styles.css?v=20260609-2">
+  <link rel="stylesheet" href="/painel-assets/styles.css?v=20260610-1">
 </head>
 <body>
+  <dialog class="modal compact" id="loginDialog">
+    <form method="dialog" class="modal compact" id="loginForm">
+      <header>
+        <div>
+          <p class="eyebrow">LOGIN</p>
+          <h2>Entrar no painel</h2>
+        </div>
+      </header>
+      <p class="modal-copy">Informe usuário e senha para acessar o painel de faturistas.</p>
+      <label>Usuário<input id="loginUsername" required autocomplete="username" autofocus></label>
+      <label>Senha<input id="loginPassword" type="password" required autocomplete="current-password"></label>
+      <div id="loginError" class="login-error"></div>
+      <footer>
+        <button class="primary" type="submit">Entrar</button>
+      </footer>
+    </form>
+  </dialog>
   <aside class="sidebar">
     <div class="brand">
       <span class="brand-mark"><img src="/painel-assets/logo.jpg" alt="Logo Minasfalto"></span>
@@ -15,6 +32,7 @@
     <nav>
       <button class="nav-item active" data-view="notas"><span>▦</span> Notas fiscais</button>
       <button class="nav-item" id="openFaturistas"><span>◉</span> Faturistas</button>
+      <button class="nav-item" id="openReports"><span>📊</span> Relatórios</button>
       <a class="nav-item" href="/docs" target="_blank"><span>↗</span> Swagger API</a>
     </nav>
     <div class="connection"><i></i><span>Atualização automática ativa</span></div>
@@ -28,6 +46,8 @@
       </div>
       <div class="top-actions">
         <span id="lastUpdate">Aguardando atualização</span>
+        <span class="user-badge" id="userBadge"></span>
+        <button class="secondary" id="logoutButton" hidden>Sair</button>
         <button class="icon-button" id="refreshButton" title="Atualizar tabela">↻</button>
         <button class="primary" id="openScan">＋ Bipar nota</button>
       </div>
@@ -97,9 +117,24 @@
 
   <dialog id="faturistasDialog">
     <section class="modal medium">
-      <header><div><p class="eyebrow">CADASTRO AUXILIAR</p><h2>Faturistas</h2></div><button class="icon-button close" data-close="faturistasDialog">×</button></header>
-      <form id="billingForm" class="inline-form"><input id="billingName" placeholder="Nome do novo faturista" required minlength="2"><button class="primary">＋ Cadastrar</button></form>
+      <header><div><p class="eyebrow">CADASTRO AUXILIAR</p><h2>Faturistas</h2></div><button class="icon-button close" type="button" data-close="faturistasDialog">×</button></header>
+      <form id="billingForm" class="inline-form">
+        <input type="hidden" id="billingId">
+        <label>Nome do faturista<input id="billingName" placeholder="Nome do faturista" required minlength="2"></label>
+        <label>Senha<input id="billingPassword" type="password" placeholder="Senha de acesso" minlength="6" required></label>
+        <button type="submit" class="primary" id="billingSubmit">＋ Cadastrar</button>
+      </form>
       <div class="billing-list" id="billingList"></div>
+    </section>
+  </dialog>
+
+  <dialog id="reportsDialog">
+    <section class="modal xlarge" id="reportsModalSection">
+      <header><div><p class="eyebrow">RELATÓRIOS</p><h2>Estrutura de relatórios — Em desenvolvimento</h2></div><div class="modal-actions"><button class="icon-button" type="button" data-maximize="reportsModalSection" title="Maximizar relatório">⤢</button><button class="icon-button close" type="button" data-close="reportsDialog">×</button></div></header>
+      <div class="reports-container">
+        <p class="modal-copy">Espaço reservado para estruturar os relatórios e visualizações analíticas.</p>
+      </div>
+      <footer><button class="secondary" type="button" data-close="reportsDialog">Fechar</button></footer>
     </section>
   </dialog>
 
@@ -111,6 +146,7 @@
     </section>
   </dialog>
   <div id="toast" role="status"></div>
-  <script src="/painel-assets/app.js?v=20260609-2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="/painel-assets/app.js?v=20260610-1"></script>
 </body>
 </html>

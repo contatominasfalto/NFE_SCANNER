@@ -67,6 +67,11 @@ def ensure_schema():
                 "WHERE NOT EXISTS (SELECT 1 FROM faturistas WHERE nome = 'BIPE')"
             )
         )
+    if "users" in inspector.get_table_names():
+        user_columns = {column["name"] for column in inspector.get_columns("users")}
+        if "role" not in user_columns:
+            with engine.begin() as connection:
+                connection.execute(text("ALTER TABLE users ADD COLUMN role VARCHAR DEFAULT 'user'"))
 
 def get_db():
     db = SessionLocal()

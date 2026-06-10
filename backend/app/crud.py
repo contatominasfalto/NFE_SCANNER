@@ -1,3 +1,6 @@
+import hashlib
+import hmac
+import os
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from . import models, schemas
@@ -69,34 +72,76 @@ def filter_notas(db: Session, data_inicio=None, data_fim=None, fornecedor=None, 
 
 
 def create_faturista(db: Session, faturista: schemas.FaturistaCreate):
-    db_faturista = models.Faturista(nome=faturista.nome.strip(), ativo=True)
-    db.add(db_faturista)
+    username = faturista.nome.strip()
+    return create_user(db, username, faturista.senha, role="user", active=True)
+
+
+def get_faturistas(db: Session, incluir_inativos: bool = False):
+    query = db.query(models.User).filter(models.User.role == "user")
+    if not incluir_inativos:
+        query = query.filter(models.User.active.is_(True))
+    return query.order_by(models.User.username).all()
+
+
+def get_faturista(db: Session, faturista_id: int):
+    return db.query(models.User).filter(models.User.id == faturista_id, models.User.role == "user").first()
+
+
+def hash_password(password: str, salt: bytes | None = None) -> tuple[str, str]:
+    if salt is None:
+        salt = os.urandom(16)
+    password_hash = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 100000)
+    return password_hash.hex(), salt.hex()
+
+
+def verify_password(password: str, password_hash: str, salt: str) -> bool:
+    computed_hash = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), bytes.fromhex(salt), 100000).hex()
+    return hmac.compare_digest(password_hash, computed_hash)
+
+
+def create_user(db: Session, username: str, password: str, role: str = "user", active: bool = True):
+    username = username.strip()
+    password_hash, salt = hash_password(password)
+    db_user = models.User(
+        username=username,
+        password_hash=password_hash,
+        salt=salt,
+        role=role,
+        active=active,
+    )
+    db.add(db_user)
     try:
         db.commit()
     except IntegrityError:
         db.rollback()
         raise
-    db.refresh(db_faturista)
-    return db_faturista
+    db.refresh(db_user)
+    return db_user
 
 
-def get_faturistas(db: Session, incluir_inativos: bool = False):
-    query = db.query(models.Faturista)
-    if not incluir_inativos:
-        query = query.filter(models.Faturista.ativo.is_(True))
-    return query.order_by(models.Faturista.nome).all()
+def get_user_by_username(db: Session, username: str):
+    return db.query(models.User).filter(models.User.username == username.strip()).first()
 
 
-def get_faturista(db: Session, faturista_id: int):
-    return db.query(models.Faturista).filter(models.Faturista.id == faturista_id).first()
+def authenticate_user(db: Session, username: str, password: str):
+    user = get_user_by_username(db, username)
+    if not user or not user.active:
+        return None
+    if not verify_password(password, user.password_hash, user.salt):
+        return None
+    return user
 
 
 def update_faturista(db: Session, faturista_id: int, faturista_data: schemas.FaturistaUpdate):
     faturista = get_faturista(db, faturista_id)
     if not faturista:
         return None
-    faturista.nome = faturista_data.nome.strip()
-    faturista.ativo = faturista_data.ativo
+    faturista.username = faturista_data.nome.strip()
+    faturista.active = faturista_data.ativo
+    if faturista_data.senha:
+        password_hash, salt = hash_password(faturista_data.senha)
+        faturista.password_hash = password_hash
+        faturista.salt = salt
     try:
         db.commit()
     except IntegrityError:
@@ -106,10 +151,18 @@ def update_faturista(db: Session, faturista_id: int, faturista_data: schemas.Fat
     return faturista
 
 
+def delete_faturista(db: Session, faturista_id: int):
+    faturista = get_faturista(db, faturista_id)
+    if faturista:
+        db.delete(faturista)
+        db.commit()
+    return faturista
+
+
 def deactivate_faturista(db: Session, faturista_id: int):
     faturista = get_faturista(db, faturista_id)
     if faturista:
-        faturista.ativo = False
+        faturista.active = False
         db.commit()
         db.refresh(faturista)
     return faturista

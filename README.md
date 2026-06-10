@@ -1,638 +1,378 @@
-# 📱 NFE Scanner
+# NFE Scanner
 
-Sistema completo para escaneamento, leitura OCR, armazenamento e emissão de relatórios de Notas Fiscais Eletrônicas (NF-e), desenvolvido em Python com aplicativo Android integrado.
+Sistema operacional para leitura de chaves de acesso de NF-e, consulta dos dados fiscais, conferência, armazenamento e geração de XML.
 
----
+O projeto possui três interfaces que utilizam o mesmo backend:
 
-# 📌 Visão Geral
+- aplicativo mobile/desktop em KivyMD para o operador bipar e conferir notas;
+- painel web para acompanhamento, edição e administração dos registros;
+- Swagger para documentação e testes completos da API.
 
-O projeto **NFE Scanner** foi desenvolvido para automatizar o processo de captura e controle de notas fiscais através de dispositivos móveis Android.
+> O fluxo atual não utiliza OCR nem fotografia da nota. A leitura é feita pela chave de acesso de 44 dígitos, obtida por um leitor de código de barras ou digitada manualmente.
 
-A aplicação permite:
+## Funcionalidades atuais
 
-* Escanear notas fiscais utilizando a câmera do celular;
-* Extrair informações automaticamente via OCR;
-* Confirmar e validar os dados antes do armazenamento;
-* Salvar os dados em banco SQL;
-* Consultar notas cadastradas;
-* Emitir relatórios em PDF e Excel;
-* Centralizar as informações em um backend FastAPI.
+- Seleção obrigatória do local de alocação antes da leitura:
+  - `A1BR`
+  - `A1BR/PRU`
+  - `A2BR`
+- Leitura da chave NF-e por leitor de código de barras.
+- Validação da chave com 44 dígitos.
+- Consulta dos dados reais da nota pela API MeuDanfe.
+- Conferência e edição dos dados antes do cadastro.
+- Fluxo contínuo com `Salvar e próxima` ou encerramento com `Salvar e finalizar`.
+- Cadastro individual das notas no backend.
+- Listagem, busca, edição, exclusão e geração de XML no app.
+- Painel web com atualização automática da tabela.
+- Filtros por texto, local e faturista no painel.
+- Cadastro, ativação e desativação de faturistas.
+- Faturista padrão `BIPE` nos lançamentos realizados pelo app.
+- Geração de XML individual ou geral.
+- Swagger com fluxo completo para consultar, cadastrar, editar e excluir notas.
+- Logs da API e da integração fiscal com mascaramento das chaves de acesso.
 
-O sistema foi projetado para operações corporativas que necessitam controle rápido de documentos fiscais diretamente em campo.
+## Arquitetura
 
----
+```text
+Leitor de código de barras
+          |
+          v
+App KivyMD ou Painel Web
+          |
+          v
+Backend FastAPI
+          |
+          +----> API MeuDanfe
+          |
+          +----> Banco SQLite
+          |
+          +----> Arquivos XML
+```
 
-# 🏗️ Arquitetura do Projeto
+O app e o painel podem operar simultaneamente. O SQLite utiliza modo WAL e timeout de 30 segundos para permitir leituras contínuas do painel enquanto o app grava novas notas.
 
-O projeto está dividido em dois módulos principais:
+## Estrutura do projeto
 
-## 1. Mobile Android
-
-Aplicativo desenvolvido em Python utilizando:
-
-* Kivy
-* KivyMD
-* Buildozer
-
-Responsável por:
-
-* Interface do usuário;
-* Captura da imagem da nota fiscal;
-* Comunicação com API;
-* Consulta de registros;
-* Emissão de relatórios.
-
----
-
-## 2. Backend API
-
-Backend desenvolvido com:
-
-* FastAPI
-* SQLAlchemy
-* SQLite/PostgreSQL
-* OCR com Tesseract
-
-Responsável por:
-
-* Processamento OCR;
-* Armazenamento das notas fiscais;
-* Geração de relatórios;
-* Disponibilização da API REST;
-* Gerenciamento do banco de dados.
-
----
-
-# 📂 Estrutura do Projeto
-
-```bash
+```text
 nfe_scanner/
-│
 ├── backend/
 │   ├── app/
-│   │   ├── config.py
-│   │   ├── crud.py
-│   │   ├── database.py
-│   │   ├── main.py
-│   │   ├── models.py
-│   │   ├── ocr_service.py
-│   │   ├── report_service.py
-│   │   ├── schemas.py
-│   │   └── utils.py
-│   │
+│   │   ├── barcode_service.py    # Extração e validação da chave
+│   │   ├── config.py             # Variáveis de ambiente e diretórios
+│   │   ├── crud.py               # Operações no banco
+│   │   ├── database.py           # Conexão, WAL e migrações
+│   │   ├── integra_api.py        # Integração com a API MeuDanfe
+│   │   ├── logging_config.py     # Configuração dos logs
+│   │   ├── main.py               # API FastAPI e Swagger
+│   │   ├── models.py             # Modelos SQLAlchemy
+│   │   ├── report_service.py     # Geração dos arquivos XML
+│   │   └── schemas.py            # Contratos Pydantic
+│   ├── panel/
+│   │   ├── index.html
+│   │   ├── app.js
+│   │   ├── styles.css
+│   │   └── logo.jpg
+│   ├── logs/
+│   ├── reports/
 │   ├── scripts/
-│   │   └── create_db.sql
-│   │
-│   ├── requirements.txt
-│   └── .env
-│
+│   ├── .env
+│   ├── nfe_scanner.db
+│   └── requirements.txt
 ├── mobile/
 │   ├── assets/
-│   │   └── logo.jpg
-│   │
 │   ├── screens/
-│   │   ├── confirm_screen.py
-│   │   ├── home_screen.kv
-│   │   ├── list_screen.py
-│   │   ├── report_screen.py
-│   │   └── scan_screen.py
-│   │
 │   ├── services/
-│   │   └── api_client.py
-│   │
-│   ├── main.py
-│   ├── ui.py
+│   ├── api_config.json
 │   ├── buildozer.spec
+│   ├── main.py
 │   ├── requirements.txt
-│   └── api_config.json
-│
-├── reports/
-├── uploads/
-├── nfe_scanner.db
+│   └── ui.py
 └── README.md
 ```
 
----
-
-# ⚙️ Tecnologias Utilizadas
-
-## Backend
-
-| Tecnologia    | Finalidade                 |
-| ------------- | -------------------------- |
-| Python        | Linguagem principal        |
-| FastAPI       | API REST                   |
-| SQLAlchemy    | ORM banco de dados         |
-| SQLite        | Banco local                |
-| PostgreSQL    | Banco produção             |
-| Tesseract OCR | Leitura de texto das notas |
-| ReportLab     | Relatórios PDF             |
-| OpenPyXL      | Relatórios Excel           |
-| Uvicorn       | Servidor ASGI              |
-
----
-
-## Mobile
-
-| Tecnologia | Finalidade               |
-| ---------- | ------------------------ |
-| Kivy       | Interface Android        |
-| KivyMD     | Componentes visuais      |
-| Buildozer  | Compilação APK           |
-| Plyer      | Recursos nativos Android |
-| Requests   | Comunicação HTTP         |
-
----
-
-# 🔍 Funcionalidades
-
-## 📸 Escaneamento de NF-e
-
-O aplicativo permite capturar imagens diretamente pela câmera do dispositivo Android.
-
-Fluxo:
-
-1. Usuário abre tela de escaneamento;
-2. Captura a imagem da nota fiscal;
-3. Imagem é enviada para API;
-4. OCR processa os dados;
-5. Sistema identifica:
-
-* Número da NF;
-* Série;
-* Data emissão;
-* CNPJ fornecedor;
-* Nome fornecedor;
-* Valor total;
-* Chave de acesso;
-* Observações.
-
----
-
-## 🧠 OCR Inteligente
-
-O backend utiliza OCR para leitura automática dos dados presentes na nota fiscal.
-
-A aplicação foi preparada para:
-
-* Extrair informações estruturadas;
-* Tratar caracteres inválidos;
-* Melhorar reconhecimento de texto;
-* Automatizar cadastro fiscal.
-
----
-
-## ✅ Confirmação Manual
-
-Antes de gravar a nota no banco:
-
-* Usuário pode validar os dados;
-* Corrigir inconsistências;
-* Confirmar o envio.
-
-Isso reduz falhas do OCR.
-
----
-
-## 🗄️ Banco de Dados
-
-As notas ficam armazenadas em banco SQL.
-
-Tabela principal:
-
-```python
-notas_fiscais
-```
-
-Campos:
-
-| Campo                  | Tipo     |
-| ---------------------- | -------- |
-| id                     | Integer  |
-| numero_nf              | String   |
-| serie                  | String   |
-| data_emissao           | DateTime |
-| cnpj_fornecedor        | String   |
-| nome_fornecedor        | String   |
-| valor_total            | Float    |
-| chave_acesso           | String   |
-| observacao             | Text     |
-| caminho_arquivo_imagem | String   |
-| data_cadastro          | DateTime |
-
----
-
-## 📊 Relatórios
-
-O sistema gera relatórios:
-
-### PDF
-
-Utilizando ReportLab.
-
-### Excel
-
-Utilizando OpenPyXL.
-
-Filtros disponíveis:
-
-* Data inicial;
-* Data final;
-* Fornecedor;
-* Valor mínimo;
-* Valor máximo.
-
----
-
-# 🌐 Endpoints da API
-
-## Health Check
-
-```http
-GET /health/
-```
-
-Resposta:
-
-```json
-{
-  "status": "ok"
-}
-```
-
----
-
-## OCR da Nota
-
-```http
-POST /ocr-nf/
-```
-
-Responsável por:
-
-* Receber imagem;
-* Executar OCR;
-* Retornar dados extraídos.
-
----
-
-## Criar Nota Fiscal
-
-```http
-POST /notas/
-```
-
-Responsável por:
-
-* Validar dados;
-* Gravar nota no banco.
-
----
-
-## Upload Completo
-
-```http
-POST /upload-nf/
-```
-
-Fluxo legado:
-
-* Upload;
-* OCR;
-* Gravação imediata.
-
----
-
-## Listar Notas
-
-```http
-GET /notas/
-```
-
----
-
-## Gerar Relatório
-
-```http
-POST /relatorio/
-```
-
-Formatos:
-
-* PDF
-* Excel
-
----
-
-# 🖥️ Instalação do Backend
-
-## 1. Clonar Projeto
-
-```bash
-git clone https://github.com/seu-repositorio/nfe_scanner.git
-```
-
----
-
-## 2. Criar Ambiente Virtual
-
-```bash
-python -m venv venv
-```
-
-Ativar:
-
-### Windows
-
-```bash
-venv\Scripts\activate
-```
-
-### Linux
-
-```bash
-source venv/bin/activate
-```
-
----
-
-## 3. Instalar Dependências
-
-```bash
-pip install -r requirements.txt
-```
-
----
-
-## 4. Configurar Variáveis Ambiente
-
-Arquivo:
-
-```env
-.env
-```
-
-Exemplo:
+## Tecnologias
+
+### Backend e painel
+
+- Python 3.11+
+- FastAPI
+- Uvicorn
+- SQLAlchemy
+- SQLite
+- Pydantic
+- `urllib` da biblioteca padrão para integração fiscal
+- HTML, CSS e JavaScript
+
+### Aplicativo
+
+- Python
+- Kivy
+- KivyMD
+- Requests
+- Plyer
+- Buildozer para geração do APK Android
+
+## Dados armazenados
+
+### Tabela `notas_fiscais`
+
+| Campo | Descrição |
+| --- | --- |
+| `id` | Identificador interno |
+| `chave_acesso` | Chave NF-e, única, com 44 dígitos |
+| `data_cadastro` | Data e hora do bip/cadastro |
+| `data_emissao` | Data de emissão da NF-e |
+| `numero_nf` | Número da nota |
+| `serie` | Série da nota |
+| `local` | Local selecionado: A1BR, A1BR/PRU ou A2BR |
+| `produto` | Produto obtido do XML fiscal |
+| `quantidade` | Quantidade ou peso líquido |
+| `transportador` | Nome do transportador |
+| `faturista` | Faturista; padrão do app: BIPE |
+| `lider_operacional` | Líder operacional |
+| `nome_fornecedor` | Razão social do fornecedor |
+| `cnpj_fornecedor` | CNPJ do fornecedor |
+| `valor_total` | Valor total da nota |
+| `observacao` | Informação adicional ou observação operacional |
+| `caminho_arquivo_imagem` | Campo legado opcional |
+
+### Tabela `faturistas`
+
+Armazena nome, situação e data de cadastro dos faturistas disponíveis no painel. O registro `BIPE` é criado automaticamente e não pode ser desativado ou renomeado.
+
+## Configuração do backend
+
+Crie ou atualize `backend/.env`:
 
 ```env
 DATABASE_URL=sqlite:///./nfe_scanner.db
-UPLOAD_DIR=uploads
 REPORT_DIR=reports
+LOG_DIR=logs
+LOG_LEVEL=INFO
+MEUDANFE_API_BASE_URL=https://api.meudanfe.com.br/v2/fd/get/xml
+MEUDANFE_API_KEY=sua-chave-da-api
 ```
 
----
+Não publique ou versione a chave da API. Se uma chave real tiver sido exposta, ela deve ser revogada e substituída.
 
-## 5. Executar Backend
+Os caminhos relativos de banco, relatórios e logs são resolvidos dentro da pasta `backend`.
 
-```bash
-uvicorn app.main:app --reload
+## Executar o backend e o painel
+
+Na raiz do projeto, usando PowerShell:
+
+```powershell
+python -m venv venv
+venv\Scripts\python.exe -m pip install -r backend\requirements.txt
+venv\Scripts\python.exe -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
 ```
 
-API disponível:
+Com recarregamento automático durante o desenvolvimento:
 
-```bash
-http://127.0.0.1:8000
+```powershell
+venv\Scripts\python.exe -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-Swagger:
+Endereços:
 
-```bash
-http://127.0.0.1:8000/docs
+| Recurso | URL |
+| --- | --- |
+| Painel operacional | `http://127.0.0.1:8000/painel` |
+| Swagger API | `http://127.0.0.1:8000/docs` |
+| Health check | `http://127.0.0.1:8000/health/` |
+
+Se a porta 8000 estiver ocupada, identifique o processo:
+
+```powershell
+Get-NetTCPConnection -LocalPort 8000 | Select-Object State, OwningProcess
 ```
 
----
+## Executar o aplicativo no computador
 
-# 📱 Instalação Mobile Android
+Instale as dependências do app:
 
-## Dependências Linux
-
-```bash
-sudo apt update
-sudo apt install -y \
-python3-pip \
-build-essential \
-git \
-zip \
-unzip \
-openjdk-17-jdk \
-autoconf \
-libtool \
-pkg-config \
-zlib1g-dev
+```powershell
+python -m venv venv-mobile
+venv-mobile\Scripts\python.exe -m pip install -r mobile\requirements.txt
 ```
 
----
+Confirme que `mobile/api_config.json` aponta para o backend:
 
-## Instalar Buildozer
-
-```bash
-pip install buildozer cython
+```json
+{
+  "base_url": "http://127.0.0.1:8000"
+}
 ```
 
----
+Execute:
 
-## Compilar APK
+```powershell
+cd mobile
+..\venv-mobile\Scripts\python.exe main.py
+```
 
-Dentro da pasta mobile:
+## Executar no Android
+
+No smartphone, `127.0.0.1` aponta para o próprio telefone. Antes de gerar o APK, configure `mobile/api_config.json` com o IP do computador ou servidor acessível pela rede:
+
+```json
+{
+  "base_url": "http://192.168.1.100:8000"
+}
+```
+
+O backend deve estar iniciado com `--host 0.0.0.0`, e o firewall deve permitir acesso à porta utilizada.
+
+Em ambiente Linux com Buildozer:
 
 ```bash
+cd mobile
 buildozer android debug
 ```
 
-APK gerado em:
+O APK será gerado na pasta `mobile/bin/`.
 
-```bash
-bin/
-```
+## Fluxo operacional do app
 
----
+1. O operador seleciona `Bipar nota`.
+2. Escolhe o local de alocação.
+3. O local escolhido permanece visível na tela de leitura.
+4. Bipa ou digita a chave de acesso da NF-e.
+5. O app chama `POST /barcode-nf/`.
+6. O backend valida a chave e consulta a API MeuDanfe.
+7. O app abre a tela de conferência preenchida.
+8. O operador revisa os dados.
+9. Em `Salvar e próxima`, a nota é gravada e o leitor é reaberto mantendo o local.
+10. Em `Salvar e finalizar`, a nota é gravada e o fluxo é encerrado.
 
-# 📲 Fluxo de Utilização
+Cada nota é salva individualmente. Dessa forma, uma falha posterior não perde as notas já confirmadas.
 
-## Operação do Usuário
+## Painel operacional
 
-1. Abrir aplicativo;
-2. Selecionar escaneamento;
-3. Fotografar nota fiscal;
-4. Aguardar OCR;
-5. Confirmar dados;
-6. Salvar nota;
-7. Consultar relatórios.
+O painel apresenta os registros em uma tabela atualizada automaticamente e permite:
 
----
+- bipar/consultar nova nota;
+- editar ou excluir uma nota;
+- gerar XML individual;
+- gerar XML geral;
+- buscar qualquer conteúdo da nota;
+- filtrar por local e faturista;
+- acompanhar totais, peso líquido, valor e pendências;
+- cadastrar, visualizar, ativar e desativar faturistas;
+- editar o faturista associado a uma nota.
 
-# 🔒 Segurança
+## Endpoints principais
 
-O projeto foi estruturado para permitir futura implementação de:
+| Método | Endpoint | Finalidade |
+| --- | --- | --- |
+| `GET` | `/health/` | Verificar se a API está online |
+| `POST` | `/barcode-nf/` | Validar chave e consultar dados fiscais |
+| `POST` | `/notas/importar-barcode/` | Consultar e cadastrar em uma chamada, útil no Swagger |
+| `POST` | `/notas/` | Cadastrar uma nota já conferida |
+| `GET` | `/notas/` | Listar notas cadastradas |
+| `PUT` | `/notas/{nota_id}/` | Editar uma nota |
+| `DELETE` | `/notas/{nota_id}/` | Excluir uma nota |
+| `POST` | `/faturistas/` | Cadastrar faturista |
+| `GET` | `/faturistas/` | Listar faturistas |
+| `PUT` | `/faturistas/{faturista_id}/` | Editar ou reativar faturista |
+| `DELETE` | `/faturistas/{faturista_id}/` | Desativar faturista |
+| `POST` | `/relatorio/` | Gerar XML individual ou geral |
 
-* JWT Authentication;
-* Controle de usuários;
-* Criptografia de dados;
-* Logs de auditoria;
-* Controle de permissões.
+A documentação completa, os schemas, exemplos e códigos de resposta estão disponíveis no Swagger.
 
----
+## Testar o fluxo completo pelo Swagger
 
-# 🚀 Melhorias Futuras
+1. Abra `http://127.0.0.1:8000/docs`.
+2. Execute `POST /notas/importar-barcode/`.
+3. Informe uma chave real de 44 dígitos em `codigo_barras`.
+4. Informe um `local` válido.
+5. Confirme o cadastro com `GET /notas/`.
+6. Edite a nota com `PUT /notas/{nota_id}/`, se necessário.
+7. Gere o XML com `POST /relatorio/?nota_id={nota_id}&formato=xml`.
+8. Exclua a nota com `DELETE /notas/{nota_id}/` para repetir o teste com a mesma chave.
 
-Possíveis evoluções:
+Uma chave já cadastrada retorna `409 Conflict`. Payloads incompatíveis retornam `422` com o campo inválido detalhado.
 
-* Integração SEFAZ;
-* Leitura QR Code NF-e;
-* Dashboard gerencial;
-* Multiempresa;
-* Sincronização cloud;
-* Backup automático;
-* Inteligência artificial para validação fiscal;
-* OCR avançado com machine learning.
+## XML
 
----
+O sistema gera somente XML no fluxo atual.
 
-# 📈 Casos de Uso
+- XML individual: informe `nota_id`.
+- XML geral: omita `nota_id`.
+- Filtros opcionais do XML geral:
+  - `data_inicio`
+  - `data_fim`
+  - `fornecedor`
+  - `valor_min`
+  - `valor_max`
 
-O sistema pode ser utilizado por:
+Os arquivos também são armazenados em `backend/reports/`.
 
-* Construtoras;
-* Transportadoras;
-* Distribuidoras;
-* Empresas de pavimentação;
-* Controle de almoxarifado;
-* Setor fiscal;
-* Controle financeiro;
-* Gestão de compras.
+## Logs e diagnóstico
 
----
-
-# 🧪 Testes Recomendados
-
-## Backend
-
-Testar:
-
-* Upload de imagem;
-* OCR;
-* Persistência banco;
-* Relatórios;
-* Filtros;
-* Performance.
-
----
-
-## Mobile
-
-Validar:
-
-* Permissões câmera;
-* Layout Android;
-* Comunicação API;
-* Responsividade;
-* Estabilidade APK.
-
----
-
-# 📋 Requisitos do Sistema
-
-## Backend
-
-* Python 3.11+
-* SQLite/PostgreSQL
-* Tesseract OCR
-
----
-
-## Android
-
-* Android 8+
-* Internet ativa
-* Permissão câmera
-
----
-
-# 🧾 Exemplo de Fluxo Técnico
+Os logs ficam em:
 
 ```text
-Android App
-     ↓
-Captura Imagem
-     ↓
-FastAPI Backend
-     ↓
-OCR Tesseract
-     ↓
-Extração Dados
-     ↓
-Validação
-     ↓
-Banco SQL
-     ↓
-Relatórios PDF/Excel
+backend/logs/nfe_scanner.log
 ```
 
----
+Exibir as últimas linhas no PowerShell:
 
-# 👨‍💻 Autor
+```powershell
+Get-Content backend\logs\nfe_scanner.log -Tail 100
+```
 
-## Maxwell Viana
+Os logs registram requisições, duração, erros de validação, integração fiscal, cadastros, edições, exclusões e geração de XML. As chaves NF-e são mascaradas nos registros de integração.
 
-Desenvolvedor responsável pela estruturação do sistema NFE Scanner.
+## Consultar a estrutura do banco
 
-Tecnologias principais utilizadas:
+Exemplo usando o Python do ambiente virtual:
 
-* Python
-* FastAPI
-* Kivy
-* OCR
-* SQL
-* Android Buildozer
+```powershell
+venv\Scripts\python.exe -c "import sqlite3; c=sqlite3.connect('backend/nfe_scanner.db'); print(c.execute('PRAGMA table_info(notas_fiscais)').fetchall())"
+```
 
----
+Listar notas cadastradas:
 
-# 📄 Licença
+```powershell
+venv\Scripts\python.exe -c "import sqlite3; c=sqlite3.connect('backend/nfe_scanner.db'); print(c.execute('SELECT id, numero_nf, local, nome_fornecedor, valor_total FROM notas_fiscais').fetchall())"
+```
+
+## Regras importantes
+
+- A chave de acesso deve possuir exatamente 44 dígitos.
+- `chave_acesso` é única no banco.
+- `local` é obrigatório ao cadastrar uma nova nota.
+- O app utiliza `BIPE` como faturista padrão.
+- A API MeuDanfe pode não retornar uma nota mesmo quando a chave é formalmente válida.
+- O app e o painel dependem do backend online.
+- A integração fiscal depende de uma `MEUDANFE_API_KEY` válida.
+- O sistema ainda não possui autenticação ou controle de permissões.
+
+## Status atual
+
+| Componente | Status |
+| --- | --- |
+| Backend FastAPI | Funcional |
+| Integração MeuDanfe | Funcional, condicionada à credencial |
+| Leitura por código de barras | Funcional |
+| Cadastro, edição e exclusão de notas | Funcional |
+| Aplicativo KivyMD | Funcional no computador e preparado para Android |
+| Painel web operacional | Funcional |
+| Gestão de faturistas | Funcional |
+| Geração de XML | Funcional |
+| Swagger | Atualizado |
+| Logs operacionais | Funcional |
+| Autenticação | Não implementada |
+
+## Segurança
+
+- Mantenha `backend/.env` fora do controle de versão.
+- Não distribua a chave da API no app mobile ou no painel.
+- Em produção, utilize HTTPS, autenticação, regras de firewall e um servidor de banco adequado ao volume da operação.
+
+## Autor
+
+Maxwell Viana
 
 Projeto desenvolvido para uso corporativo e operacional.
-
-Todos os direitos reservados.
-
----
-
-# 📞 Observações Técnicas
-
-O projeto já possui:
-
-* Estrutura backend funcional;
-* Estrutura mobile organizada;
-* Separação de responsabilidades;
-* Arquitetura preparada para expansão;
-* Modelo adequado para deploy em VPS/Hosting.
-
-Pode ser facilmente adaptado para:
-
-* Docker;
-* Railway;
-* Render;
-* VPS Linux;
-* AWS;
-* Azure;
-* Google Cloud.
-
----
-
-# ✅ Status Atual do Projeto
-
-| Módulo          | Status       |
-| --------------- | ------------ |
-| Backend FastAPI | Funcional    |
-| OCR             | Implementado |
-| Banco de Dados  | Funcional    |
-| Relatórios      | Funcional    |
-| Mobile Android  | Estruturado  |
-| Build APK       | Preparado    |
-| Deploy Hosting  | Preparado    |
-
----
-
-# 📌 Conclusão
-
-O projeto NFE Scanner entrega uma solução prática para digitalização e controle de notas fiscais em ambiente corporativo.
-
-A arquitetura adotada permite crescimento escalável, integração futura com sistemas ERP e adaptação para operações de grande volume.
