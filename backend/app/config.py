@@ -11,14 +11,6 @@ if DATABASE_URL.startswith("sqlite:///./"):
     database_name = DATABASE_URL.removeprefix("sqlite:///./")
     DATABASE_URL = f"sqlite:///{(BACKEND_DIR / database_name).as_posix()}"
 
-
-def resolve_backend_path(value: str, default_name: str) -> str:
-    path = Path(value or default_name)
-    return str(path if path.is_absolute() else BACKEND_DIR / path)
-
-
-REPORT_DIR = resolve_backend_path(os.getenv("REPORT_DIR", ""), "reports")
-LOG_DIR = resolve_backend_path(os.getenv("LOG_DIR", ""), "logs")
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 MEUDANFE_API_BASE_URL = os.getenv(
     "MEUDANFE_API_BASE_URL",
@@ -26,6 +18,3 @@ MEUDANFE_API_BASE_URL = os.getenv(
 )
 MEUDANFE_API_KEY = os.getenv("MEUDANFE_API_KEY", "")
 SECRET_KEY = os.getenv("SECRET_KEY", "nfe_scanner_default_secret_2026")
-
-os.makedirs(REPORT_DIR, exist_ok=True)
-os.makedirs(LOG_DIR, exist_ok=True)

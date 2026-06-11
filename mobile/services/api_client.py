@@ -152,9 +152,9 @@ class APIClient:
             from kivy.app import App
 
             app = App.get_running_app()
-            base_dir = app.user_data_dir if app else os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            base_dir = app.user_data_dir if app else os.path.join(os.path.expanduser("~"), ".nfe_scanner")
         except Exception:
-            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            base_dir = os.path.join(os.path.expanduser("~"), ".nfe_scanner")
         os.makedirs(base_dir, exist_ok=True)
         return os.path.join(base_dir, "pending_save_errors.json")
 

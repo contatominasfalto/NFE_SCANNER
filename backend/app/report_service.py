@@ -1,4 +1,3 @@
-import os
 from datetime import datetime
 from pathlib import Path
 from xml.etree.ElementTree import Element, SubElement, ElementTree, indent
@@ -35,7 +34,7 @@ def safe_text(value):
     return str(value)
 
 
-def generate_xml(notas, filtros, output_path):
+def generate_xml(notas, filtros, output):
     """
     Gera relatório XML das notas fiscais cadastradas.
     XML completo conforme os campos disponíveis no banco do projeto.
@@ -76,8 +75,7 @@ def generate_xml(notas, filtros, output_path):
     tree = ElementTree(root)
     indent(tree, space="    ", level=0)
 
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    tree.write(output_path, encoding="utf-8", xml_declaration=True)
+    tree.write(output, encoding="utf-8", xml_declaration=True)
 
 
 def format_ton(value):
@@ -200,12 +198,16 @@ def _receipt_bar_drawing(recebimento):
     if recebimento["material"]:
         title += f" - {recebimento['material']}"
     drawing.add(String(360, 255, title, textAnchor="middle", fontName="Helvetica-Bold", fontSize=13))
+    materiais = [item["material"] for item in recebimento["totais_materiais"]]
+    if not materiais:
+        drawing.add(String(360, 130, "Nenhum dado no periodo", textAnchor="middle", fontSize=10))
+        return drawing
+
     chart = VerticalBarChart()
     chart.x = 55
     chart.y = 45
     chart.width = 610
     chart.height = 175
-    materiais = [item["material"] for item in recebimento["totais_materiais"]]
     chart.data = [[dia["materiais_ton"].get(material, 0) for dia in recebimento["dias"]] for material in materiais]
     chart.categoryAxis.categoryNames = [item["data"][8:10] for item in recebimento["dias"]]
     chart.categoryAxis.style = "stacked"
@@ -235,6 +237,10 @@ def _receipt_share_drawing(recebimento):
     drawing = Drawing(720, 230)
     drawing.add(String(360, 215, "Participacao total por material", textAnchor="middle", fontName="Helvetica-Bold", fontSize=13))
     materiais = recebimento["totais_materiais"]
+    if not materiais:
+        drawing.add(String(360, 110, "Nenhum dado no periodo", textAnchor="middle", fontSize=10))
+        return drawing
+
     pie = Pie()
     pie.x = 260
     pie.y = 25
@@ -250,10 +256,9 @@ def _receipt_share_drawing(recebimento):
     return drawing
 
 
-def generate_operational_pdf(operacional, material, setor, recebimento, output_path):
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+def generate_operational_pdf(operacional, material, setor, recebimento, output):
     doc = SimpleDocTemplate(
-        output_path,
+        output,
         pagesize=landscape(A4),
         leftMargin=14 * mm,
         rightMargin=14 * mm,
@@ -333,8 +338,7 @@ def _style_sheet(sheet, header_row=1):
         sheet.column_dimensions[get_column_letter(column[0].column)].width = width
 
 
-def generate_operational_excel(operacional, material, setor, recebimento, output_path):
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+def generate_operational_excel(operacional, material, setor, recebimento, output):
     workbook = Workbook()
     summary = workbook.active
     summary.title = "Resumo"
@@ -405,4 +409,4 @@ def generate_operational_excel(operacional, material, setor, recebimento, output
     receipt_chart.dLbls.showVal = True
     receipt_chart.dLbls.numFmt = "0.000"
     receipt_sheet.add_chart(receipt_chart, "E4")
-    workbook.save(output_path)
+    workbook.save(output)

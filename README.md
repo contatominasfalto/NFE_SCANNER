@@ -149,16 +149,16 @@ Crie ou atualize `backend/.env`:
 
 ```env
 DATABASE_URL=sqlite:///./nfe_scanner.db
-REPORT_DIR=reports
-LOG_DIR=logs
 LOG_LEVEL=INFO
 MEUDANFE_API_BASE_URL=https://api.meudanfe.com.br/v2/fd/get/xml
 MEUDANFE_API_KEY=sua-chave-da-api
+SECRET_KEY=uma-chave-secreta-longa-e-aleatoria
 ```
 
 Não publique ou versione a chave da API. Se uma chave real tiver sido exposta, ela deve ser revogada e substituída.
 
-Os caminhos relativos de banco, relatórios e logs são resolvidos dentro da pasta `backend`.
+O banco SQLite local é resolvido dentro da pasta `backend`. Exportações são
+transmitidas diretamente ao cliente e os logs seguem para a saída padrão.
 
 ## Executar o backend e o painel
 
@@ -341,21 +341,13 @@ O sistema gera somente XML no fluxo atual.
   - `valor_min`
   - `valor_max`
 
-Os arquivos também são armazenados em `backend/reports/`.
+Os arquivos são transmitidos diretamente para download e não são armazenados
+na pasta do projeto.
 
 ## Logs e diagnóstico
 
-Os logs ficam em:
-
-```text
-backend/logs/nfe_scanner.log
-```
-
-Exibir as últimas linhas no PowerShell:
-
-```powershell
-Get-Content backend\logs\nfe_scanner.log -Tail 100
-```
+Os logs são enviados para a saída padrão (`stdout`/`stderr`), permitindo que a
+plataforma de hospedagem cuide da coleta e retenção.
 
 Os logs registram requisições, duração, erros de validação, integração fiscal, cadastros, edições, exclusões e geração de XML. As chaves NF-e são mascaradas nos registros de integração.
 

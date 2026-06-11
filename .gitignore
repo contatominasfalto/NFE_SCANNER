@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+venv/
+venv-*/
+venv_*/
+.venv/
+
+# Secrets and local configuration
+.env
+backend/.env
+
+# Local databases and runtime artifacts
+*.db
+*.db-shm
+*.db-wal
+*.log
+backend/backups/
+backend/logs/
+backend/reports/
+backend/uploads/
+reports/
+uploads/
+
+# Generated downloads and mobile builds
+mobile/*.xml
+mobile/pending_save_errors.json
+mobile/bin/
+mobile/.buildozer/
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

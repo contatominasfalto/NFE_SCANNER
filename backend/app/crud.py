@@ -404,12 +404,3 @@ def delete_faturista(db: Session, faturista_id: int):
         db.delete(faturista)
         db.commit()
     return faturista
-
-
-def deactivate_faturista(db: Session, faturista_id: int):
-    faturista = get_faturista(db, faturista_id)
-    if faturista:
-        faturista.active = False
-        db.commit()
-        db.refresh(faturista)
-    return faturista

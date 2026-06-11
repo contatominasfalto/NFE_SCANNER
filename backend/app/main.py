@@ -3,7 +3,7 @@ from calendar import monthrange
 import base64
 import hashlib
 import hmac
-import os
+from io import BytesIO
 import time
 from pathlib import Path
 from time import perf_counter
@@ -12,14 +12,13 @@ from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, S
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.security import APIKeyCookie
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from . import barcode_service, crud, integra_api, models, report_service, schemas, config
-from .config import REPORT_DIR
 from .database import engine, ensure_schema, get_db, SessionLocal
 from .logging_config import configure_logging, mask_access_key
 
@@ -583,7 +582,7 @@ def relatorio_recebimento_diario(
 
 @app.get(
     "/relatorios/exportar/",
-    response_class=FileResponse,
+    response_class=StreamingResponse,
     tags=["Notas fiscais"],
     summary="Exportar relatorio operacional",
     description="Gera o relatorio completo em PDF ou Excel usando os periodos configurados no painel.",
@@ -627,14 +626,19 @@ def exportar_relatorio_operacional(
 
     timestamp = agora.strftime("%Y%m%d_%H%M%S")
     filename = f"relatorio_operacional_{timestamp}.{formato}"
-    filepath = os.path.join(REPORT_DIR, filename)
+    output = BytesIO()
     if formato == "pdf":
-        report_service.generate_operational_pdf(operacional, material, setor, recebimento, filepath)
+        report_service.generate_operational_pdf(operacional, material, setor, recebimento, output)
         media_type = "application/pdf"
     else:
-        report_service.generate_operational_excel(operacional, material, setor, recebimento, filepath)
+        report_service.generate_operational_excel(operacional, material, setor, recebimento, output)
         media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    return FileResponse(filepath, filename=filename, media_type=media_type)
+    output.seek(0)
+    return StreamingResponse(
+        output,
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @app.put(
@@ -777,7 +781,7 @@ def delete_faturista(faturista_id: int, current_user: models.User = Depends(get_
 
 @app.post(
     "/relatorio/",
-    response_class=FileResponse,
+    response_class=StreamingResponse,
     tags=["XML"],
     summary="Gerar XML de nota fiscal",
     description=(
@@ -853,7 +857,6 @@ def gerar_relatorio(
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"nota_fiscal_{nota_id}_{timestamp}.xml" if nota_id else f"notas_fiscais_{timestamp}.xml"
-    filepath = os.path.join(REPORT_DIR, filename)
 
     if nota_id:
         filtros_str = f"Nota ID: {nota_id}"
@@ -865,11 +868,13 @@ def gerar_relatorio(
             f"Valor maximo: {valor_max if valor_max is not None else 'todos'}"
         )
 
-    report_service.generate_xml(notas, filtros_str, filepath)
+    output = BytesIO()
+    report_service.generate_xml(notas, filtros_str, output)
+    output.seek(0)
     logger.info("XML gerado | nota_id=%s | quantidade=%s | arquivo=%s", nota_id, len(notas), filename)
 
-    return FileResponse(
-        filepath,
-        filename=filename,
+    return StreamingResponse(
+        output,
         media_type="application/xml",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
