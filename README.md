@@ -263,6 +263,33 @@ O painel apresenta os registros em uma tabela atualizada automaticamente e permi
 - acompanhar totais, peso líquido, valor e pendências;
 - cadastrar, visualizar, ativar e desativar faturistas;
 - editar o faturista associado a uma nota.
+- visualizar relatórios acumulados do dia e do mês vigente.
+
+Ao abrir **Relatórios**, o painel apresenta um modal maximizado com dois gráficos de
+pizza agrupados por produto. Os períodos usam a data de emissão (`data_emissao`):
+do primeiro ao último dia do mês vigente e do primeiro ao último minuto do dia
+vigente. As quantidades armazenadas em kg são exibidas em
+toneladas, e notas marcadas com erro não entram nos acumulados.
+
+Abaixo dos gráficos, o relatório dinâmico permite informar data/hora inicial e
+final para agrupar as notas por material. A tabela apresenta a quantidade total
+em toneladas e a quantidade de NF-es de cada material no período selecionado.
+
+O relatório por período, material e local apresenta todos os materiais do período
+e separa as quantidades em toneladas e o número de NF-es entre CDMA e PRU.
+
+O relatório de recebimento diário permite filtrar o período e um material
+específico ou todos os materiais. Cada dia possui uma única barra empilhada,
+dividida proporcionalmente entre os materiais recebidos. A rosca apresenta a
+participação total de cada material no período.
+
+Os botões **Baixar PDF** e **Baixar Excel** exportam o relatório completo usando
+os períodos atualmente configurados nas consultas dinâmicas. O navegador inicia
+o download do arquivo para a pasta de downloads configurada no computador.
+
+O PDF utiliza a identidade visual **SCAN-NFE MINASFALTO**, incluindo logo,
+cabeçalho e rodapé paginados, moldura externa, seções delimitadas e gráficos
+organizados em páginas individuais para melhorar a leitura.
 
 ## Endpoints principais
 
@@ -273,6 +300,11 @@ O painel apresenta os registros em uma tabela atualizada automaticamente e permi
 | `POST` | `/notas/importar-barcode/` | Consultar e cadastrar em uma chamada, útil no Swagger |
 | `POST` | `/notas/` | Cadastrar uma nota já conferida |
 | `GET` | `/notas/` | Listar notas cadastradas |
+| `GET` | `/relatorios/operacional/` | Obter acumulados operacionais diário e mensal |
+| `GET` | `/relatorios/material/` | Agrupar materiais por período informado |
+| `GET` | `/relatorios/material-local/` | Agrupar materiais por período e local |
+| `GET` | `/relatorios/recebimento-diario/` | Agrupar e calcular a proporção diária dos materiais |
+| `GET` | `/relatorios/exportar/` | Exportar o relatório completo em PDF ou Excel |
 | `PUT` | `/notas/{nota_id}/` | Editar uma nota |
 | `DELETE` | `/notas/{nota_id}/` | Excluir uma nota |
 | `POST` | `/faturistas/` | Cadastrar faturista |

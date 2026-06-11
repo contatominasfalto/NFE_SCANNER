@@ -1,4 +1,5 @@
 from datetime import datetime
+from calendar import monthrange
 import base64
 import hashlib
 import hmac
@@ -480,6 +481,160 @@ def list_notas(
     db: Session = Depends(get_db),
 ):
     return crud.get_notas(db, skip=skip, limit=limit)
+
+
+@app.get(
+    "/relatorios/operacional/",
+    response_model=schemas.RelatorioOperacionalResponse,
+    tags=["Notas fiscais"],
+    summary="Resumo operacional diario e mensal",
+    description=(
+        "Agrupa por produto as quantidades das notas sem erro, considerando a data de "
+        "emissao. Retorna os acumulados do mes vigente e do dia vigente em toneladas."
+    ),
+)
+def relatorio_operacional(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    agora = datetime.now()
+    inicio_mes = agora.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    fim_mes = agora.replace(
+        day=monthrange(agora.year, agora.month)[1],
+        hour=23,
+        minute=59,
+        second=59,
+        microsecond=999999,
+    )
+    inicio_dia = agora.replace(hour=0, minute=0, second=0, microsecond=0)
+    fim_dia = agora.replace(hour=23, minute=59, second=59, microsecond=999999)
+    return crud.get_relatorio_operacional(db, inicio_mes, fim_mes, inicio_dia, fim_dia)
+
+
+@app.get(
+    "/relatorios/material/",
+    response_model=schemas.RelatorioMaterialResponse,
+    tags=["Notas fiscais"],
+    summary="Resumo de materiais por periodo",
+    description=(
+        "Agrupa notas sem erro por material dentro do periodo informado, usando a "
+        "data de emissao. Retorna quantidade em toneladas e quantidade de NF-es."
+    ),
+)
+def relatorio_material(
+    data_inicio: datetime = Query(description="Data e hora inicial inclusiva."),
+    data_fim: datetime = Query(description="Data e hora final inclusiva."),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if data_inicio > data_fim:
+        raise HTTPException(status_code=400, detail="A data inicial deve ser anterior ou igual a data final.")
+    if data_fim.second == 0 and data_fim.microsecond == 0:
+        data_fim = data_fim.replace(second=59, microsecond=999999)
+    return crud.get_relatorio_material(db, data_inicio, data_fim)
+
+
+@app.get(
+    "/relatorios/material-local/",
+    response_model=schemas.RelatorioMaterialLocalResponse,
+    tags=["Notas fiscais"],
+    summary="Resumo de materiais por periodo e local",
+    description=(
+        "Agrupa notas sem erro por material e separa quantidade em toneladas e "
+        "quantidade de NF-es entre os locais CDMA e PRU."
+    ),
+)
+def relatorio_material_local(
+    data_inicio: datetime = Query(description="Data e hora inicial inclusiva."),
+    data_fim: datetime = Query(description="Data e hora final inclusiva."),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if data_inicio > data_fim:
+        raise HTTPException(status_code=400, detail="A data inicial deve ser anterior ou igual a data final.")
+    if data_fim.second == 0 and data_fim.microsecond == 0:
+        data_fim = data_fim.replace(second=59, microsecond=999999)
+    return crud.get_relatorio_material_local(db, data_inicio, data_fim)
+
+
+@app.get(
+    "/relatorios/recebimento-diario/",
+    response_model=schemas.RelatorioRecebimentoResponse,
+    tags=["Notas fiscais"],
+    summary="Composicao diaria por material",
+    description=(
+        "Agrupa as quantidades recebidas por dia e separa proporcionalmente cada "
+        "material em uma barra empilhada. O filtro de material e opcional."
+    ),
+)
+def relatorio_recebimento_diario(
+    data_inicio: datetime = Query(description="Data e hora inicial inclusiva."),
+    data_fim: datetime = Query(description="Data e hora final inclusiva."),
+    material: str | None = Query(None, description="Material especifico. Omitir para considerar todos."),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if data_inicio > data_fim:
+        raise HTTPException(status_code=400, detail="A data inicial deve ser anterior ou igual a data final.")
+    if data_fim.second == 0 and data_fim.microsecond == 0:
+        data_fim = data_fim.replace(second=59, microsecond=999999)
+    return crud.get_relatorio_recebimento(db, data_inicio, data_fim, material)
+
+
+@app.get(
+    "/relatorios/exportar/",
+    response_class=FileResponse,
+    tags=["Notas fiscais"],
+    summary="Exportar relatorio operacional",
+    description="Gera o relatorio completo em PDF ou Excel usando os periodos configurados no painel.",
+)
+def exportar_relatorio_operacional(
+    formato: str = Query(pattern="^(pdf|xlsx)$"),
+    material_inicio: datetime = Query(),
+    material_fim: datetime = Query(),
+    setor_inicio: datetime = Query(),
+    setor_fim: datetime = Query(),
+    recebimento_inicio: datetime = Query(),
+    recebimento_fim: datetime = Query(),
+    recebimento_material: str | None = Query(None),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if material_inicio > material_fim or setor_inicio > setor_fim or recebimento_inicio > recebimento_fim:
+        raise HTTPException(status_code=400, detail="A data inicial deve ser anterior ou igual a data final.")
+    if material_fim.second == 0 and material_fim.microsecond == 0:
+        material_fim = material_fim.replace(second=59, microsecond=999999)
+    if setor_fim.second == 0 and setor_fim.microsecond == 0:
+        setor_fim = setor_fim.replace(second=59, microsecond=999999)
+    if recebimento_fim.second == 0 and recebimento_fim.microsecond == 0:
+        recebimento_fim = recebimento_fim.replace(second=59, microsecond=999999)
+
+    agora = datetime.now()
+    inicio_mes = agora.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    fim_mes = agora.replace(
+        day=monthrange(agora.year, agora.month)[1],
+        hour=23,
+        minute=59,
+        second=59,
+        microsecond=999999,
+    )
+    inicio_dia = agora.replace(hour=0, minute=0, second=0, microsecond=0)
+    fim_dia = agora.replace(hour=23, minute=59, second=59, microsecond=999999)
+    operacional = crud.get_relatorio_operacional(db, inicio_mes, fim_mes, inicio_dia, fim_dia)
+    material = crud.get_relatorio_material(db, material_inicio, material_fim)
+    setor = crud.get_relatorio_material_local(db, setor_inicio, setor_fim)
+    recebimento = crud.get_relatorio_recebimento(db, recebimento_inicio, recebimento_fim, recebimento_material)
+
+    timestamp = agora.strftime("%Y%m%d_%H%M%S")
+    filename = f"relatorio_operacional_{timestamp}.{formato}"
+    filepath = os.path.join(REPORT_DIR, filename)
+    if formato == "pdf":
+        report_service.generate_operational_pdf(operacional, material, setor, recebimento, filepath)
+        media_type = "application/pdf"
+    else:
+        report_service.generate_operational_excel(operacional, material, setor, recebimento, filepath)
+        media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    return FileResponse(filepath, filename=filename, media_type=media_type)
 
 
 @app.put(

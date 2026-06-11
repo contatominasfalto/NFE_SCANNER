@@ -58,154 +58,193 @@ showLogin("");
 (async()=>{if(await ensureAuthenticated()){loadAll(true);setInterval(()=>loadAll(true),4000);}})();
 
 // Reports functionality
-$("openReports").addEventListener("click",async e=>{e.preventDefault();if(!await ensureAuthenticated()) return;$("reportsDialog").showModal();await renderReports();});
-let reportCharts = {};
-function destroyReports(){Object.values(reportCharts).forEach(c=>{try{c.destroy()}catch{} }); reportCharts={};}
-async function renderReports(){try{if(!notes || notes.length===0){await loadAll(true)}const data = notes;
-		const total = data.length;
-		const totalValue = data.reduce((s,n)=>s+(n.valor_total||0),0);
-		const totalWeight = data.reduce((s,n)=>s+(n.quantidade||0),0);
-		const suppliers = new Set(data.map(n=>n.nome_fornecedor||""));
-		$("reportsTotal").textContent=total;$("reportsValue").textContent=money(totalValue);$("reportsWeight").textContent=new Intl.NumberFormat("pt-BR").format(totalWeight)+" kg";$("reportsSuppliers").textContent=suppliers.size;
-
-		const byLocal = data.reduce((acc,n)=>{const k=n.local||"Não alocado";acc[k]=(acc[k]||0)+1;return acc},{})
-		const localLabels = Object.keys(byLocal);const localValues = localLabels.map(l=>byLocal[l]);
-
-		const prodMap = data.reduce((acc,n)=>{const k=(n.produto||"(sem produto)").trim();acc[k]=(acc[k]||0)+1;return acc},{})
-		const prodPairs = Object.entries(prodMap).sort((a,b)=>b[1]-a[1]).slice(0,10);
-		const prodLabels = prodPairs.map(p=>p[0]);const prodValues = prodPairs.map(p=>p[1]);
-
-		const valMap = data.reduce((acc,n)=>{const k=(n.nome_fornecedor||"(sem fornecedor)").trim();acc[k]=(acc[k]||0)+(n.valor_total||0);return acc},{})
-		const valPairs = Object.entries(valMap).sort((a,b)=>b[1]-a[1]).slice(0,10);
-		const valLabels = valPairs.map(p=>p[0]);const valValues = valPairs.map(p=>p[1]);
-
-		const monthMap = data.reduce((acc,n)=>{const d=n.data_emissao?new Date(n.data_emissao):null;const k=d?`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`:"(sem data)";acc[k]=(acc[k]||0)+1;return acc},{})
-		const monthPairs = Object.entries(monthMap).sort((a,b)=>a[0].localeCompare(b[0]));const monthLabels = monthPairs.map(p=>p[0]);const monthValues = monthPairs.map(p=>p[1]);
-
+const reportColors=["#f29129","#3478bd","#48a868","#d85c57","#8b6fc0","#e0b43c","#4ba7a5","#c36b99","#76818d","#b56e32"];
+const tons=v=>`${new Intl.NumberFormat("pt-BR",{minimumFractionDigits:3,maximumFractionDigits:3}).format(v||0)} TON`;
+const reportDate=v=>new Date(v).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
+const reportInputDate=v=>String(v||"").slice(0,16);
+const pieValueLabels={
+	id:"pieValueLabels",
+	afterDatasetsDraw(chart){
+		const {ctx,chartArea}=chart,meta=chart.getDatasetMeta(0),values=chart.data.datasets[0].data,isDoughnut=chart.config.type==="doughnut";
+		ctx.save();
+		meta.data.forEach((arc,index)=>{
+			const value=Number(values[index]||0);
+			if(value<=0)return;
+			ctx.font="700 12px Inter, Segoe UI, Arial, sans-serif";
+			ctx.textAlign="center";
+			ctx.textBaseline="middle";
+			ctx.lineWidth=3;
+			ctx.strokeStyle="rgba(0,0,0,.55)";
+			ctx.fillStyle="#fff";
+			const label=tons(value);
+			let position=arc.tooltipPosition();
+			if(isDoughnut){
+				const angle=(arc.startAngle+arc.endAngle)/2;
+				const radius=arc.innerRadius+(arc.outerRadius-arc.innerRadius)*0.48;
+				position={x:arc.x+Math.cos(angle)*radius,y:arc.y+Math.sin(angle)*radius};
+			}
+			const halfWidth=ctx.measureText(label).width/2;
+			const x=Math.max(chartArea.left+halfWidth+5,Math.min(position.x,chartArea.right-halfWidth-5));
+			const y=Math.max(chartArea.top+10,Math.min(position.y,chartArea.bottom-10));
+			ctx.strokeText(label,x,y);
+			ctx.fillText(label,x,y);
+		});
+		ctx.restore();
+	}
+};
+const barValueLabels={
+	id:"barValueLabels",
+	afterDatasetsDraw(chart){
+		const {ctx,chartArea}=chart;
+		ctx.save();
+		chart.data.datasets.forEach((dataset,datasetIndex)=>{
+			chart.getDatasetMeta(datasetIndex).data.forEach((bar,index)=>{
+				const value=Number(dataset.data[index]||0);
+				if(value<=0)return;
+				ctx.font="700 11px Inter, Segoe UI, Arial, sans-serif";
+				ctx.textAlign="center";
+				ctx.textBaseline="bottom";
+				ctx.lineWidth=3;
+				ctx.strokeStyle="rgba(255,255,255,.9)";
+				ctx.fillStyle="#29292e";
+				const label=tons(value);
+				const halfWidth=ctx.measureText(label).width/2;
+				const x=Math.max(chartArea.left+halfWidth+2,Math.min(bar.x,chartArea.right-halfWidth-2));
+				const stacked=chart.options.scales?.x?.stacked&&chart.options.scales?.y?.stacked;
+				const segmentHeight=Math.abs((bar.base??bar.y)-bar.y);
+				if(stacked&&segmentHeight<18)return;
+				const offset=datasetIndex%2===0?6:22;
+				const y=stacked?(bar.y+(bar.base-bar.y)/2):Math.max(chartArea.top+14,bar.y-offset);
+				ctx.fillStyle=stacked?"#fff":"#29292e";
+				ctx.strokeStyle=stacked?"rgba(0,0,0,.55)":"rgba(255,255,255,.9)";
+				ctx.strokeText(label,x,y);
+				ctx.fillText(label,x,y);
+			});
+		});
+		ctx.restore();
+	}
+};
+let reportCharts={};
+function destroyReports(){Object.values(reportCharts).forEach(chart=>chart.destroy());reportCharts={};}
+function renderPeriodReport(period,prefix,canvasId){
+	$(`report${prefix}Range`).textContent=`${reportDate(period.inicio)} até ${reportDate(period.fim)}`;
+	$(`report${prefix}Tons`).textContent=tons(period.total_ton);
+	$(`report${prefix}Notes`).textContent=new Intl.NumberFormat("pt-BR").format(period.total_notas);
+	const empty=$(`chart${prefix}Empty`),canvas=$(canvasId),hasData=period.produtos.some(item=>item.quantidade_ton>0);
+	empty.hidden=hasData;canvas.hidden=!hasData;if(!hasData)return;
+	reportCharts[prefix.toLowerCase()]=new Chart(canvas.getContext("2d"),{
+		type:"pie",
+		data:{labels:period.produtos.map(item=>item.produto),datasets:[{data:period.produtos.map(item=>item.quantidade_ton),backgroundColor:period.produtos.map((_,index)=>reportColors[index%reportColors.length]),borderColor:"#fff",borderWidth:2}]},
+		options:{responsive:true,maintainAspectRatio:false,plugins:{title:{display:true,text:"Quantidade por produto",color:"#29292e",font:{size:17,weight:"bold"}},legend:{position:"bottom",labels:{boxWidth:14,padding:14,color:"#29292e",font:{size:12}}},tooltip:{callbacks:{label:context=>`${context.label}: ${tons(context.raw)}`}}}},
+		plugins:[pieValueLabels]
+	});
+}
+async function renderReports(){
+	try{
+		const report=await api("/relatorios/operacional/");
 		destroyReports();
-		const ctxLocal = document.getElementById('chartByLocal').getContext('2d');
-		reportCharts.local = new Chart(ctxLocal,{type:'doughnut',data:{labels:localLabels,datasets:[{data:localValues,backgroundColor:['#4e79a7','#f28e2b','#e15759','#76b7b2']}]},options:{plugins:{legend:{position:'right',labels:{color:'#222',font:{weight:'700',size:14}}},title:{display:true,text:'Notas por local',color:'#111',font:{weight:'800',size:18}}},elements:{arc:{borderWidth:1,borderColor:'#fff'}},layout:{padding:12}},plugins:[chartDataLabelPlugin]});
-
-		const ctxProd = document.getElementById('chartByProduct').getContext('2d');
-		reportCharts.prod = new Chart(ctxProd,{
-			type:'bar',
-			data:{
-				labels:prodLabels,
-				datasets:[{label:'Quantidade',data:prodValues,backgroundColor:'#3d7a3f',borderColor:'#315f34',borderWidth:1}],
-			},
-			options:{
-				indexAxis:'y',
-				plugins:{legend:{display:false},title:{display:true,text:'Top 10 produtos por volume',color:'#111',font:{weight:'800',size:18}}},
-				scales:{
-					x:{title:{display:true,text:'Quantidade',color:'#111',font:{size:14}},ticks:{color:'#111',font:{size:13}}},
-					y:{title:{display:false},ticks:{color:'#111',font:{size:13}}},
-				},
-			},
-			plugins:[chartDataLabelPlugin],
-		});
-
-		const ctxVal = document.getElementById('chartValueBySupplier').getContext('2d');
-		reportCharts.val = new Chart(ctxVal, {
-			type: 'bar',
-			data: {
-				labels: valLabels,
-				datasets: [{label: 'Valor (R$)', data: valValues, backgroundColor: '#edc948',borderColor:'#caa937',borderWidth:1}],
-			},
-			options: {
-				plugins: {legend: {display: false}, title: {display: true, text: 'Top 10 fornecedores por valor',color:'#111',font:{weight:'800',size:18}}},
-				scales: {
-					y: {
-						ticks: {
-							callback: v => new Intl.NumberFormat('pt-BR', {style: 'currency', currency: 'BRL'}).format(v),
-							color:'#111',
-							font:{size:13},
-						},
-						title:{display:true,text:'Valor (R$)',color:'#111',font:{size:14}},
-					},
-					x: {
-						ticks:{color:'#111',font:{size:13}},
-						title:{display:true,text:'Fornecedores',color:'#111',font:{size:14}},
-					},
-				},
-			},
-			plugins:[chartDataLabelPlugin],
-		});
-		reportCharts.month = new Chart(ctxMonth, {
-			type: 'line',
-			data: {
-				labels: monthLabels,
-				datasets: [{
-					label: 'Notas por mês',
-					data: monthValues,
-					borderColor: '#1b1b1b',
-					backgroundColor: 'rgba(27,27,27,0.22)',
-					fill: true,
-					pointBackgroundColor:'#111',
-					pointBorderColor:'#fff',
-					pointRadius:5,
-				}],
-			},
-			options: {
-				plugins: {legend: {display: false}, title: {display: true, text: 'Notas por mês',color:'#111',font:{weight:'800',size:18}}},
-				scales: {
-					x: {
-						ticks: {maxRotation: 0,color:'#111',font:{size:13}},
-						title:{display:true,text:'Mês',color:'#111',font:{size:14}},
-					},
-					y: {
-						ticks: {
-							precision: 0,
-							color:'#111',
-							font:{size:13},
-						},
-						title:{display:true,text:'Notas',color:'#111',font:{size:14}},
-					},
-				},
-			},
-			plugins:[chartDataLabelPlugin],
-		});
-
-		const materialBySector = data.reduce((acc,n)=>{
-			const material=(n.produto||"(sem produto)").trim()||"(sem produto)";
-			const sector=n.local||"Não alocado";
-			if(!acc[material]){acc[material]={};}
-			acc[material][sector]=(acc[material][sector]||0)+(n.quantidade||0);
-			return acc;
-		},{})
-		const orderedMaterials = Object.entries(materialBySector)
-			.map(([material, sectors]) => [material, sectors])
-			.sort((a,b)=>{const totalA=Object.values(a[1]).reduce((sum,v)=>sum+v,0);const totalB=Object.values(b[1]).reduce((sum,v)=>sum+v,0);return totalB-totalA});
-		const materialLabels = orderedMaterials.map(([material])=>material);
-		const fixedSectors = ["CDMA","PRU"];
-		const extraSectors = Array.from(new Set(Object.values(materialBySector).flatMap(sectors=>Object.keys(sectors)).filter(s=>!fixedSectors.includes(s))));
-		const sectorKeys = fixedSectors.concat(extraSectors);
-		const sectorColors = ['#4e79a7','#f28e2b','#e15759','#76b7b2','#59a14f','#edc948'];
-		const materialDatasets = sectorKeys.map((sector,index)=>({
-			label: sector,
-			data: materialLabels.map(material => materialBySector[material][sector]||0),
-			backgroundColor: sectorColors[index % sectorColors.length],
-		}));
-
-		const ctxMaterial = document.getElementById('chartMaterialBySector').getContext('2d');
-		reportCharts.material = new Chart(ctxMaterial, {
-			type: 'bar',
-			data: {
-				labels: materialLabels,
-				datasets: materialDatasets,
-			},
-			options: {
-				indexAxis: 'y',
-				responsive: true,
-				maintainAspectRatio: false,
-				plugins: {
-					legend: {position: 'bottom', labels:{color:'#111',font:{weight:'700',size:14}}},
-					title: {display: true, text: 'Quantidade por tipo de material e setor',color:'#111',font:{weight:'800',size:18}},
-				},
-				scales: {
-					x: {title: {display: true, text: 'Quantidade',color:'#111',font:{size:14}},ticks:{color:'#111',font:{size:13}}},
-					y: {title: {display: true, text: 'Material',color:'#111',font:{size:14}},ticks:{color:'#111',font:{size:13}}},
-				},
-			},
-			plugins:[chartDataLabelPlugin],
-		});
-	}catch(e){toast(e.message,true)} }
+		renderPeriodReport(report.mes,"Month","chartMonthProducts");
+		renderPeriodReport(report.dia,"Day","chartDayProducts");
+		$("materialStart").value=reportInputDate(report.mes.inicio);
+		$("materialEnd").value=reportInputDate(report.dia.fim);
+		$("sectorStart").value=reportInputDate(report.mes.inicio);
+		$("sectorEnd").value=reportInputDate(report.dia.fim);
+		$("receiptStart").value=reportInputDate(report.mes.inicio);
+		$("receiptEnd").value=reportInputDate(report.dia.fim);
+		await renderMaterialReport();
+		await renderSectorReport();
+		await renderReceiptReport();
+	}catch(error){toast(error.message,true)}
+}
+async function renderMaterialReport(){
+	const start=$("materialStart").value,end=$("materialEnd").value;
+	if(!start||!end)return;
+	if(start>end){toast("A data inicial deve ser anterior ou igual à data final.",true);return}
+	const result=await api(`/relatorios/material/?data_inicio=${encodeURIComponent(start)}&data_fim=${encodeURIComponent(end)}`);
+	$("materialReportTotal").textContent=tons(result.total_ton);
+	$("materialReportNotes").textContent=`${new Intl.NumberFormat("pt-BR").format(result.total_nfes)} NF-es`;
+	$("materialReportBody").innerHTML=result.materiais.map(item=>`<tr><td>${esc(item.material)}</td><td>${tons(item.quantidade_ton)}</td><td>${new Intl.NumberFormat("pt-BR").format(item.quantidade_nfes)}</td></tr>`).join("");
+	$("materialReportEmpty").hidden=result.materiais.length>0;
+}
+$("materialReportForm").addEventListener("submit",async event=>{
+	event.preventDefault();
+	try{await renderMaterialReport()}catch(error){toast(error.message,true)}
+});
+async function renderSectorReport(){
+	const start=$("sectorStart").value,end=$("sectorEnd").value;
+	if(!start||!end)return;
+	if(start>end){toast("A data inicial deve ser anterior ou igual à data final.",true);return}
+	const result=await api(`/relatorios/material-local/?data_inicio=${encodeURIComponent(start)}&data_fim=${encodeURIComponent(end)}`);
+	$("sectorReportBody").innerHTML=result.materiais.map(item=>`<tr><td>${esc(item.material)}</td><td>${tons(item.quantidade_cdma_ton)}</td><td>${new Intl.NumberFormat("pt-BR").format(item.quantidade_nfes_cdma)}</td><td>${tons(item.quantidade_pru_ton)}</td><td>${new Intl.NumberFormat("pt-BR").format(item.quantidade_nfes_pru)}</td></tr>`).join("");
+	$("sectorReportEmpty").hidden=result.materiais.length>0;
+}
+$("sectorReportForm").addEventListener("submit",async event=>{
+	event.preventDefault();
+	try{await renderSectorReport()}catch(error){toast(error.message,true)}
+});
+async function renderReceiptReport(){
+	const start=$("receiptStart").value,end=$("receiptEnd").value,material=$("receiptMaterial").value;
+	if(!start||!end)return;
+	if(start>end){toast("A data inicial deve ser anterior ou igual à data final.",true);return}
+	const params=new URLSearchParams({data_inicio:start,data_fim:end});if(material)params.set("material",material);
+	const result=await api(`/relatorios/recebimento-diario/?${params}`);
+	const materialSelect=$("receiptMaterial"),selected=result.material||"";
+	materialSelect.innerHTML='<option value="">Todos os materiais</option>'+result.materiais_disponiveis.map(item=>`<option value="${esc(item)}">${esc(item)}</option>`).join("");
+	materialSelect.value=selected;
+	$("receiptMaterialTotals").innerHTML=`<span>Total: ${tons(result.total_ton)}</span>`+result.totais_materiais.map(item=>`<span>${esc(item.material)}: ${tons(item.total_ton)}</span>`).join("");
+	reportCharts.receiptDaily?.destroy();reportCharts.receiptShare?.destroy();
+	const hasData=result.total_ton>0;
+	$("receiptDailyEmpty").hidden=hasData;$("receiptShareEmpty").hidden=hasData;$("receiptDailyChart").hidden=!hasData;$("receiptShareChart").hidden=!hasData;
+	if(!hasData)return;
+	const labels=result.dias.map(item=>new Date(`${item.data}T00:00:00`).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"}));
+	const materials=result.totais_materiais.map(item=>item.material);
+	const datasets=materials.map((item,index)=>({label:item,data:result.dias.map(day=>day.materiais_ton[item]||0),backgroundColor:reportColors[index%reportColors.length],borderRadius:2}));
+	reportCharts.receiptDaily=new Chart($("receiptDailyChart").getContext("2d"),{
+		type:"bar",
+		data:{labels,datasets},
+		options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:30,right:12}},plugins:{title:{display:true,text:selected?`Recebimento diário - ${selected}`:"Composição diária por material",color:"#29292e",font:{size:17,weight:"bold"}},tooltip:{callbacks:{label:context=>`${context.dataset.label}: ${tons(context.raw)}`}}},scales:{x:{stacked:true,title:{display:true,text:"Data de emissão"}},y:{stacked:true,beginAtZero:true,grace:"15%",title:{display:true,text:"Toneladas"},ticks:{callback:value=>new Intl.NumberFormat("pt-BR").format(value)}}}},
+		plugins:[barValueLabels]
+	});
+	reportCharts.receiptShare=new Chart($("receiptShareChart").getContext("2d"),{
+		type:"doughnut",
+		data:{labels:materials,datasets:[{data:result.totais_materiais.map(item=>item.total_ton),backgroundColor:materials.map((_,index)=>reportColors[index%reportColors.length]),borderColor:"#fff",borderWidth:2}]},
+		options:{responsive:true,maintainAspectRatio:false,cutout:"58%",layout:{padding:{left:20,right:20,top:8}},plugins:{title:{display:true,text:"Participação total por material",color:"#29292e",font:{size:17,weight:"bold"}},legend:{position:"bottom"},tooltip:{callbacks:{label:context=>`${context.label}: ${tons(context.raw)}`}}}},
+		plugins:[pieValueLabels]
+	});
+}
+$("receiptReportForm").addEventListener("submit",async event=>{
+	event.preventDefault();
+	try{await renderReceiptReport()}catch(error){toast(error.message,true)}
+});
+async function exportOperationalReport(format){
+	const values={
+		material_inicio:$("materialStart").value,
+		material_fim:$("materialEnd").value,
+		setor_inicio:$("sectorStart").value,
+		setor_fim:$("sectorEnd").value,
+		recebimento_inicio:$("receiptStart").value,
+		recebimento_fim:$("receiptEnd").value,
+	};
+	if($("receiptMaterial").value)values.recebimento_material=$("receiptMaterial").value;
+	if(Object.values(values).some(value=>!value)){toast("Preencha todos os períodos antes de exportar.",true);return}
+	if(values.material_inicio>values.material_fim||values.setor_inicio>values.setor_fim||values.recebimento_inicio>values.recebimento_fim){toast("A data inicial deve ser anterior ou igual à data final.",true);return}
+	const button=format==="pdf"?$("exportReportPdf"):$("exportReportExcel"),original=button.textContent;
+	button.disabled=true;button.textContent="Gerando...";
+	try{
+		const params=new URLSearchParams({formato:format,...values});
+		const response=await fetch(`/relatorios/exportar/?${params}`,{credentials:"include"});
+		if(!response.ok){let message=`Erro ${response.status}`;try{message=(await response.json()).detail||message}catch{}throw new Error(message)}
+		const blob=await response.blob(),url=URL.createObjectURL(blob),link=document.createElement("a");
+		link.href=url;link.download=`relatorio_operacional.${format}`;document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);
+		toast(`Relatório ${format.toUpperCase()} baixado`);
+	}catch(error){toast(error.message,true)}finally{button.disabled=false;button.textContent=original}
+}
+$("exportReportPdf").onclick=()=>exportOperationalReport("pdf");
+$("exportReportExcel").onclick=()=>exportOperationalReport("xlsx");
+$("openReports").addEventListener("click",async event=>{
+	event.preventDefault();
+	if(!await ensureAuthenticated())return;
+	$("reportsModalSection").classList.add("maximized");
+	$("reportsDialog").showModal();
+	await renderReports();
+});

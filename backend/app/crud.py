@@ -1,10 +1,11 @@
 import hashlib
 import hmac
 import os
+from collections import defaultdict
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from . import models, schemas
-from datetime import datetime
+from datetime import datetime, timedelta
 
 def create_nota(db: Session, nota: schemas.NotaFiscalCreate, imagem_path: str | None = None):
     data = nota.model_dump()
@@ -132,6 +133,189 @@ def filter_notas(db: Session, data_inicio=None, data_fim=None, fornecedor=None, 
         query = query.filter(models.NotaFiscal.valor_total <= valor_max)
     
     return query.all()
+
+
+def get_relatorio_operacional(
+    db: Session,
+    inicio_mes: datetime,
+    fim_mes: datetime,
+    inicio_dia: datetime,
+    fim_dia: datetime,
+):
+    notas = (
+        db.query(models.NotaFiscal)
+        .filter(
+            models.NotaFiscal.data_emissao >= inicio_mes,
+            models.NotaFiscal.data_emissao <= fim_mes,
+            models.NotaFiscal.erro_salvamento.is_(False),
+        )
+        .all()
+    )
+
+    def resumir(inicio: datetime, fim: datetime):
+        produtos = defaultdict(float)
+        total_quantidade = 0.0
+        total_notas = 0
+
+        for nota in notas:
+            if nota.data_emissao < inicio or nota.data_emissao > fim:
+                continue
+            quantidade = float(nota.quantidade or 0)
+            produto = (nota.produto or "Sem produto").strip() or "Sem produto"
+            produtos[produto] += quantidade
+            total_quantidade += quantidade
+            total_notas += 1
+
+        return {
+            "inicio": inicio,
+            "fim": fim,
+            "total_ton": round(total_quantidade / 1000, 3),
+            "total_notas": total_notas,
+            "produtos": [
+                {"produto": produto, "quantidade_ton": round(quantidade / 1000, 3)}
+                for produto, quantidade in sorted(produtos.items(), key=lambda item: item[1], reverse=True)
+            ],
+        }
+
+    return {"mes": resumir(inicio_mes, fim_mes), "dia": resumir(inicio_dia, fim_dia)}
+
+
+def get_relatorio_material(db: Session, inicio: datetime, fim: datetime):
+    notas = (
+        db.query(models.NotaFiscal)
+        .filter(
+            models.NotaFiscal.data_emissao >= inicio,
+            models.NotaFiscal.data_emissao <= fim,
+            models.NotaFiscal.erro_salvamento.is_(False),
+        )
+        .all()
+    )
+    materiais = defaultdict(lambda: {"quantidade": 0.0, "nfes": 0})
+
+    for nota in notas:
+        material = (nota.produto or "Sem produto").strip() or "Sem produto"
+        materiais[material]["quantidade"] += float(nota.quantidade or 0)
+        materiais[material]["nfes"] += 1
+
+    itens = [
+        {
+            "material": material,
+            "quantidade_ton": round(dados["quantidade"] / 1000, 3),
+            "quantidade_nfes": dados["nfes"],
+        }
+        for material, dados in sorted(
+            materiais.items(),
+            key=lambda item: item[1]["quantidade"],
+            reverse=True,
+        )
+    ]
+    return {
+        "inicio": inicio,
+        "fim": fim,
+        "total_ton": round(sum(float(nota.quantidade or 0) for nota in notas) / 1000, 3),
+        "total_nfes": len(notas),
+        "materiais": itens,
+    }
+
+
+def get_relatorio_material_local(db: Session, inicio: datetime, fim: datetime):
+    notas = (
+        db.query(models.NotaFiscal)
+        .filter(
+            models.NotaFiscal.data_emissao >= inicio,
+            models.NotaFiscal.data_emissao <= fim,
+            models.NotaFiscal.erro_salvamento.is_(False),
+        )
+        .all()
+    )
+    materiais = defaultdict(
+        lambda: {
+            "CDMA": {"quantidade": 0.0, "nfes": 0},
+            "PRU": {"quantidade": 0.0, "nfes": 0},
+        }
+    )
+
+    for nota in notas:
+        material = (nota.produto or "Sem produto").strip() or "Sem produto"
+        local = nota.local if nota.local in {"CDMA", "PRU"} else None
+        if not local:
+            continue
+        materiais[material][local]["quantidade"] += float(nota.quantidade or 0)
+        materiais[material][local]["nfes"] += 1
+
+    return {
+        "inicio": inicio,
+        "fim": fim,
+        "materiais": [
+            {
+                "material": material,
+                "quantidade_cdma_ton": round(dados["CDMA"]["quantidade"] / 1000, 3),
+                "quantidade_nfes_cdma": dados["CDMA"]["nfes"],
+                "quantidade_pru_ton": round(dados["PRU"]["quantidade"] / 1000, 3),
+                "quantidade_nfes_pru": dados["PRU"]["nfes"],
+            }
+            for material, dados in sorted(
+                materiais.items(),
+                key=lambda item: item[1]["CDMA"]["quantidade"] + item[1]["PRU"]["quantidade"],
+                reverse=True,
+            )
+        ],
+    }
+
+
+def get_relatorio_recebimento(db: Session, inicio: datetime, fim: datetime, material: str | None = None):
+    query = db.query(models.NotaFiscal).filter(
+        models.NotaFiscal.data_emissao >= inicio,
+        models.NotaFiscal.data_emissao <= fim,
+        models.NotaFiscal.erro_salvamento.is_(False),
+    )
+    notas_periodo = query.all()
+    materiais_disponiveis = sorted(
+        {
+            (nota.produto or "Sem produto").strip() or "Sem produto"
+            for nota in notas_periodo
+        },
+        key=str.casefold,
+    )
+    material_normalizado = material.strip() if material else None
+    dias = defaultdict(lambda: defaultdict(float))
+    totais_materiais = defaultdict(float)
+
+    for nota in notas_periodo:
+        produto = (nota.produto or "Sem produto").strip() or "Sem produto"
+        if material_normalizado and produto != material_normalizado:
+            continue
+        quantidade = float(nota.quantidade or 0)
+        dias[nota.data_emissao.date().isoformat()][produto] += quantidade
+        totais_materiais[produto] += quantidade
+
+    itens = []
+    data_atual = inicio.date()
+    while data_atual <= fim.date():
+        valores = dias[data_atual.isoformat()]
+        itens.append(
+            {
+                "data": data_atual.isoformat(),
+                "materiais_ton": {
+                    produto: round(quantidade / 1000, 3)
+                    for produto, quantidade in sorted(valores.items())
+                },
+            }
+        )
+        data_atual += timedelta(days=1)
+    totais = [
+        {"material": produto, "total_ton": round(quantidade / 1000, 3)}
+        for produto, quantidade in sorted(totais_materiais.items(), key=lambda item: item[1], reverse=True)
+    ]
+    return {
+        "inicio": inicio,
+        "fim": fim,
+        "material": material_normalizado,
+        "materiais_disponiveis": materiais_disponiveis,
+        "totais_materiais": totais,
+        "total_ton": round(sum(item["total_ton"] for item in totais), 3),
+        "dias": itens,
+    }
 
 
 def create_faturista(db: Session, faturista: schemas.FaturistaCreate):

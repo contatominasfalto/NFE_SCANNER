@@ -80,6 +80,72 @@ class NotaFiscalErrorRefreshResponse(BaseModel):
     itens: list[NotaFiscalErrorRefreshItem]
 
 
+class RelatorioProduto(BaseModel):
+    produto: str
+    quantidade_ton: float
+
+
+class RelatorioPeriodo(BaseModel):
+    inicio: datetime
+    fim: datetime
+    total_ton: float
+    total_notas: int
+    produtos: list[RelatorioProduto]
+
+
+class RelatorioOperacionalResponse(BaseModel):
+    mes: RelatorioPeriodo
+    dia: RelatorioPeriodo
+
+
+class RelatorioMaterialItem(BaseModel):
+    material: str
+    quantidade_ton: float
+    quantidade_nfes: int
+
+
+class RelatorioMaterialResponse(BaseModel):
+    inicio: datetime
+    fim: datetime
+    total_ton: float
+    total_nfes: int
+    materiais: list[RelatorioMaterialItem]
+
+
+class RelatorioMaterialLocalItem(BaseModel):
+    material: str
+    quantidade_cdma_ton: float
+    quantidade_nfes_cdma: int
+    quantidade_pru_ton: float
+    quantidade_nfes_pru: int
+
+
+class RelatorioMaterialLocalResponse(BaseModel):
+    inicio: datetime
+    fim: datetime
+    materiais: list[RelatorioMaterialLocalItem]
+
+
+class RelatorioRecebimentoDia(BaseModel):
+    data: str
+    materiais_ton: dict[str, float]
+
+
+class RelatorioRecebimentoMaterial(BaseModel):
+    material: str
+    total_ton: float
+
+
+class RelatorioRecebimentoResponse(BaseModel):
+    inicio: datetime
+    fim: datetime
+    material: Optional[str] = None
+    materiais_disponiveis: list[str]
+    totais_materiais: list[RelatorioRecebimentoMaterial]
+    total_ton: float
+    dias: list[RelatorioRecebimentoDia]
+
+
 class NotaFiscalDeleteResponse(BaseModel):
     id: int
     numero_nf: str
