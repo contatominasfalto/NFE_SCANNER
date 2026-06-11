@@ -4,12 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Painel NF-e</title>
-  <link rel="stylesheet" href="/painel-assets/styles.css?v=20260611-6">
+  <link rel="stylesheet" href="/painel-assets/styles.css?v=20260611-8">
 </head>
 <body>
   <dialog class="modal compact" id="loginDialog">
     <form method="dialog" class="modal compact" id="loginForm">
       <header>
+        <div class="login-logo">
+            <img src="/painel-assets/logo.jpg" alt="Logo Minasfalto">
+        </div>
         <div>
           <p class="eyebrow">LOGIN</p>
           <h2>Entrar no painel</h2>
@@ -19,9 +22,14 @@
       <label>Usuário<input id="loginUsername" required autocomplete="username" autofocus></label>
       <label>Senha<input id="loginPassword" type="password" required autocomplete="current-password"></label>
       <div id="loginError" class="login-error"></div>
+
       <footer>
         <button class="primary" type="submit">Entrar</button>
       </footer>
+
+      <div class="dev-signature login-signature">
+        <img src="/painel-assets/assinatura-maxwell.png" alt="">
+      </div>
     </form>
   </dialog>
   <aside class="sidebar">
@@ -34,10 +42,12 @@
       <button class="nav-item" id="openFaturistas"><span>◉</span> Faturistas</button>
       <button class="nav-item" id="openReports"><span>📊</span> Relatórios</button>
       <a class="nav-item" href="/docs" target="_blank"><span>↗</span> Swagger API</a>
-    </nav>
+    </nav>    
     <div class="connection"><i></i><span>Atualização automática ativa</span></div>
+    <div class="sidebar-footer">
+        <img src="/painel-assets/assinatura-maxwell.png" alt="">
+    </div>
   </aside>
-
   <main>
     <header class="topbar">
       <div>
