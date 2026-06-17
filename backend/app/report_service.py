@@ -9,7 +9,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from reportlab.graphics.charts.barcharts import VerticalBarChart
 from reportlab.graphics.charts.piecharts import Pie
-from reportlab.graphics.shapes import Drawing, String
+from reportlab.graphics.shapes import Drawing, Rect, String
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import getSampleStyleSheet
@@ -23,7 +23,10 @@ BRAND_MUTED = colors.HexColor("#66666B")
 BRAND_LINE = colors.HexColor("#D8D3CA")
 BRAND_LIGHT = colors.HexColor("#FAF9F7")
 LOGO_PATH = Path(__file__).resolve().parents[1] / "panel" / "logo.jpg"
-REPORT_COLORS = ["#F29129", "#3478BD", "#48A868", "#D85C57", "#8B6FC0", "#E0B43C", "#4BA7A5", "#C36B99", "#76818D", "#B56E32"]
+REPORT_COLORS = ["#F29129", "#FFC46B", "#F7A94C", "#FFD994", "#E68A22", "#FFE7B8", "#CC741C", "#FFF0CF", "#B86212", "#F6D08A"]
+CHART_GRADIENT_START = colors.HexColor("#EEF6FF")
+CHART_GRADIENT_MIDDLE = colors.HexColor("#FBFDFF")
+CHART_GRADIENT_END = colors.HexColor("#D8E5F0")
 
 
 def safe_text(value):
@@ -86,6 +89,27 @@ def format_period(inicio, fim):
     return f"{inicio.strftime('%d/%m/%Y %H:%M')} ate {fim.strftime('%d/%m/%Y %H:%M')}"
 
 
+def _blend_color(start, end, ratio):
+    return colors.Color(
+        start.red + (end.red - start.red) * ratio,
+        start.green + (end.green - start.green) * ratio,
+        start.blue + (end.blue - start.blue) * ratio,
+    )
+
+
+def _add_chart_gradient(drawing, width, height):
+    steps = 48
+    stripe_width = width / steps
+    for index in range(steps):
+        position = index / max(steps - 1, 1)
+        if position <= 0.46:
+            fill = _blend_color(CHART_GRADIENT_START, CHART_GRADIENT_MIDDLE, position / 0.46)
+        else:
+            fill = _blend_color(CHART_GRADIENT_MIDDLE, CHART_GRADIENT_END, (position - 0.46) / 0.54)
+        drawing.add(Rect(index * stripe_width, 0, stripe_width + 1, height, strokeColor=fill, fillColor=fill))
+    drawing.add(Rect(0, 0, width, height, strokeColor=colors.HexColor("#C6D6E2"), fillColor=None, strokeWidth=0.8))
+
+
 def _pdf_table(rows, widths=None, header_rows=1):
     table = Table(rows, colWidths=widths, repeatRows=header_rows)
     table.setStyle(
@@ -133,8 +157,8 @@ def _chart_card(drawing):
     card.setStyle(
         TableStyle(
             [
-                ("BACKGROUND", (0, 0), (-1, -1), colors.white),
-                ("BOX", (0, 0), (-1, -1), 0.8, BRAND_LINE),
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#EEF6FF")),
+                ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#C6D6E2")),
                 ("LEFTPADDING", (0, 0), (-1, -1), 8),
                 ("RIGHTPADDING", (0, 0), (-1, -1), 8),
                 ("TOPPADDING", (0, 0), (-1, -1), 8),
@@ -173,6 +197,7 @@ def _draw_pdf_branding(canvas, doc):
 
 def _pie_drawing(periodo, title):
     drawing = Drawing(720, 235)
+    _add_chart_gradient(drawing, 720, 235)
     drawing.add(String(360, 222, title, textAnchor="middle", fontName="Helvetica-Bold", fontSize=13))
     produtos = [item for item in periodo["produtos"] if item["quantidade_ton"] > 0]
     if not produtos:
@@ -187,6 +212,9 @@ def _pie_drawing(periodo, title):
     pie.data = [item["quantidade_ton"] for item in produtos]
     pie.labels = [f"{item['produto']} ({format_ton(item['quantidade_ton'])})" for item in produtos]
     pie.slices.strokeWidth = 0.5
+    pie.slices.strokeColor = colors.white
+    for index, _produto in enumerate(produtos):
+        pie.slices[index].fillColor = colors.HexColor(REPORT_COLORS[index % len(REPORT_COLORS)])
     pie.sideLabels = True
     drawing.add(pie)
     return drawing
@@ -194,6 +222,7 @@ def _pie_drawing(periodo, title):
 
 def _receipt_bar_drawing(recebimento):
     drawing = Drawing(720, 270)
+    _add_chart_gradient(drawing, 720, 270)
     title = "Recebimento diario"
     if recebimento["material"]:
         title += f" - {recebimento['material']}"
@@ -225,7 +254,7 @@ def _receipt_bar_drawing(recebimento):
     chart.barLabels.textAnchor = "middle"
     chart.barLabels.fontName = "Helvetica-Bold"
     chart.barLabels.fontSize = 6
-    chart.barLabels.fillColor = colors.white
+    chart.barLabels.fillColor = BRAND_DARK
     drawing.add(chart)
     legend_x = max(50, 360 - len(materiais) * 42)
     for index, material in enumerate(materiais):
@@ -235,6 +264,7 @@ def _receipt_bar_drawing(recebimento):
 
 def _receipt_share_drawing(recebimento):
     drawing = Drawing(720, 230)
+    _add_chart_gradient(drawing, 720, 230)
     drawing.add(String(360, 215, "Participacao total por material", textAnchor="middle", fontName="Helvetica-Bold", fontSize=13))
     materiais = recebimento["totais_materiais"]
     if not materiais:
@@ -250,6 +280,7 @@ def _receipt_share_drawing(recebimento):
     pie.labels = [f"{item['material']} ({format_ton(item['total_ton'])})" for item in materiais]
     for index, _material in enumerate(materiais):
         pie.slices[index].fillColor = colors.HexColor(REPORT_COLORS[index % len(REPORT_COLORS)])
+        pie.slices[index].strokeColor = colors.white
     pie.sideLabels = True
     pie.simpleLabels = False
     drawing.add(pie)
