@@ -26,6 +26,9 @@ logger = configure_logging()
 models.Base.metadata.create_all(bind=engine)
 ensure_schema()
 
+VIEWER_USERNAME = "viewer_user"
+VIEWER_ROLE = "viewer"
+
 
 def initialize_default_users():
     with SessionLocal() as db:
@@ -34,6 +37,7 @@ def initialize_default_users():
             ("BIPE", "BIPE", "user"),
             ("faturista01", "faturista01", "user"),
             ("faturista02", "faturista02", "user"),
+            (VIEWER_USERNAME, VIEWER_USERNAME, VIEWER_ROLE),
         ]
         for username, password, role in defaults:
             user = crud.get_user_by_username(db, username)
@@ -149,6 +153,11 @@ def get_current_user(request: Request, db: Session = Depends(get_db), session_to
 def ensure_admin(user: models.User):
     if user.role != "admin":
         raise HTTPException(status_code=403, detail="Acesso restrito ao usuario administrador.")
+
+
+def ensure_not_viewer(user: models.User):
+    if user.role == VIEWER_ROLE:
+        raise HTTPException(status_code=403, detail="Usuario de visualizacao nao possui acesso a esta operacao.")
 
 
 @app.exception_handler(RequestValidationError)
@@ -285,6 +294,7 @@ def read_barcode(
     barcode_data: schemas.BarcodeInput,
     current_user: models.User = Depends(get_current_user),
 ):
+    ensure_not_viewer(current_user)
     try:
         chave_acesso = barcode_service.extract_access_key(barcode_data.codigo_barras)
     except ValueError as error:
@@ -329,6 +339,7 @@ def importar_barcode(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    ensure_not_viewer(current_user)
     barcode_result = read_barcode(barcode_data, current_user)
     nota_data = schemas.NotaFiscalCreate(
         **barcode_result.nota.model_dump(exclude={"local"}),
@@ -365,6 +376,7 @@ def create_nota(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    ensure_not_viewer(current_user)
     try:
         nota = crud.create_nota(db, nota_data, nota_data.caminho_arquivo_imagem)
     except IntegrityError as error:
@@ -391,6 +403,7 @@ def create_nota_erro(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    ensure_not_viewer(current_user)
     try:
         nota = crud.create_nota_erro(db, erro_data)
     except IntegrityError as error:
@@ -658,6 +671,7 @@ def exportar_relatorio_operacional(
     },
 )
 def update_nota(nota_id: int, nota_data: schemas.NotaFiscalUpdate, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    ensure_admin(current_user)
     try:
         nota = crud.update_nota(db, nota_id, nota_data)
     except IntegrityError as error:
@@ -684,6 +698,7 @@ def update_nota(nota_id: int, nota_data: schemas.NotaFiscalUpdate, current_user:
     },
 )
 def delete_nota(nota_id: int, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    ensure_admin(current_user)
     nota = crud.delete_nota(db, nota_id)
     if not nota:
         logger.warning("Exclusao recusada: nota nao encontrada | id=%s", nota_id)
@@ -726,6 +741,7 @@ def list_faturistas(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    ensure_admin(current_user)
     return crud.get_faturistas(db, incluir_inativos)
 
 
@@ -748,6 +764,8 @@ def update_faturista(
         raise HTTPException(status_code=404, detail="Faturista nao encontrado.")
     if atual.nome == "BIPE" and (faturista_data.nome != "BIPE" or not faturista_data.ativo):
         raise HTTPException(status_code=409, detail="O faturista padrao BIPE nao pode ser renomeado ou desativado.")
+    if atual.nome == VIEWER_USERNAME and faturista_data.nome != VIEWER_USERNAME:
+        raise HTTPException(status_code=409, detail="O usuario de visualizacao nao pode ser renomeado.")
     try:
         faturista = crud.update_faturista(db, faturista_id, faturista_data)
     except IntegrityError as error:
@@ -770,6 +788,8 @@ def delete_faturista(faturista_id: int, current_user: models.User = Depends(get_
         raise HTTPException(status_code=404, detail="Faturista nao encontrado.")
     if atual.nome == "BIPE":
         raise HTTPException(status_code=409, detail="O faturista padrao BIPE nao pode ser excluido.")
+    if atual.nome == VIEWER_USERNAME:
+        raise HTTPException(status_code=409, detail="O usuario de visualizacao nao pode ser excluido.")
     faturista = crud.delete_faturista(db, faturista_id)
     logger.info("Faturista excluido | id=%s | nome=%s | admin=%s", faturista.id, faturista.nome, current_user.username)
     return schemas.FaturistaDeleteResponse(
@@ -836,6 +856,7 @@ def gerar_relatorio(
     ),
     db: Session = Depends(get_db),
 ):
+    ensure_not_viewer(current_user)
     data_inicio_dt = datetime.strptime(data_inicio, "%Y-%m-%d") if data_inicio else None
     data_fim_dt = datetime.strptime(data_fim, "%Y-%m-%d") if data_fim else None
 

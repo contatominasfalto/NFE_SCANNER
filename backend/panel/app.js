@@ -6,30 +6,33 @@ async function api(path,options={}){options.credentials="include";const r=await 
 function toast(message,error=false){const el=$("toast");el.textContent=message;el.className=error?"show error":"show";setTimeout(()=>el.className="",3200)}
 function showLogin(message){$("loginError").textContent=message||"";document.body.classList.remove("authenticated");const dialog=$("loginDialog");if(!dialog.open){dialog.showModal();}}
 function hideLogin(){document.body.classList.add("authenticated");const dialog=$("loginDialog");if(dialog.open){dialog.close();}$("loginError").textContent="";}
-async function ensureAuthenticated(){try{currentUser=await api("/auth/me/");$("userBadge").textContent=`${currentUser.username}${currentUser.role==="admin"?" (admin)":""}`;$("logoutButton").hidden=false;$("openFaturistas").hidden = currentUser.role !== "admin";$("refreshErrorsButton").hidden = currentUser.role !== "admin";hideLogin();return true;}catch(err){currentUser=null;$("userBadge").textContent="";$("logoutButton").hidden=true;$("openFaturistas").hidden = true;$("refreshErrorsButton").hidden=true;showLogin("");return false;}}
+async function ensureAuthenticated(){try{currentUser=await api("/auth/me/");const isAdmin=currentUser.role==="admin",isViewer=currentUser.role==="viewer";$("userBadge").textContent=`${currentUser.username}${isAdmin?" (admin)":isViewer?" (viewer)":""}`;$("logoutButton").hidden=false;$("openNotes").hidden=false;$("mainPanel").hidden=false;$("openScan").hidden=isViewer;$("downloadAll").hidden=isViewer;$("openFaturistas").hidden=!isAdmin;$("openSwagger").hidden=!isAdmin;$("refreshErrorsButton").hidden=!isAdmin;hideLogin();return true;}catch(err){currentUser=null;$("userBadge").textContent="";$("logoutButton").hidden=true;$("openNotes").hidden=false;$("mainPanel").hidden=false;$("openScan").hidden=false;$("downloadAll").hidden=false;$("openFaturistas").hidden=true;$("openSwagger").hidden=true;$("refreshErrorsButton").hidden=true;showLogin("");return false;}}
 async function loginUser(){try{await api("/auth/login/",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:$("loginUsername").value,password:$("loginPassword").value})});await ensureAuthenticated();await loadAll(true);}catch(err){$("loginError").textContent=err.message;}}
-async function loadAll(silent=false){if(refreshing)return;refreshing=true;try{[notes,faturistas]=await Promise.all([api("/notas/?limit=500"),api("/faturistas/?incluir_inativos=true")]);renderBillingOptions();applyFilters();renderFaturistas();$("lastUpdate").textContent=`Atualizado ${new Date().toLocaleTimeString("pt-BR")}`;if(!silent)toast("Dados atualizados")}catch(e){toast(e.message,true)}finally{refreshing=false}}
-function applyFilters(){const q=$("searchInput").value.toLowerCase().trim(),local=$("localFilter").value,bill=$("billingFilter").value;filtered=notes.filter(n=>(!local||n.local===local)&&(!bill||n.faturista===bill)&&(!q||Object.values(n).some(v=>String(v??"").toLowerCase().includes(q))));render()}
+async function loadAll(silent=false){if(refreshing)return;refreshing=true;try{if(currentUser?.role==="admin"){[notes,faturistas]=await Promise.all([api("/notas/?limit=500"),api("/faturistas/?incluir_inativos=true")]);}else{notes=await api("/notas/?limit=500");faturistas=[];}renderBillingOptions();applyFilters();if(currentUser?.role==="admin")renderFaturistas();$("lastUpdate").textContent=`Atualizado ${new Date().toLocaleTimeString("pt-BR")}`;if(!silent)toast("Dados atualizados")}catch(e){toast(e.message,true)}finally{refreshing=false}}
+function isErrorNote(n){return Boolean(n.erro_salvamento)||fields.some(k=>String(n[k]??"").trim().toUpperCase()==="ERRO")}
+function applyFilters(){const q=$("searchInput").value.toLowerCase().trim(),onlyErrors=$("errorOnlyFilter").checked,local=$("localFilter").value,bill=$("billingFilter").value;filtered=notes.filter(n=>(!onlyErrors||isErrorNote(n))&&(!local||n.local===local)&&(!bill||n.faturista===bill)&&(!q||Object.values(n).some(v=>String(v??"").toLowerCase().includes(q))));render()}
 function render(){const body=$("notesTable");body.innerHTML=filtered.map(n=>{
-	const canDelete = currentUser?.role==="admin";
-	const deleteAction = canDelete?`<button title="Excluir" onclick="askDelete(${n.id})">×</button>`:"";
-	if(n.erro_salvamento){
+	const canManageNotes = currentUser?.role==="admin";
+	const canDownloadXml = currentUser?.role!=="viewer";
+	const editAction = canManageNotes?`<button title="Editar" onclick="editNote(${n.id})">✎</button>`:"";
+	const xmlAction = canDownloadXml?`<button title="Gerar XML" onclick="downloadXML(${n.id})">↓</button>`:"";
+	const deleteAction = canManageNotes?`<button title="Excluir" onclick="askDelete(${n.id})">×</button>`:"";
+	if(isErrorNote(n)){
 		const errorCell = `<td class="error-value" title="${esc(n.erro_detalhe||"Falha ao salvar nota")}">ERRO</td>`;
-		const editAction = `<button title="Editar" onclick="editNote(${n.id})">✎</button>`;
 		return `<tr class="save-error">
 <td class="sticky"><div class="row-actions">${editAction}${deleteAction}</div></td>
 <td>${n.id}</td><td title="${esc(n.chave_acesso)}">${esc(n.chave_acesso)}</td>${errorCell.repeat(4)}
 <td><span class="badge">${esc(n.local||"—")}</span></td>${errorCell.repeat(8)}</tr>`;
 	}
 	return `<tr>
-<td class="sticky"><div class="row-actions"><button title="Editar" onclick="editNote(${n.id})">✎</button><button title="Gerar XML" onclick="downloadXML(${n.id})">↓</button>${deleteAction}</div></td>
+<td class="sticky"><div class="row-actions">${editAction}${xmlAction}${deleteAction}</div></td>
 <td>${n.id}</td><td title="${esc(n.chave_acesso)}">${esc(n.chave_acesso)}</td><td>${date(n.data_cadastro)}</td><td>${date(n.data_emissao)}</td><td>${esc(n.nome_fornecedor)}</td><td><strong>${esc(n.numero_nf)}</strong></td>
 <td><span class="badge">${esc(n.local||"—")}</span></td><td title="${esc(n.produto)}">${esc(n.produto||"—")}</td><td>${esc(n.quantidade||"—")}</td><td>${money(n.valor_total)}</td>
 <td>${esc(n.transportador||"—")}</td><td>${esc(n.faturista||"BIPE")}</td><td>${esc(n.lider_operacional||"—")}</td><td>${esc(n.cnpj_fornecedor)}</td>
 <td title="${esc(n.observacao)}">${esc(n.observacao||"—")}</td></tr>`}).join("");
 $("emptyState").hidden=filtered.length>0;$("resultCount").textContent=`${filtered.length} registro(s)`;$("metricTotal").textContent=notes.length;$("metricWeight").textContent=new Intl.NumberFormat("pt-BR").format(notes.reduce((s,n)=>s+(n.quantidade||0),0));$("metricValue").textContent=money(notes.reduce((s,n)=>s+(n.valor_total||0),0));$("metricPending").textContent=notes.filter(n=>!n.erro_salvamento&&!n.lider_operacional).length}
-function renderBillingOptions(){const active=faturistas.filter(f=>f.ativo),current=$("billingFilter").value;$("billingFilter").innerHTML='<option value="">Todos os usuários</option>'+active.map(f=>`<option>${esc(f.nome)}</option>`).join("");$("billingFilter").value=current;$("faturista").innerHTML=active.map(f=>`<option>${esc(f.nome)}</option>`).join("")} 
-function renderFaturistas(){const admin=currentUser?.role==="admin";$("billingList").innerHTML=faturistas.map(f=>`<div class="billing-item"><div class="${f.ativo?"":"inactive"}"><strong>${esc(f.nome)}</strong><small>${f.ativo?"Ativo":"Desativado"}</small></div><div>${f.nome==="BIPE"?"Padrão do app":`${admin?`<button class="secondary" onclick="editBilling(${f.id})">Editar senha</button><button class="danger" onclick="deleteBilling(${f.id})">Excluir</button><button class="secondary" onclick="toggleBilling(${f.id},${!f.ativo})">${f.ativo?"Desativar":"Reativar"}</button>`:"Somente administrador"}`}</div></div>`).join("")} 
+function renderBillingOptions(){const active=faturistas.length?faturistas.filter(f=>f.ativo):[...new Set(notes.map(n=>n.faturista).filter(Boolean))].sort((a,b)=>a.localeCompare(b)).map(nome=>({nome,ativo:true})),current=$("billingFilter").value;$("billingFilter").innerHTML='<option value="">Todos os usuários</option>'+active.map(f=>`<option>${esc(f.nome)}</option>`).join("");$("billingFilter").value=current;$("faturista").innerHTML=active.map(f=>`<option>${esc(f.nome)}</option>`).join("")} 
+function renderFaturistas(){const admin=currentUser?.role==="admin";$("billingList").innerHTML=faturistas.map(f=>`<div class="billing-item"><div class="${f.ativo?"":"inactive"}"><strong>${esc(f.nome)}</strong><small>${f.ativo?"Ativo":"Desativado"}</small></div><div>${f.nome==="BIPE"?"Padrão do app":f.nome==="viewer_user"?`${admin?`<button class="secondary" onclick="editBilling(${f.id})">Editar senha</button><button class="secondary" onclick="toggleBilling(${f.id},${!f.ativo})">${f.ativo?"Desativar":"Reativar"}</button>`:"Somente administrador"}`:`${admin?`<button class="secondary" onclick="editBilling(${f.id})">Editar senha</button><button class="danger" onclick="deleteBilling(${f.id})">Excluir</button><button class="secondary" onclick="toggleBilling(${f.id},${!f.ativo})">${f.ativo?"Desativar":"Reativar"}</button>`:"Somente administrador"}`}</div></div>`).join("")} 
 function setBillingFormMode(mode,faturista=null){const editing=mode==="edit";$("billingId").value=editing?faturista?.id:"";$("billingName").value=editing?faturista?.nome:"";$("billingName").readOnly=editing;$("billingName").required=!editing;$("billingPassword").value="";$("billingPassword").required=true;$("billingSubmit").textContent=editing?"Salvar senha":"＋ Cadastrar";} 
 function closeDialog(id){const dialog=$(id);if(dialog?.open){dialog.close()}if(id==="reportsDialog"){const reportsSection=$("reportsModalSection");reportsSection?.classList.remove("maximized")}} 
 document.querySelectorAll("[data-close]").forEach(btn=>btn.addEventListener("click",e=>{e.preventDefault();const target=btn.dataset.close;if(target){closeDialog(target)}}));
@@ -52,10 +55,10 @@ async function deleteBilling(id){const faturista=faturistas.find(f=>f.id===id);i
 $("loginForm").addEventListener("submit",async e=>{e.preventDefault();await loginUser();});
 $("loginDialog").addEventListener("cancel",e=>{e.preventDefault();});
 $("logoutButton").onclick=async()=>{try{await api("/auth/logout/",{method:"POST"});currentUser=null;$("logoutButton").hidden=true;$("userBadge").textContent="";showLogin("");}catch(err){toast(err.message,true)}};
-$("openScan").onclick=()=>{$("scanForm").reset();$("scanDialog").showModal()};$("openFaturistas").addEventListener("click",async e=>{e.preventDefault();if(!currentUser||currentUser.role!=="admin")return;await loadAll(true);setBillingFormMode("create");const faturistasDialog=$("faturistasDialog"); faturistasDialog.showModal ? faturistasDialog.showModal() : faturistasDialog.show();});$("refreshErrorsButton").onclick=refreshErrorNotes;$("refreshButton").onclick=()=>loadAll();$("searchInput").oninput=applyFilters;$("localFilter").onchange=applyFilters;$("billingFilter").onchange=applyFilters;
+$("openScan").onclick=()=>{$("scanForm").reset();$("scanDialog").showModal()};$("openFaturistas").addEventListener("click",async e=>{e.preventDefault();if(!currentUser||currentUser.role!=="admin")return;await loadAll(true);setBillingFormMode("create");const faturistasDialog=$("faturistasDialog"); faturistasDialog.showModal ? faturistasDialog.showModal() : faturistasDialog.show();});$("refreshErrorsButton").onclick=refreshErrorNotes;$("refreshButton").onclick=()=>loadAll();$("searchInput").oninput=applyFilters;$("errorOnlyFilter").onchange=applyFilters;$("localFilter").onchange=applyFilters;$("billingFilter").onchange=applyFilters;
 $("downloadAll").onclick=()=>downloadReport("formato=xml","notas_fiscais.xml");
 showLogin("");
-(async()=>{if(await ensureAuthenticated()){loadAll(true);setInterval(()=>loadAll(true),4000);}})();
+(async()=>{if(await ensureAuthenticated()){await loadAll(true);setInterval(()=>loadAll(true),4000);}})();
 
 // Reports functionality
 const reportColors=["#f29129","#3478bd","#48a868","#d85c57","#8b6fc0","#e0b43c","#4ba7a5","#c36b99","#76818d","#b56e32"];
@@ -241,10 +244,13 @@ async function exportOperationalReport(format){
 }
 $("exportReportPdf").onclick=()=>exportOperationalReport("pdf");
 $("exportReportExcel").onclick=()=>exportOperationalReport("xlsx");
+async function openReportsModal(){
+	$("reportsModalSection").classList.add("maximized");
+	if(!$("reportsDialog").open)$("reportsDialog").showModal();
+	await renderReports();
+}
 $("openReports").addEventListener("click",async event=>{
 	event.preventDefault();
 	if(!await ensureAuthenticated())return;
-	$("reportsModalSection").classList.add("maximized");
-	$("reportsDialog").showModal();
-	await renderReports();
+	await openReportsModal();
 });

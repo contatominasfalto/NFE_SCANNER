@@ -2,6 +2,7 @@ import hashlib
 import hmac
 import os
 from collections import defaultdict
+from sqlalchemy import case
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from . import models, schemas
@@ -324,14 +325,22 @@ def create_faturista(db: Session, faturista: schemas.FaturistaCreate):
 
 
 def get_faturistas(db: Session, incluir_inativos: bool = False):
-    query = db.query(models.User).filter(models.User.role == "user")
+    query = db.query(models.User).filter(models.User.role.in_(("user", "viewer")))
     if not incluir_inativos:
         query = query.filter(models.User.active.is_(True))
-    return query.order_by(models.User.username).all()
+    fixed_user_order = case(
+        (models.User.username == "BIPE", 0),
+        (models.User.username == "viewer_user", 1),
+        else_=2,
+    )
+    return query.order_by(fixed_user_order, models.User.username).all()
 
 
 def get_faturista(db: Session, faturista_id: int):
-    return db.query(models.User).filter(models.User.id == faturista_id, models.User.role == "user").first()
+    return db.query(models.User).filter(
+        models.User.id == faturista_id,
+        models.User.role.in_(("user", "viewer")),
+    ).first()
 
 
 def hash_password(password: str, salt: bytes | None = None) -> tuple[str, str]:
