@@ -18,7 +18,7 @@
           <h2>Entrar no painel</h2>
         </div>
       </header>
-      <p class="modal-copy">Informe usuário e senha para acessar o painel de faturistas.</p>
+      <p class="modal-copy">Informe usuário e senha para acessar o painel de usuários.</p>
       <label>Usuário<input id="loginUsername" required autocomplete="username" autofocus></label>
       <label>Senha<input id="loginPassword" type="password" required autocomplete="current-password"></label>
       <div id="loginError" class="login-error"></div>
@@ -39,7 +39,7 @@
     </div>
     <nav>
       <button class="nav-item active" data-view="notas"><span>▦</span> Notas fiscais</button>
-      <button class="nav-item" id="openFaturistas"><span>◉</span> Faturistas</button>
+      <button class="nav-item" id="openFaturistas"><span>◉</span> Usuários</button>
       <button class="nav-item" id="openReports"><span>📊</span> Relatórios</button>
       <a class="nav-item" href="/docs" target="_blank"><span>↗</span> Swagger API</a>
     </nav>    
@@ -78,7 +78,7 @@
           <option value="">Todos os locais</option>
           <option>CDMA</option><option>PRU</option>
         </select>
-        <select id="billingFilter" aria-label="Filtrar por faturista"><option value="">Todos os faturistas</option></select>
+        <select id="billingFilter" aria-label="Filtrar por usuário"><option value="">Todos os usuários</option></select>
         <button class="secondary" id="downloadAll">↓ Gerar XML geral</button>
       </div>
       <div class="table-summary"><strong id="resultCount">0 registros</strong><span>Arraste horizontalmente para visualizar todos os campos</span></div>
@@ -87,7 +87,7 @@
           <thead><tr>
             <th class="sticky">Ações</th><th>ID</th><th>Chave NF</th><th>Data/hora do bip</th><th>Data emissão</th>
             <th>Fornecedor</th><th>NF</th><th>Local</th><th>Produto</th><th>Quantidade</th><th>Valor total</th>
-            <th>Transportador</th><th>Faturista</th><th>Líder operacional</th><th>CNPJ</th><th>Observação</th>
+            <th>Transportador</th><th>Usuário</th><th>Líder operacional</th><th>CNPJ</th><th>Observação</th>
           </tr></thead>
           <tbody id="notesTable"></tbody>
         </table>
@@ -116,7 +116,7 @@
       </div></div>
       <div class="form-section"><h3>Dados operacionais</h3><div class="form-grid">
         <label class="span-2">Produto<input id="produto"></label><label>Quantidade / peso líquido<input id="quantidade" type="number" step="0.01"></label>
-        <label>Transportador<input id="transportador"></label><label>Faturista<select id="faturista"></select></label><label>Líder operacional<input id="lider_operacional"></label>
+        <label>Transportador<input id="transportador"></label><label>Usuário<select id="faturista"></select></label><label>Líder operacional<input id="lider_operacional"></label>
       </div></div>
       <div class="form-section"><h3>Fornecedor e complemento</h3><div class="form-grid">
         <label>Fornecedor<input id="nome_fornecedor" required></label><label>CNPJ<input id="cnpj_fornecedor" required></label><label>Valor total<input id="valor_total" type="number" step="0.01" required></label>
@@ -128,10 +128,10 @@
 
   <dialog id="faturistasDialog">
     <section class="modal medium">
-      <header><div><p class="eyebrow">CADASTRO AUXILIAR</p><h2>Faturistas</h2></div><button class="icon-button close" type="button" data-close="faturistasDialog">×</button></header>
+      <header><div><p class="eyebrow">CADASTRO AUXILIAR</p><h2>Usuários</h2></div><button class="icon-button close" type="button" data-close="faturistasDialog">×</button></header>
       <form id="billingForm" class="inline-form">
         <input type="hidden" id="billingId">
-        <label>Nome do faturista<input id="billingName" placeholder="Nome do faturista" required minlength="2"></label>
+        <label>Nome do usuário<input id="billingName" placeholder="Nome do usuário" required minlength="2"></label>
         <label>Senha<input id="billingPassword" type="password" placeholder="Senha de acesso" minlength="6" required></label>
         <button type="submit" class="primary" id="billingSubmit">＋ Cadastrar</button>
       </form>
@@ -220,6 +220,6 @@
   </dialog>
   <div id="toast" role="status"></div>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="/painel-assets/app.js?v=20260611-10"></script>
+  <script src="/painel-assets/app.js?v=20260617-2"></script>
 </body>
 </html>
