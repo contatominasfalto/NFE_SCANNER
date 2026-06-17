@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Painel NF-e</title>
-  <link rel="stylesheet" href="/painel-assets/styles.css?v=20260617-6">
+  <link rel="stylesheet" href="/painel-assets/styles.css?v=20260617-8">
 </head>
 <body>
   <dialog class="modal compact" id="loginDialog">
@@ -57,6 +57,7 @@
       <div class="top-actions">
         <span id="lastUpdate">Aguardando atualização</span>
         <span class="user-badge" id="userBadge"></span>
+        <button class="primary" id="openBatchScan">＋ Bipar Remessa</button>
         <button class="primary" id="openScan">＋ Bipar nota</button>
         <button class="icon-button" id="refreshButton" title="Atualizar tabela">↻</button>
         <button class="secondary refresh-errors" id="refreshErrorsButton">Refresh NFes Erro</button>
@@ -105,6 +106,25 @@
       <label>Chave NF<input id="scanKey" required inputmode="numeric" maxlength="44" placeholder="44 dígitos"></label>
       <footer><button class="secondary" type="button" data-close="scanDialog">Cancelar</button><button class="primary" type="submit">Consultar nota</button></footer>
     </form>
+  </dialog>
+
+  <dialog id="batchDialog">
+    <form method="dialog" class="modal medium" id="batchForm">
+      <header><div><p class="eyebrow">NOVA REMESSA</p><h2>Bipar Remessa</h2></div><button class="icon-button close" type="button" data-close="batchDialog">×</button></header>
+      <p class="modal-copy">Informe o local e cole uma ou mais chaves de NF-e. Use uma chave por linha, ou separe por vírgula ou ponto e vírgula.</p>
+      <label>Local<select id="batchLocal" required><option value="">Selecione</option><option>CDMA</option><option>PRU</option></select></label>
+      <label>Chaves da remessa<textarea id="batchKeys" rows="8" required placeholder="Cole aqui as chaves de acesso da remessa"></textarea></label>
+      <footer><button class="secondary" type="button" data-close="batchDialog">Cancelar</button><button class="primary" id="batchSubmit" type="submit">Processar remessa</button></footer>
+    </form>
+  </dialog>
+
+  <dialog id="batchResultDialog">
+    <section class="modal medium">
+      <header><div><p class="eyebrow">RESULTADO DA REMESSA</p><h2>Processamento concluído</h2></div><button class="icon-button close" type="button" data-close="batchResultDialog">×</button></header>
+      <div class="batch-result-summary" id="batchResultSummary"></div>
+      <div class="batch-result-list" id="batchResultList"></div>
+      <footer><button class="primary" type="button" data-close="batchResultDialog">Fechar</button></footer>
+    </section>
   </dialog>
 
   <dialog id="noteDialog">
@@ -221,6 +241,6 @@
   </dialog>
   <div id="toast" role="status"></div>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="/painel-assets/app.js?v=20260617-13"></script>
+  <script src="/painel-assets/app.js?v=20260617-15"></script>
 </body>
 </html>

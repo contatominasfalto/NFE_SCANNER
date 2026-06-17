@@ -61,6 +61,28 @@ class BarcodeResult(BaseModel):
     nota: NotaFiscalBase
 
 
+class BarcodeBatchInput(BaseModel):
+    local: Local = Field(description="Local onde o material das notas sera alocado.")
+    chaves: list[str] = Field(min_length=1, description="Chaves de acesso NF-e ou leituras do scanner.")
+
+
+class BarcodeBatchItem(BaseModel):
+    chave_acesso: str
+    status: str
+    detalhe: str
+    id: Optional[int] = None
+    numero_nf: Optional[str] = None
+
+
+class BarcodeBatchResponse(BaseModel):
+    total: int
+    cadastradas: int
+    erros: int
+    duplicadas: int
+    invalidas: int
+    itens: list[BarcodeBatchItem]
+
+
 class NotaFiscalErrorCreate(BaseModel):
     chave_acesso: str = Field(min_length=1, max_length=100)
     local: Optional[str] = None

@@ -356,6 +356,129 @@ def importar_barcode(
 
 
 @app.post(
+    "/notas/importar-remessa/",
+    response_model=schemas.BarcodeBatchResponse,
+    tags=["Notas fiscais"],
+    summary="Consultar e cadastrar notas por remessa",
+    description=(
+        "Recebe uma ou mais chaves de NF-e, consulta a API fiscal e cadastra as notas "
+        "em lote. Quando uma chave nao e reconhecida ou a API falha, registra a chave "
+        "como nota com erro no painel para tratamento posterior."
+    ),
+)
+def importar_remessa(
+    remessa_data: schemas.BarcodeBatchInput,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    ensure_not_viewer(current_user)
+    itens = []
+    cadastradas = erros = duplicadas = invalidas = 0
+
+    for raw_code in remessa_data.chaves:
+        raw_code = (raw_code or "").strip()
+        if not raw_code:
+            continue
+
+        try:
+            chave_acesso = barcode_service.extract_access_key(raw_code)
+        except ValueError as error:
+            invalidas += 1
+            chave_erro = raw_code[:100]
+            detalhe = str(error)
+            try:
+                nota = crud.create_nota_erro(
+                    db,
+                    schemas.NotaFiscalErrorCreate(chave_acesso=chave_erro, local=remessa_data.local.value, detalhe=detalhe),
+                )
+                itens.append(
+                    schemas.BarcodeBatchItem(
+                        chave_acesso=chave_erro,
+                        status="erro",
+                        detalhe=f"Chave invalida registrada com erro: {detalhe}",
+                        id=nota.id,
+                    )
+                )
+                erros += 1
+            except IntegrityError:
+                duplicadas += 1
+                itens.append(
+                    schemas.BarcodeBatchItem(
+                        chave_acesso=chave_erro,
+                        status="duplicada",
+                        detalhe="Chave invalida ja cadastrada anteriormente.",
+                    )
+                )
+            continue
+
+        try:
+            nota_api = integra_api.consultar_nfe(chave_acesso)
+            nota_data = schemas.NotaFiscalCreate(**nota_api, local=remessa_data.local)
+            nota = crud.create_nota(db, nota_data)
+            cadastradas += 1
+            itens.append(
+                schemas.BarcodeBatchItem(
+                    chave_acesso=chave_acesso,
+                    status="cadastrada",
+                    detalhe="Nota cadastrada com sucesso.",
+                    id=nota.id,
+                    numero_nf=nota.numero_nf,
+                )
+            )
+            logger.info("Nota importada por remessa | id=%s | numero=%s | local=%s", nota.id, nota.numero_nf, nota.local)
+        except IntegrityError:
+            duplicadas += 1
+            itens.append(
+                schemas.BarcodeBatchItem(
+                    chave_acesso=chave_acesso,
+                    status="duplicada",
+                    detalhe="Nota fiscal ja cadastrada para esta chave de acesso.",
+                )
+            )
+            logger.warning("Importacao por remessa duplicada | chave=%s", mask_access_key(chave_acesso))
+        except Exception as error:
+            detalhe = str(error)[:2000] or "Falha ao consultar ou salvar a nota."
+            try:
+                nota = crud.create_nota_erro(
+                    db,
+                    schemas.NotaFiscalErrorCreate(chave_acesso=chave_acesso, local=remessa_data.local.value, detalhe=detalhe),
+                )
+                erros += 1
+                itens.append(
+                    schemas.BarcodeBatchItem(
+                        chave_acesso=chave_acesso,
+                        status="erro",
+                        detalhe=detalhe,
+                        id=nota.id,
+                    )
+                )
+                logger.error(
+                    "Nota da remessa registrada com erro | id=%s | chave=%s | detalhe=%s",
+                    nota.id,
+                    mask_access_key(chave_acesso),
+                    detalhe,
+                )
+            except IntegrityError:
+                duplicadas += 1
+                itens.append(
+                    schemas.BarcodeBatchItem(
+                        chave_acesso=chave_acesso,
+                        status="duplicada",
+                        detalhe="Nota fiscal ja cadastrada para esta chave de acesso.",
+                    )
+                )
+
+    return schemas.BarcodeBatchResponse(
+        total=len(itens),
+        cadastradas=cadastradas,
+        erros=erros,
+        duplicadas=duplicadas,
+        invalidas=invalidas,
+        itens=itens,
+    )
+
+
+@app.post(
     "/notas/",
     response_model=schemas.NotaFiscalResponse,
     tags=["Notas fiscais"],

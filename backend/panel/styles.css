@@ -162,6 +162,65 @@ body:not(.authenticated) main,body:not(.authenticated) .sidebar{pointer-events:n
     height: 360px;
 }
 
+.batch-result-summary {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 14px;
+}
+
+.batch-result-summary strong,
+.batch-result-summary span {
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #faf9f7;
+}
+
+.batch-result-list {
+    max-height: 300px;
+    overflow: auto;
+    display: grid;
+    gap: 8px;
+}
+
+.batch-result-list div {
+    border: 1px solid var(--line);
+    border-left: 4px solid #76818d;
+    border-radius: 6px;
+    padding: 9px 10px;
+    background: #fff;
+}
+
+.batch-result-list strong,
+.batch-result-list span {
+    display: block;
+}
+
+.batch-result-list span {
+    color: var(--muted);
+    margin-top: 3px;
+}
+
+.batch-result-list .cadastrada {
+    border-left-color: #48a868;
+}
+
+.batch-result-list .erro {
+    border-left-color: var(--danger);
+    background: #fff5f5;
+}
+
+.batch-result-list .duplicada {
+    border-left-color: #e0b43c;
+}
+
+.top-actions #openBatchScan,
+.top-actions #openScan {
+    width: 145px;
+    min-width: 145px;
+}
+
 @media(max-width:1000px){
     .period-report {
         min-height: 0;
