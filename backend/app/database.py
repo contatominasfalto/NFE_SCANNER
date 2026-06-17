@@ -2,12 +2,13 @@ from sqlalchemy import create_engine, event, inspect, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 from .config import DATABASE_URL
 
-connect_args = {"check_same_thread": False, "timeout": 30} if DATABASE_URL.startswith("sqlite") else {}
-engine = create_engine(DATABASE_URL, connect_args=connect_args)
+IS_SQLITE = DATABASE_URL.startswith("sqlite")
+connect_args = {"check_same_thread": False, "timeout": 30} if IS_SQLITE else {}
+engine = create_engine(DATABASE_URL, connect_args=connect_args, pool_pre_ping=not IS_SQLITE)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-if DATABASE_URL.startswith("sqlite"):
+if IS_SQLITE:
     @event.listens_for(engine, "connect")
     def configure_sqlite_connection(dbapi_connection, _connection_record):
         cursor = dbapi_connection.cursor()
@@ -22,6 +23,7 @@ def ensure_schema():
         return
 
     columns = {column["name"] for column in inspector.get_columns("notas_fiscais")}
+    bool_default = "0" if IS_SQLITE else "FALSE"
     migrations = {
         "local": "ALTER TABLE notas_fiscais ADD COLUMN local VARCHAR",
         "produto": "ALTER TABLE notas_fiscais ADD COLUMN produto TEXT",
@@ -29,7 +31,7 @@ def ensure_schema():
         "transportador": "ALTER TABLE notas_fiscais ADD COLUMN transportador VARCHAR",
         "faturista": "ALTER TABLE notas_fiscais ADD COLUMN faturista VARCHAR DEFAULT 'BIPE'",
         "lider_operacional": "ALTER TABLE notas_fiscais ADD COLUMN lider_operacional VARCHAR",
-        "erro_salvamento": "ALTER TABLE notas_fiscais ADD COLUMN erro_salvamento BOOLEAN DEFAULT 0 NOT NULL",
+        "erro_salvamento": f"ALTER TABLE notas_fiscais ADD COLUMN erro_salvamento BOOLEAN DEFAULT {bool_default} NOT NULL",
         "erro_detalhe": "ALTER TABLE notas_fiscais ADD COLUMN erro_detalhe TEXT",
     }
     with engine.begin() as connection:

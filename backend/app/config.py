@@ -7,6 +7,8 @@ BACKEND_DIR = Path(__file__).resolve().parents[1]
 load_dotenv(BACKEND_DIR / ".env")
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./nfe_scanner.db")
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 if DATABASE_URL.startswith("sqlite:///./"):
     database_name = DATABASE_URL.removeprefix("sqlite:///./")
     DATABASE_URL = f"sqlite:///{(BACKEND_DIR / database_name).as_posix()}"
