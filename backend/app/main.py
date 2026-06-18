@@ -12,7 +12,7 @@ from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, S
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.security import APIKeyCookie
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import IntegrityError
@@ -172,6 +172,8 @@ async def validation_exception_handler(request: Request, error: RequestValidatio
 
 
 PANEL_DIR = Path(__file__).resolve().parents[1] / "panel"
+PROJECT_DIR = Path(__file__).resolve().parents[2]
+APK_PATH = PROJECT_DIR / "mobile" / "bin" / "nfescanner-0.1.0-arm64-v8a-debug.apk"
 app.mount("/painel-assets", StaticFiles(directory=PANEL_DIR), name="painel-assets")
 
 @app.middleware("http")
@@ -227,6 +229,80 @@ def health_check():
 @app.get("/painel", include_in_schema=False, response_class=FileResponse)
 def painel():
     return FileResponse(PANEL_DIR / "index.html")
+
+
+@app.get("/app-download", include_in_schema=False, response_class=FileResponse)
+def app_download():
+    if not APK_PATH.exists():
+        raise HTTPException(status_code=404, detail="APK nao encontrado. Gere o APK antes de baixar.")
+    return FileResponse(
+        APK_PATH,
+        media_type="application/vnd.android.package-archive",
+        filename=APK_PATH.name,
+    )
+
+
+@app.get("/app", include_in_schema=False, response_class=HTMLResponse)
+def app_download_page():
+    apk_status = "disponivel" if APK_PATH.exists() else "nao encontrado"
+    return f"""
+    <!doctype html>
+    <html lang="pt-BR">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Baixar NFE Scanner</title>
+        <style>
+          body {{
+            font-family: Arial, sans-serif;
+            background: #f7f7f5;
+            color: #29292e;
+            margin: 0;
+            padding: 24px;
+          }}
+          .card {{
+            max-width: 520px;
+            margin: 0 auto;
+            background: #fff;
+            border: 1px solid #dbd6cc;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, .08);
+          }}
+          h1 {{ margin-top: 0; font-size: 24px; }}
+          .button {{
+            display: block;
+            margin-top: 18px;
+            padding: 16px 18px;
+            border-radius: 12px;
+            background: #f29129;
+            color: #111;
+            text-align: center;
+            text-decoration: none;
+            font-weight: 700;
+          }}
+          code {{
+            display: block;
+            margin-top: 16px;
+            padding: 12px;
+            background: #fff2de;
+            border-radius: 8px;
+            word-break: break-all;
+          }}
+          small {{ color: #66666b; }}
+        </style>
+      </head>
+      <body>
+        <main class="card">
+          <h1>NFE Scanner Android</h1>
+          <p>APK {apk_status}. Toque no botao abaixo para baixar e instalar no Android.</p>
+          <a class="button" href="/app-download">Baixar APK</a>
+          <code>http://192.168.10.180:8000/app-download</code>
+          <small>Se o Android bloquear, permita instalar apps desconhecidos para o navegador usado.</small>
+        </main>
+      </body>
+    </html>
+    """
 
 
 @app.get("/", include_in_schema=False, response_class=RedirectResponse)

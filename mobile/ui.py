@@ -1,5 +1,5 @@
 from kivy.metrics import dp
-from kivymd.uix.button import MDFillRoundFlatIconButton, MDRectangleFlatIconButton
+from kivy.uix.button import Button
 from kivymd.uix.card import MDCard
 from kivymd.uix.label import MDLabel
 
@@ -39,6 +39,25 @@ def body_label(text, height=28):
     )
 
 
+def wrap_label(text, font_style="Body2", color=MUTED, height=None, bold=False, halign="left"):
+    fixed_height = dp(height) if height is not None else None
+    label = MDLabel(
+        text=text,
+        font_style=font_style,
+        bold=bold,
+        theme_text_color="Custom",
+        text_color=color,
+        halign=halign,
+        size_hint_y=None,
+    )
+    label.bind(width=lambda instance, value: setattr(instance, "text_size", (value, None)))
+    if fixed_height is None:
+        label.bind(texture_size=lambda instance, value: setattr(instance, "height", value[1] + dp(6)))
+    else:
+        label.height = fixed_height
+    return label
+
+
 def section_card(height=None):
     card = MDCard(
         orientation="vertical",
@@ -57,29 +76,31 @@ def section_card(height=None):
 
 
 def primary_button(text, icon, callback):
-    button = MDFillRoundFlatIconButton(
+    button = Button(
         text=text,
-        icon=icon,
         size_hint_x=1,
+        size_hint_y=None,
         height=dp(48),
-        md_bg_color=PRIMARY,
-        text_color=TEXT,
-        icon_color=TEXT,
+        background_normal="",
+        background_down="",
+        background_color=PRIMARY,
+        color=TEXT,
+        bold=True,
     )
     button.bind(on_release=callback)
     return button
 
 
 def outline_button(text, icon, callback):
-    button = MDRectangleFlatIconButton(
+    button = Button(
         text=text,
-        icon=icon,
         size_hint_x=1,
+        size_hint_y=None,
         height=dp(48),
-        theme_text_color="Custom",
-        text_color=ACCENT,
-        line_color=BORDER,
-        icon_color=ACCENT,
+        background_normal="",
+        background_down="",
+        background_color=(1, 1, 1, 1),
+        color=ACCENT,
     )
     button.bind(on_release=callback)
     return button

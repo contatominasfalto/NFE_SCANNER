@@ -15,7 +15,7 @@ from kivymd.uix.toolbar import MDTopAppBar
 from plyer import storagepath
 
 from services.api_client import APIClient
-from ui import ACCENT, BG, MUTED, PRIMARY, SURFACE, TEXT, WHITE, outline_button, primary_button
+from ui import ACCENT, BG, MUTED, PRIMARY, SURFACE, TEXT, WHITE, outline_button, primary_button, wrap_label
 
 
 class ListScreen(Screen):
@@ -40,8 +40,8 @@ class ListScreen(Screen):
 
         content = MDBoxLayout(
             orientation="vertical",
-            padding=dp(16),
-            spacing=dp(12),
+            padding=dp(14),
+            spacing=dp(10),
         )
 
         self.search_input = MDTextField(
@@ -149,12 +149,12 @@ class ListScreen(Screen):
             radius=[16, 16, 16, 16],
             elevation=1,
             padding=dp(14),
-            spacing=dp(4),
+            spacing=dp(6),
             md_bg_color=SURFACE,
             size_hint_y=None,
-            height=dp(112),
             ripple_behavior=True,
         )
+        card.bind(minimum_height=card.setter("height"))
         card.bind(on_release=lambda *_: self.ver_detalhe(nota))
         card.add_widget(
             MDLabel(
@@ -168,15 +168,7 @@ class ListScreen(Screen):
             )
         )
         card.add_widget(
-            MDLabel(
-                text=fornecedor,
-                font_style="Body2",
-                theme_text_color="Custom",
-                text_color=MUTED,
-                size_hint_y=None,
-                height=dp(24),
-                shorten=True,
-            )
+            wrap_label(fornecedor, font_style="Body2", color=MUTED)
         )
         card.add_widget(
             MDLabel(
@@ -216,8 +208,8 @@ class ListScreen(Screen):
         )
         content.add_widget(header)
 
-        detalhe = MDLabel(
-            text=(
+        detalhe = wrap_label(
+            (
                 f"Numero: {nota.get('numero_nf', '')}\n"
                 f"Fornecedor: {nota.get('nome_fornecedor', '')}\n"
                 f"CNPJ: {nota.get('cnpj_fornecedor', '')}\n"
@@ -232,10 +224,7 @@ class ListScreen(Screen):
                 f"Data/hora do bip: {nota.get('data_cadastro', '')}"
             ),
             font_style="Body1",
-            theme_text_color="Custom",
-            text_color=MUTED,
-            size_hint_y=None,
-            height=dp(286),
+            color=MUTED,
         )
         content.add_widget(detalhe)
         content.add_widget(

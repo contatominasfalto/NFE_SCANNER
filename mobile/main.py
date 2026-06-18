@@ -1,167 +1,36 @@
 from kivy.core.window import Window
 from kivy.lang import Builder
+from kivy.clock import Clock
+from kivy.metrics import dp
+from kivy.uix.image import Image
+from kivy.uix.screenmanager import Screen
+from kivy.uix.scrollview import ScrollView
+from kivy.utils import platform
 from kivymd.app import MDApp
+from kivymd.uix.boxlayout import MDBoxLayout
+from kivymd.uix.card import MDCard
+from kivymd.uix.label import MDLabel
+from kivymd.uix.toolbar import MDTopAppBar
 from pathlib import Path
 
 from screens.confirm_screen import ConfirmScreen
 from screens.list_screen import ListScreen
 from screens.scan_screen import ScanScreen
 from services.api_client import APIClient
+from ui import BG, INFO, PRIMARY, SURFACE, TEXT, MUTED, outline_button, primary_button, section_card, wrap_label
 
 
-Window.size = (390, 760)
+if platform not in ("android", "ios"):
+    Window.size = (390, 760)
 BASE_DIR = Path(__file__).resolve().parent
 
 Window.clearcolor = (0.97, 0.97, 0.96, 1)
 
 
 KV = """
-#:import FitImage kivymd.uix.fitimage.FitImage
-
 ScreenManager:
-    Screen:
+    HomeScreen:
         name: "home"
-
-        MDBoxLayout:
-            orientation: "vertical"
-            md_bg_color: app.bg_color
-
-            MDTopAppBar:
-                title: "Minasfalto NF-e"
-                elevation: 0
-                md_bg_color: app.primary_color
-                specific_text_color: app.text_color
-
-            ScrollView:
-                MDBoxLayout:
-                    orientation: "vertical"
-                    adaptive_height: True
-                    padding: "20dp", "18dp", "20dp", "28dp"
-                    spacing: "16dp"
-
-                    MDCard:
-                        orientation: "vertical"
-                        size_hint_y: None
-                        height: "228dp"
-                        radius: [18, 18, 18, 18]
-                        elevation: 1
-                        padding: "20dp"
-                        spacing: "10dp"
-                        md_bg_color: app.surface_color
-
-                        FitImage:
-                            source: app.logo_path
-                            size_hint_y: None
-                            height: "88dp"
-                            radius: [10, 10, 10, 10]
-
-                        MDLabel:
-                            text: "MINASFALTO"
-                            theme_text_color: "Custom"
-                            text_color: app.text_color
-                            font_style: "H5"
-                            bold: True
-                            halign: "center"
-                            size_hint_y: None
-                            height: self.texture_size[1]
-
-                        MDLabel:
-                            text: "Scanner de NF-e para controle, conferencia e relatorios internos."
-                            theme_text_color: "Custom"
-                            text_color: app.muted_text_color
-                            font_style: "Body1"
-                            halign: "center"
-                            size_hint_y: None
-                            height: self.texture_size[1] + dp(8)
-
-                        MDLabel:
-                            text: app.api_base_url_label
-                            theme_text_color: "Custom"
-                            text_color: app.primary_color
-                            font_style: "Caption"
-                            bold: True
-                            halign: "center"
-                            size_hint_y: None
-                            height: self.texture_size[1]
-
-                    MDLabel:
-                        text: "Acoes principais"
-                        theme_text_color: "Custom"
-                        text_color: app.text_color
-                        font_style: "Subtitle1"
-                        bold: True
-                        size_hint_y: None
-                        height: self.texture_size[1] + dp(4)
-
-                    MDCard:
-                        orientation: "vertical"
-                        size_hint_y: None
-                        height: "174dp"
-                        radius: [16, 16, 16, 16]
-                        elevation: 1
-                        padding: "12dp"
-                        spacing: "10dp"
-                        md_bg_color: app.surface_color
-
-                        MDBoxLayout:
-                            orientation: "horizontal"
-                            spacing: "10dp"
-                            size_hint_y: None
-                            height: "52dp"
-
-                            MDFillRoundFlatButton:
-                                text: "CDMA"
-                                size_hint_x: 1
-                                height: "52dp"
-                                md_bg_color: app.primary_color
-                                text_color: app.text_color
-                                on_release: app.iniciar_leitura("CDMA")
-
-                            MDFillRoundFlatButton:
-                                text: "PRU"
-                                size_hint_x: 1
-                                height: "52dp"
-                                md_bg_color: app.primary_color
-                                text_color: app.text_color
-                                on_release: app.iniciar_leitura("PRU")
-
-                        MDRectangleFlatIconButton:
-                            icon: "file-document-outline"
-                            text: "Notas escaneadas"
-                            size_hint_x: 1
-                            height: "52dp"
-                            theme_text_color: "Custom"
-                            text_color: app.accent_color
-                            line_color: app.border_color
-                            icon_color: app.accent_color
-                            on_release: app.root.current = "list"
-
-                    MDCard:
-                        orientation: "vertical"
-                        size_hint_y: None
-                        height: "116dp"
-                        radius: [16, 16, 16, 16]
-                        elevation: 0
-                        padding: "16dp"
-                        spacing: "6dp"
-                        md_bg_color: app.info_color
-
-                        MDLabel:
-                            text: "Fluxo recomendado"
-                            theme_text_color: "Custom"
-                            text_color: app.text_color
-                            font_style: "Subtitle2"
-                            bold: True
-                            size_hint_y: None
-                            height: self.texture_size[1]
-
-                        MDLabel:
-                            text: "1. Escaneie a nota  2. Confira os campos  3. Salve e gere relatorios"
-                            theme_text_color: "Custom"
-                            text_color: app.muted_text_color
-                            font_style: "Body2"
-                            size_hint_y: None
-                            height: self.texture_size[1] + dp(8)
 
     ScanScreen:
         name: "scan"
@@ -173,6 +42,104 @@ ScreenManager:
         name: "list"
 
 """
+
+
+class HomeScreen(Screen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.build_ui()
+
+    def build_ui(self):
+        root = MDBoxLayout(orientation="vertical", md_bg_color=BG)
+        root.add_widget(
+            MDTopAppBar(
+                title="Minasfalto NF-e",
+                elevation=0,
+                md_bg_color=PRIMARY,
+                specific_text_color=TEXT,
+            )
+        )
+
+        scroll = ScrollView()
+        content = MDBoxLayout(
+            orientation="vertical",
+            adaptive_height=True,
+            padding=(dp(16), dp(16), dp(16), dp(24)),
+            spacing=dp(14),
+        )
+
+        hero = section_card()
+        hero.radius = [18, 18, 18, 18]
+        hero.padding = dp(16)
+        hero.spacing = dp(8)
+        hero.md_bg_color = SURFACE
+        hero.add_widget(
+            Image(
+                source=str(BASE_DIR / "assets" / "logo.jpg"),
+                size_hint_y=None,
+                height=dp(86),
+                allow_stretch=True,
+                keep_ratio=True,
+            )
+        )
+        hero.add_widget(wrap_label("MINASFALTO", font_style="H5", color=TEXT, bold=True, halign="center"))
+        hero.add_widget(
+            wrap_label(
+                "Scanner de NF-e para controle, conferencia e relatorios internos.",
+                font_style="Body1",
+                color=MUTED,
+                halign="center",
+            )
+        )
+        hero.add_widget(
+            wrap_label(
+                f"API: {APIClient.get_base_url()}",
+                font_style="Caption",
+                color=PRIMARY,
+                bold=True,
+                halign="center",
+            )
+        )
+        content.add_widget(hero)
+
+        content.add_widget(wrap_label("Acoes principais", font_style="Subtitle1", color=TEXT, bold=True, height=32))
+
+        actions = section_card()
+        actions.padding = dp(12)
+        actions.spacing = dp(10)
+        actions.md_bg_color = SURFACE
+        local_buttons = MDBoxLayout(orientation="horizontal", spacing=dp(10), size_hint_y=None, height=dp(50))
+        local_buttons.add_widget(primary_button("CDMA", "", lambda *_: self.start_scan("CDMA")))
+        local_buttons.add_widget(primary_button("PRU", "", lambda *_: self.start_scan("PRU")))
+        actions.add_widget(local_buttons)
+        actions.add_widget(outline_button("Notas escaneadas", "", lambda *_: self.open_list()))
+        content.add_widget(actions)
+
+        flow = section_card()
+        flow.elevation = 0
+        flow.padding = dp(16)
+        flow.spacing = dp(6)
+        flow.md_bg_color = INFO
+        flow.add_widget(wrap_label("Fluxo recomendado", font_style="Subtitle2", color=TEXT, bold=True, height=28))
+        flow.add_widget(
+            wrap_label(
+                "1. Escolha CDMA ou PRU\\n2. Leia pela camera ou digite a chave\\n3. Confira e salve a nota",
+                font_style="Body2",
+                color=MUTED,
+            )
+        )
+        content.add_widget(flow)
+
+        scroll.add_widget(content)
+        root.add_widget(scroll)
+        self.add_widget(root)
+
+    def start_scan(self, local):
+        app = MDApp.get_running_app()
+        app.iniciar_leitura(local)
+
+    def open_list(self):
+        self.manager.current = "list"
 
 
 class NFeApp(MDApp):
@@ -199,6 +166,11 @@ class NFeApp(MDApp):
     def iniciar_leitura(self, local):
         self.root.get_screen("scan").set_local(local)
         self.root.current = "scan"
+
+    def on_resume(self):
+        if self.root and self.root.current == "scan":
+            Clock.schedule_once(self.root.get_screen("scan").verificar_retorno_camera, 0.8)
+        return True
 
 
 if __name__ == "__main__":

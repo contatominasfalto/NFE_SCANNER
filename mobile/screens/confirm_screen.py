@@ -10,7 +10,7 @@ from kivymd.uix.textfield import MDTextField
 from kivymd.uix.toolbar import MDTopAppBar
 
 from services.api_client import APIClient
-from ui import ACCENT, BG, DANGER, MUTED, PRIMARY, TEXT, WHITE, outline_button, primary_button, section_card
+from ui import BG, MUTED, PRIMARY, TEXT, WHITE, outline_button, primary_button, section_card, wrap_label
 
 
 class ConfirmScreen(Screen):
@@ -36,26 +36,23 @@ class ConfirmScreen(Screen):
         form = MDBoxLayout(
             orientation="vertical",
             adaptive_height=True,
-            padding=dp(20),
-            spacing=dp(14),
+            padding=dp(16),
+            spacing=dp(12),
         )
 
-        intro = section_card(104)
-        self.intro_title = MDLabel(
-            text="Revise antes de salvar",
+        intro = section_card()
+        self.intro_title = wrap_label(
+            "Revise antes de salvar",
             font_style="H6",
+            color=TEXT,
             bold=True,
-            theme_text_color="Custom",
-            text_color=TEXT,
-            size_hint_y=None,
-            height=dp(30),
+            height=30,
         )
         intro.add_widget(self.intro_title)
-        self.intro_text = MDLabel(
-            text="Confira os campos da nota antes de enviar para o banco.",
+        self.intro_text = wrap_label(
+            "Confira os campos da nota antes de enviar para o banco.",
             font_style="Body2",
-            theme_text_color="Custom",
-            text_color=MUTED,
+            color=MUTED,
         )
         intro.add_widget(self.intro_text)
         form.add_widget(intro)
@@ -78,7 +75,7 @@ class ConfirmScreen(Screen):
         ]
 
         card = section_card()
-        card.spacing = dp(18)
+        card.spacing = dp(12)
         for key, label, multiline in fields:
             field = MDTextField(
                 hint_text=label,
@@ -86,7 +83,7 @@ class ConfirmScreen(Screen):
                 multiline=multiline,
                 disabled=key in ("local", "faturista"),
                 size_hint_y=None,
-                height=dp(168 if key == "observacao" else 88 if multiline else 56),
+                height=dp(120 if key == "observacao" else 78 if multiline else 54),
             )
             self.campos[key] = field
             card.add_widget(field)
