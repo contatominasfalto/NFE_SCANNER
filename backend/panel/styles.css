@@ -139,6 +139,19 @@ body:not(.authenticated) main,body:not(.authenticated) .sidebar{pointer-events:n
     color: var(--orange-dark);
 }
 
+.toolbar #downloadAll,
+.toolbar #downloadTableExcel {
+    background: #fff2de;
+    border-color: #f4c78f;
+    color: #7a4300;
+}
+
+.toolbar #downloadAll:hover,
+.toolbar #downloadTableExcel:hover {
+    background: #ffe8c4;
+    border-color: #eeb46e;
+}
+
 .chart-box,
 .receipt-chart-box {
     background:
