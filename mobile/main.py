@@ -6,6 +6,7 @@ from pathlib import Path
 from screens.confirm_screen import ConfirmScreen
 from screens.list_screen import ListScreen
 from screens.scan_screen import ScanScreen
+from services.api_client import APIClient
 
 
 Window.size = (390, 760)
@@ -74,7 +75,7 @@ ScreenManager:
                             height: self.texture_size[1] + dp(8)
 
                         MDLabel:
-                            text: "API local: 127.0.0.1:8000"
+                            text: app.api_base_url_label
                             theme_text_color: "Custom"
                             text_color: app.primary_color
                             font_style: "Caption"
@@ -186,6 +187,7 @@ class NFeApp(MDApp):
     white = (1, 1, 1, 1)
     soft_white = (1.0, 0.95, 0.87, 1)
     logo_path = str(BASE_DIR / "assets" / "logo.jpg")
+    api_base_url_label = f"API: {APIClient.get_base_url()}"
 
     def build(self):
         self.title = "NF-e Scanner"

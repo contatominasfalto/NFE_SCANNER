@@ -1,6 +1,7 @@
 from kivy.clock import Clock
 from kivy.metrics import dp
 from kivy.uix.screenmanager import Screen
+from kivy.utils import platform
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.card import MDCard
 from kivymd.uix.label import MDLabel
@@ -17,7 +18,9 @@ class ScanScreen(Screen):
         super().__init__(**kwargs)
         self.chave_acesso = None
         self.local = None
+        self.scanner_request_code = 4201
         self.build_ui()
+        self.bind_android_scanner_result()
 
     def build_ui(self):
         root = MDBoxLayout(orientation="vertical", md_bg_color=BG)
@@ -62,8 +65,8 @@ class ScanScreen(Screen):
         hero.add_widget(
             MDLabel(
                 text=(
-                    "Use o leitor como em uma bipagem de supermercado. A chave de acesso "
-                    "sera capturada e validada automaticamente ao receber Enter."
+                    "Use a camera do celular para ler o codigo. Se a camera nao conseguir "
+                    "capturar, digite ou cole a chave de acesso manualmente."
                 ),
                 font_style="Body1",
                 theme_text_color="Custom",
@@ -115,12 +118,23 @@ class ScanScreen(Screen):
 
         self.status_label = body_label("Pronto para bipar a nota fiscal.", 44)
         content.add_widget(self.status_label)
-        content.add_widget(primary_button("Validar codigo", "barcode-scan", self.processar_codigo_barras))
+        content.add_widget(primary_button("Ler com camera", "camera", self.iniciar_leitura_camera))
+        content.add_widget(outline_button("Validar codigo digitado", "barcode-scan", self.processar_codigo_barras))
         content.add_widget(outline_button("Voltar ao inicio", "arrow-left", self.voltar))
         content.add_widget(MDBoxLayout())
 
         root.add_widget(content)
         self.add_widget(root)
+
+    def bind_android_scanner_result(self):
+        if platform != "android":
+            return
+        try:
+            from android import activity
+
+            activity.bind(on_activity_result=self.on_android_activity_result)
+        except Exception as error:
+            self.status_label.text = f"Leitura por camera indisponivel: {error}"
 
     def on_pre_enter(self):
         self.preparar_nova_leitura()
@@ -142,6 +156,52 @@ class ScanScreen(Screen):
     def limpar_local(self):
         self.local = None
         self.local_label.text = "Nao selecionado"
+
+    def iniciar_leitura_camera(self, instance):
+        if not self.local:
+            self.status_label.text = "Volte e selecione o local antes da leitura."
+            return
+
+        if platform != "android":
+            self.status_label.text = "A camera para leitura esta disponivel apenas no Android."
+            self.barcode_input.focus = True
+            return
+
+        try:
+            from jnius import autoclass
+
+            Intent = autoclass("android.content.Intent")
+            PythonActivity = autoclass("org.kivy.android.PythonActivity")
+            scanner_intent = Intent("com.google.zxing.client.android.SCAN")
+            scanner_intent.putExtra("SCAN_MODE", "ONE_D_MODE")
+            scanner_intent.putExtra("PROMPT_MESSAGE", "Aponte a camera para o codigo de barras da NF-e")
+            PythonActivity.mActivity.startActivityForResult(scanner_intent, self.scanner_request_code)
+            self.status_label.text = "Camera aberta. Aguardando leitura do codigo."
+        except Exception:
+            self.status_label.text = (
+                "Nao foi possivel abrir o leitor pela camera. "
+                "Digite ou cole a chave de acesso no campo abaixo."
+            )
+            self.barcode_input.focus = True
+
+    def on_android_activity_result(self, request_code, result_code, intent):
+        if request_code != self.scanner_request_code:
+            return
+
+        if result_code != -1 or intent is None:
+            self.status_label.text = "Leitura cancelada. Voce pode digitar a chave manualmente."
+            self.barcode_input.focus = True
+            return
+
+        codigo_lido = intent.getStringExtra("SCAN_RESULT")
+        if not codigo_lido:
+            self.status_label.text = "Nenhum codigo foi capturado. Digite a chave manualmente."
+            self.barcode_input.focus = True
+            return
+
+        self.barcode_input.text = codigo_lido
+        self.status_label.text = "Codigo capturado pela camera. Validando nota..."
+        Clock.schedule_once(lambda *_: self.processar_codigo_barras(self.barcode_input), 0.1)
 
     def processar_codigo_barras(self, instance):
         if not self.local:

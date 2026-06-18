@@ -13,7 +13,7 @@ requirements = python3,kivy==2.2.1,kivymd==1.1.1,requests,plyer
 orientation = portrait
 fullscreen = 0
 
-android.permissions = INTERNET,READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE
+android.permissions = INTERNET,CAMERA,READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE
 android.api = 34
 android.minapi = 23
 android.ndk = 25b
@@ -21,6 +21,7 @@ android.accept_sdk_license = True
 
 android.archs = arm64-v8a, armeabi-v7a
 android.allow_backup = True
+android.add_manifest_application_arguments = android:usesCleartextTraffic="true"
 
 [buildozer]
 log_level = 2
