@@ -173,8 +173,17 @@ async def validation_exception_handler(request: Request, error: RequestValidatio
 
 PANEL_DIR = Path(__file__).resolve().parents[1] / "panel"
 PROJECT_DIR = Path(__file__).resolve().parents[2]
-APK_PATH = PROJECT_DIR / "mobile" / "bin" / "nfescanner-0.1.0-arm64-v8a-debug.apk"
+APK_DIR = PROJECT_DIR / "mobile" / "bin"
 app.mount("/painel-assets", StaticFiles(directory=PANEL_DIR), name="painel-assets")
+
+
+def get_latest_apk_path() -> Path | None:
+    apks = sorted(
+        APK_DIR.glob("nfescanner-*-arm64-v8a-debug.apk"),
+        key=lambda path: path.stat().st_mtime,
+        reverse=True,
+    )
+    return apks[0] if apks else None
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
@@ -233,18 +242,21 @@ def painel():
 
 @app.get("/app-download", include_in_schema=False, response_class=FileResponse)
 def app_download():
-    if not APK_PATH.exists():
+    apk_path = get_latest_apk_path()
+    if not apk_path:
         raise HTTPException(status_code=404, detail="APK nao encontrado. Gere o APK antes de baixar.")
     return FileResponse(
-        APK_PATH,
+        apk_path,
         media_type="application/vnd.android.package-archive",
-        filename=APK_PATH.name,
+        filename=apk_path.name,
     )
 
 
 @app.get("/app", include_in_schema=False, response_class=HTMLResponse)
-def app_download_page():
-    apk_status = "disponivel" if APK_PATH.exists() else "nao encontrado"
+def app_download_page(request: Request):
+    apk_path = get_latest_apk_path()
+    apk_status = f"disponivel: {apk_path.name}" if apk_path else "nao encontrado"
+    download_url = request.url_for("app_download")
     return f"""
     <!doctype html>
     <html lang="pt-BR">
@@ -297,7 +309,7 @@ def app_download_page():
           <h1>NFE Scanner Android</h1>
           <p>APK {apk_status}. Toque no botao abaixo para baixar e instalar no Android.</p>
           <a class="button" href="/app-download">Baixar APK</a>
-          <code>http://192.168.10.180:8000/app-download</code>
+          <code>{download_url}</code>
           <small>Se o Android bloquear, permita instalar apps desconhecidos para o navegador usado.</small>
         </main>
       </body>

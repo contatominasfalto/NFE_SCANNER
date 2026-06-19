@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Painel NF-e</title>
-  <link rel="stylesheet" href="/painel-assets/styles.css?v=20260618-1">
+  <link rel="stylesheet" href="/painel-assets/styles.css?v=20260619-11">
 </head>
 <body>
   <dialog class="modal compact" id="loginDialog">
@@ -55,10 +55,11 @@
         <h1>Notas fiscais</h1>
       </div>
       <div class="top-actions">
+        <button class="secondary export-action" id="downloadAll">↓ Gerar XML</button>
+        <button class="secondary export-action" id="downloadTableExcel">↓ Baixar Excel</button>
         <span id="lastUpdate">Aguardando atualização</span>
         <span class="user-badge" id="userBadge"></span>
         <button class="primary" id="openBatchScan">＋ Bipar Remessa</button>
-        <button class="primary" id="openScan">＋ Bipar nota</button>
         <button class="icon-button" id="refreshButton" title="Atualizar tabela">↻</button>
         <button class="secondary refresh-errors" id="refreshErrorsButton">Refresh NFes Erro</button>
         <button class="secondary" id="logoutButton" hidden>Sair</button>
@@ -68,29 +69,27 @@
     <section class="metrics">
       <article><span>Total cadastrado</span><strong id="metricTotal">0</strong><small>notas fiscais</small></article>
       <article><span>Peso líquido</span><strong id="metricWeight">0</strong><small>kg registrados</small></article>
-      <article><span>Valor total</span><strong id="metricValue">R$ 0,00</strong><small>somatório da base</small></article>
-      <article><span>Sem líder operacional</span><strong id="metricPending">0</strong><small>pendências</small></article>
     </section>
 
     <section class="workspace">
       <div class="toolbar">
         <label class="search"><span>⌕</span><input id="searchInput" placeholder="Buscar NF, chave, produto, fornecedor, transportador..."></label>
         <label class="flag-filter"><input id="errorOnlyFilter" type="checkbox" onchange="applyFilters()" onclick="applyFilters()"><span>Com erro</span></label>
+        <label class="date-filter"><span>Bip</span><input id="bipDateFilter" type="date" aria-label="Filtrar por data do bip"></label>
+        <label class="date-filter"><span>Emissão</span><input id="issueDateFilter" type="date" aria-label="Filtrar por data de emissão"></label>
         <select id="localFilter" aria-label="Filtrar por local">
           <option value="">Todos os locais</option>
           <option>CDMA</option><option>PRU</option>
         </select>
-        <select id="billingFilter" aria-label="Filtrar por usuário"><option value="">Todos os usuários</option></select>
-        <button class="secondary" id="downloadAll">↓ Gerar XML geral</button>
-        <button class="secondary" id="downloadTableExcel">↓ Baixar Excel</button>
+        <select id="billingFilter" aria-label="Filtrar por usuário"><option value="">Usuários</option></select>
       </div>
       <div class="table-summary"><strong id="resultCount">0 registros</strong><span>Arraste horizontalmente para visualizar todos os campos</span></div>
       <div class="table-wrap">
         <table>
           <thead><tr>
-            <th class="sticky">Ações</th><th>ID</th><th>Chave NF</th><th>Data/hora do bip</th><th>Data emissão</th>
+            <th class="sticky">Ações</th><th>Chave NF</th><th>Data/hora do bip</th><th>Data emissão</th>
             <th>Fornecedor</th><th>NF</th><th>Local</th><th>Produto</th><th>Quantidade</th><th>Valor total</th>
-            <th>Transportador</th><th>Usuário</th><th>Líder operacional</th><th>CNPJ</th><th>Observação</th>
+            <th>Transportador</th><th>Usuário</th><th>CNPJ</th><th>Observação</th>
           </tr></thead>
           <tbody id="notesTable"></tbody>
         </table>
@@ -98,16 +97,6 @@
       </div>
     </section>
   </main>
-
-  <dialog id="scanDialog">
-    <form method="dialog" class="modal compact" id="scanForm">
-      <header><div><p class="eyebrow">NOVA LEITURA</p><h2>Bipar nota fiscal</h2></div><button class="icon-button close" type="button" data-close="scanDialog">×</button></header>
-      <p class="modal-copy">Informe a chave de acesso e o local onde o material será alocado.</p>
-      <label>Local<select id="scanLocal" required><option value="">Selecione</option><option>CDMA</option><option>PRU</option></select></label>
-      <label>Chave NF<input id="scanKey" required inputmode="numeric" maxlength="44" placeholder="44 dígitos"></label>
-      <footer><button class="secondary" type="button" data-close="scanDialog">Cancelar</button><button class="primary" type="submit">Consultar nota</button></footer>
-    </form>
-  </dialog>
 
   <dialog id="batchDialog">
     <form method="dialog" class="modal medium" id="batchForm">
@@ -242,6 +231,6 @@
   </dialog>
   <div id="toast" role="status"></div>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="/painel-assets/app.js?v=20260618-1"></script>
+  <script src="/painel-assets/app.js?v=20260619-11"></script>
 </body>
 </html>
