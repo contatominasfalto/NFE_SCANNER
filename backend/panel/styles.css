@@ -405,6 +405,50 @@ tbody tr:hover td {
     min-width: 145px;
 }
 
+.table-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--line);
+    background: #fffaf1;
+    font-size: 12px;
+}
+
+.table-pagination label,
+.pagination-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.table-pagination select {
+    height: 30px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #fff;
+    padding: 0 8px;
+}
+
+.pagination-actions .secondary {
+    height: 30px;
+    padding: 0 10px;
+    font-size: 12px;
+}
+
+.pagination-actions .secondary:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
+
+#tablePageInfo {
+    min-width: 98px;
+    text-align: center;
+    color: var(--muted);
+    font-weight: 700;
+}
+
 @media(max-width:1000px){
     .period-report {
         min-height: 0;

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Painel NF-e</title>
-  <link rel="stylesheet" href="/painel-assets/styles.css?v=20260619-11">
+  <link rel="stylesheet" href="/painel-assets/styles.css?v=20260619-14">
 </head>
 <body>
   <dialog class="modal compact" id="loginDialog">
@@ -84,6 +84,20 @@
         <select id="billingFilter" aria-label="Filtrar por usuário"><option value="">Usuários</option></select>
       </div>
       <div class="table-summary"><strong id="resultCount">0 registros</strong><span>Arraste horizontalmente para visualizar todos os campos</span></div>
+      <div class="table-pagination">
+        <label>Linhas por página
+          <select id="tablePageSize">
+            <option value="100">100</option>
+            <option value="250">250</option>
+            <option value="500">500</option>
+          </select>
+        </label>
+        <div class="pagination-actions">
+          <button class="secondary" id="prevTablePage" type="button">Anterior</button>
+          <span id="tablePageInfo">Página 1 de 1</span>
+          <button class="secondary" id="nextTablePage" type="button">Próxima</button>
+        </div>
+      </div>
       <div class="table-wrap">
         <table>
           <thead><tr>
@@ -231,6 +245,6 @@
   </dialog>
   <div id="toast" role="status"></div>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="/painel-assets/app.js?v=20260619-11"></script>
+  <script src="/painel-assets/app.js?v=20260619-14"></script>
 </body>
 </html>
