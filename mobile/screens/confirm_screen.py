@@ -10,7 +10,22 @@ from kivymd.uix.textfield import MDTextField
 from kivymd.uix.toolbar import MDTopAppBar
 
 from services.api_client import APIClient
-from ui import BG, MUTED, PRIMARY, TEXT, WHITE, outline_button, primary_button, section_card, wrap_label
+from ui import (
+    BG,
+    DANGER_SOFT,
+    DANGER_TEXT,
+    MUTED,
+    PRIMARY,
+    SUCCESS_SOFT,
+    SUCCESS_TEXT,
+    TEXT,
+    WHITE,
+    outline_button,
+    primary_button,
+    section_card,
+    soft_button,
+    wrap_label,
+)
 
 
 class ConfirmScreen(Screen):
@@ -96,10 +111,16 @@ class ConfirmScreen(Screen):
             padding=(0, dp(2), 0, 0),
         )
         self.primary_action = primary_button("Salvar e proxima", "barcode-scan", self.salvar_e_proxima)
-        self.finish_action = outline_button("Salvar e finalizar", "check-circle-outline", self.salvar_e_finalizar)
+        self.finish_action = soft_button(
+            "Salvar e finalizar",
+            "check-circle-outline",
+            self.salvar_e_finalizar,
+            SUCCESS_SOFT,
+            SUCCESS_TEXT,
+        )
         actions.add_widget(self.primary_action)
         actions.add_widget(self.finish_action)
-        actions.add_widget(outline_button("Cancelar", "close", self.cancelar))
+        actions.add_widget(soft_button("Cancelar", "close", self.cancelar, DANGER_SOFT, DANGER_TEXT))
         form.add_widget(actions)
 
         scroll.add_widget(form)

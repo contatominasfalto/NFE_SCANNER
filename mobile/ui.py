@@ -14,6 +14,10 @@ TEXT = (0.16, 0.16, 0.18, 1)
 MUTED = (0.40, 0.40, 0.42, 1)
 WHITE = (1, 1, 1, 1)
 DANGER = (0.86, 0.23, 0.22, 1)
+SUCCESS_SOFT = (0.88, 0.96, 0.91, 1)
+SUCCESS_TEXT = (0.10, 0.42, 0.25, 1)
+DANGER_SOFT = (1.0, 0.91, 0.90, 1)
+DANGER_TEXT = (0.70, 0.16, 0.15, 1)
 
 
 def title_label(text):
@@ -101,6 +105,22 @@ def outline_button(text, icon, callback):
         background_down="",
         background_color=(1, 1, 1, 1),
         color=ACCENT,
+    )
+    button.bind(on_release=callback)
+    return button
+
+
+def soft_button(text, icon, callback, background_color, text_color):
+    button = Button(
+        text=text,
+        size_hint_x=1,
+        size_hint_y=None,
+        height=dp(48),
+        background_normal="",
+        background_down="",
+        background_color=background_color,
+        color=text_color,
+        bold=True,
     )
     button.bind(on_release=callback)
     return button

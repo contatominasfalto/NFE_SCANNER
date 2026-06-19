@@ -12,7 +12,23 @@ from kivymd.uix.toolbar import MDTopAppBar
 import re
 
 from services.api_client import APIClient
-from ui import BG, INFO, MUTED, PRIMARY, TEXT, WHITE, body_label, outline_button, primary_button, section_card, wrap_label
+from ui import (
+    BG,
+    DANGER_SOFT,
+    DANGER_TEXT,
+    INFO,
+    MUTED,
+    PRIMARY,
+    SUCCESS_SOFT,
+    SUCCESS_TEXT,
+    TEXT,
+    WHITE,
+    body_label,
+    primary_button,
+    section_card,
+    soft_button,
+    wrap_label,
+)
 
 
 class ScanScreen(Screen):
@@ -115,8 +131,16 @@ class ScanScreen(Screen):
         content.add_widget(self.status_label)
         self.camera_button = primary_button("Abrir leitor pela camera", "camera", self.iniciar_leitura_camera)
         content.add_widget(self.camera_button)
-        content.add_widget(outline_button("Validar codigo digitado", "barcode-scan", self.processar_codigo_barras))
-        content.add_widget(outline_button("Voltar ao inicio", "arrow-left", self.voltar))
+        content.add_widget(
+            soft_button(
+                "Validar codigo digitado",
+                "barcode-scan",
+                self.processar_codigo_barras,
+                SUCCESS_SOFT,
+                SUCCESS_TEXT,
+            )
+        )
+        content.add_widget(soft_button("Voltar ao inicio", "arrow-left", self.voltar, DANGER_SOFT, DANGER_TEXT))
 
         scroll.add_widget(content)
         root.add_widget(scroll)
