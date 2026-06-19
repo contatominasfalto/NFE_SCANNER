@@ -249,6 +249,7 @@ def app_download():
         apk_path,
         media_type="application/vnd.android.package-archive",
         filename=apk_path.name,
+        headers={"Cache-Control": "no-store"},
     )
 
 
@@ -257,7 +258,9 @@ def app_download_page(request: Request):
     apk_path = get_latest_apk_path()
     apk_status = f"disponivel: {apk_path.name}" if apk_path else "nao encontrado"
     download_url = request.url_for("app_download")
-    return f"""
+    download_version = int(apk_path.stat().st_mtime) if apk_path else "missing"
+    download_href = f"/app-download?v={download_version}"
+    html = f"""
     <!doctype html>
     <html lang="pt-BR">
       <head>
@@ -308,13 +311,14 @@ def app_download_page(request: Request):
         <main class="card">
           <h1>NFE Scanner Android</h1>
           <p>APK {apk_status}. Toque no botao abaixo para baixar e instalar no Android.</p>
-          <a class="button" href="/app-download">Baixar APK</a>
-          <code>{download_url}</code>
+          <a class="button" href="{download_href}">Baixar APK</a>
+          <code>{download_url}?v={download_version}</code>
           <small>Se o Android bloquear, permita instalar apps desconhecidos para o navegador usado.</small>
         </main>
       </body>
     </html>
     """
+    return HTMLResponse(content=html, headers={"Cache-Control": "no-store"})
 
 
 @app.get("/", include_in_schema=False, response_class=RedirectResponse)
