@@ -1,5 +1,6 @@
 import os
 import re
+from datetime import datetime, time
 
 from kivy.metrics import dp
 from kivy.utils import platform
@@ -15,13 +16,19 @@ from kivymd.uix.toolbar import MDTopAppBar
 from plyer import storagepath
 
 from services.api_client import APIClient
-from ui import ACCENT, BG, MUTED, PRIMARY, SURFACE, TEXT, WHITE, outline_button, primary_button, wrap_label
+from ui import ACCENT, BG, DANGER_SOFT, DANGER_TEXT, MUTED, PRIMARY, SUCCESS_SOFT, SUCCESS_TEXT, SURFACE, TEXT, WHITE, outline_button, primary_button, soft_button, wrap_label
 
 
 class ListScreen(Screen):
+    PAGE_SIZE = 10
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.notas = []
+        self.skip = 0
+        self.has_more = True
+        self.today_start = None
+        self.today_end = None
         self.dialog = None
         self.build_ui()
 
@@ -72,7 +79,23 @@ class ListScreen(Screen):
         )
         self.scroll.add_widget(self.lista_layout)
         content.add_widget(self.scroll)
-        content.add_widget(outline_button("Voltar ao inicio", "arrow-left", self.voltar))
+        self.load_more_button = soft_button(
+            "Carregar mais notas",
+            "plus",
+            self.carregar_mais_notas,
+            SUCCESS_SOFT,
+            SUCCESS_TEXT,
+        )
+        content.add_widget(self.load_more_button)
+        content.add_widget(
+            soft_button(
+                "Voltar ao inicio",
+                "arrow-left",
+                self.voltar,
+                DANGER_SOFT,
+                DANGER_TEXT,
+            )
+        )
 
         root.add_widget(content)
         self.add_widget(root)
@@ -82,12 +105,61 @@ class ListScreen(Screen):
 
     def carregar_notas(self):
         try:
-            self.notas = APIClient.list_notas()
+            self.skip = 0
+            self.has_more = True
+            self.today_start, self.today_end = self.get_today_range()
+            self.notas = APIClient.list_notas(
+                skip=self.skip,
+                limit=self.PAGE_SIZE,
+                data_cadastro_inicio=self.today_start,
+                data_cadastro_fim=self.today_end,
+            )
+            self.skip = len(self.notas)
+            self.has_more = len(self.notas) == self.PAGE_SIZE
             self.render_notas()
         except Exception as error:
             self.notas = []
+            self.has_more = False
             self.status_label.text = "Nao foi possivel carregar as notas."
+            self.update_load_more_button()
             self.show_dialog("Erro ao listar notas", str(error))
+
+    def carregar_mais_notas(self, *_):
+        if not self.has_more:
+            return
+        try:
+            self.load_more_button.disabled = True
+            self.load_more_button.text = "Carregando..."
+            novas_notas = APIClient.list_notas(
+                skip=self.skip,
+                limit=self.PAGE_SIZE,
+                data_cadastro_inicio=self.today_start,
+                data_cadastro_fim=self.today_end,
+            )
+            self.notas.extend(novas_notas)
+            self.skip += len(novas_notas)
+            self.has_more = len(novas_notas) == self.PAGE_SIZE
+            self.render_notas()
+        except Exception as error:
+            self.show_dialog("Erro ao carregar mais notas", str(error))
+        finally:
+            self.update_load_more_button()
+
+    def get_today_range(self):
+        today = datetime.now().date()
+        start = datetime.combine(today, time.min).isoformat(timespec="seconds")
+        end = datetime.combine(today, time.max).replace(microsecond=0).isoformat(timespec="seconds")
+        return start, end
+
+    def update_load_more_button(self):
+        if self.has_more:
+            self.load_more_button.text = "Carregar mais notas"
+            self.load_more_button.disabled = False
+            self.load_more_button.opacity = 1
+        else:
+            self.load_more_button.text = "Todas as notas carregadas"
+            self.load_more_button.disabled = True
+            self.load_more_button.opacity = 0.65
 
     def render_notas(self):
         self.lista_layout.clear_widgets()
@@ -111,7 +183,8 @@ class ListScreen(Screen):
             reverse=True,
         )
 
-        self.status_label.text = f"{len(notas)} nota(s) encontrada(s)"
+        self.status_label.text = f"Hoje: {len(notas)} exibida(s) de {len(self.notas)} carregada(s)"
+        self.update_load_more_button()
 
         if not notas:
             empty = MDCard(
@@ -140,9 +213,9 @@ class ListScreen(Screen):
 
     def build_nota_card(self, nota):
         numero = nota.get("numero_nf") or "Sem numero"
-        fornecedor = nota.get("nome_fornecedor") or "Fornecedor nao informado"
         valor = nota.get("valor_total") or 0
-        data = str(nota.get("data_emissao") or "")[:10]
+        data_bip = self.format_datetime(nota.get("data_cadastro"))
+        data_emissao = self.format_datetime(nota.get("data_emissao"))
 
         card = MDCard(
             orientation="vertical",
@@ -168,18 +241,29 @@ class ListScreen(Screen):
             )
         )
         card.add_widget(
-            wrap_label(fornecedor, font_style="Body2", color=MUTED)
+            wrap_label(f"Bip: {data_bip}", font_style="Body2", color=MUTED, height=24)
+        )
+        card.add_widget(
+            wrap_label(f"Emissao: {data_emissao}", font_style="Body2", color=MUTED, height=24)
         )
         card.add_widget(
             MDLabel(
-                text=f"R$ {valor}    {data}",
+                text=f"Valor: R$ {valor}",
                 font_style="Body2",
                 bold=True,
                 theme_text_color="Custom",
                 text_color=ACCENT,
+                size_hint_y=None,
+                height=dp(26),
             )
         )
         return card
+
+    def format_datetime(self, value):
+        if not value:
+            return "-"
+        text = str(value).replace("T", " ")
+        return text[:16]
 
     def ver_detalhe(self, nota):
         if self.dialog:

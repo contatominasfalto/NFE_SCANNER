@@ -205,9 +205,14 @@ class APIClient:
         APIClient.save_pending_errors(remaining)
 
     @staticmethod
-    def list_notas():
+    def list_notas(skip=0, limit=100, data_cadastro_inicio=None, data_cadastro_fim=None):
         APIClient.sync_pending_errors()
-        response = APIClient.request("GET", "/notas/")
+        params = {"skip": skip, "limit": limit}
+        if data_cadastro_inicio:
+            params["data_cadastro_inicio"] = data_cadastro_inicio
+        if data_cadastro_fim:
+            params["data_cadastro_fim"] = data_cadastro_fim
+        response = APIClient.request("GET", "/notas/", params=params)
         return response.json()
 
     @staticmethod

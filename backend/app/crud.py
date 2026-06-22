@@ -55,8 +55,24 @@ def create_nota_erro(db: Session, erro: schemas.NotaFiscalErrorCreate):
     db.refresh(db_nota)
     return db_nota
 
-def get_notas(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.NotaFiscal).offset(skip).limit(limit).all()
+def get_notas(
+    db: Session,
+    skip: int = 0,
+    limit: int = 100,
+    data_cadastro_inicio: datetime | None = None,
+    data_cadastro_fim: datetime | None = None,
+):
+    query = db.query(models.NotaFiscal)
+    if data_cadastro_inicio:
+        query = query.filter(models.NotaFiscal.data_cadastro >= data_cadastro_inicio)
+    if data_cadastro_fim:
+        query = query.filter(models.NotaFiscal.data_cadastro <= data_cadastro_fim)
+    return (
+        query.order_by(models.NotaFiscal.data_cadastro.desc(), models.NotaFiscal.id.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
 
 def get_nota(db: Session, nota_id: int):
     return db.query(models.NotaFiscal).filter(models.NotaFiscal.id == nota_id).first()

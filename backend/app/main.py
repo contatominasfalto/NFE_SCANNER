@@ -704,10 +704,18 @@ def refresh_notas_erro(
 def list_notas(
     skip: int = Query(0, ge=0, description="Quantidade de registros a ignorar."),
     limit: int = Query(100, ge=1, le=500, description="Quantidade maxima de notas retornadas."),
+    data_cadastro_inicio: datetime | None = Query(None, description="Inicio do periodo de bip."),
+    data_cadastro_fim: datetime | None = Query(None, description="Fim do periodo de bip."),
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    return crud.get_notas(db, skip=skip, limit=limit)
+    return crud.get_notas(
+        db,
+        skip=skip,
+        limit=limit,
+        data_cadastro_inicio=data_cadastro_inicio,
+        data_cadastro_fim=data_cadastro_fim,
+    )
 
 
 @app.get(
