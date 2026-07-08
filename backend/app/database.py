@@ -3,6 +3,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 from .config import DATABASE_URL
 
 IS_SQLITE = DATABASE_URL.startswith("sqlite")
+IS_MYSQL = DATABASE_URL.startswith("mysql")
 connect_args = {"check_same_thread": False, "timeout": 30} if IS_SQLITE else {}
 engine = create_engine(DATABASE_URL, connect_args=connect_args, pool_pre_ping=not IS_SQLITE)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -24,13 +25,14 @@ def ensure_schema():
 
     columns = {column["name"] for column in inspector.get_columns("notas_fiscais")}
     bool_default = "0" if IS_SQLITE else "FALSE"
+    string_type = "VARCHAR(255)" if IS_MYSQL else "VARCHAR"
     migrations = {
-        "local": "ALTER TABLE notas_fiscais ADD COLUMN local VARCHAR",
+        "local": f"ALTER TABLE notas_fiscais ADD COLUMN local {string_type}",
         "produto": "ALTER TABLE notas_fiscais ADD COLUMN produto TEXT",
         "quantidade": "ALTER TABLE notas_fiscais ADD COLUMN quantidade FLOAT",
-        "transportador": "ALTER TABLE notas_fiscais ADD COLUMN transportador VARCHAR",
-        "faturista": "ALTER TABLE notas_fiscais ADD COLUMN faturista VARCHAR DEFAULT 'BIPE'",
-        "lider_operacional": "ALTER TABLE notas_fiscais ADD COLUMN lider_operacional VARCHAR",
+        "transportador": f"ALTER TABLE notas_fiscais ADD COLUMN transportador {string_type}",
+        "faturista": f"ALTER TABLE notas_fiscais ADD COLUMN faturista {string_type} DEFAULT 'BIPE'",
+        "lider_operacional": f"ALTER TABLE notas_fiscais ADD COLUMN lider_operacional {string_type}",
         "erro_salvamento": f"ALTER TABLE notas_fiscais ADD COLUMN erro_salvamento BOOLEAN DEFAULT {bool_default} NOT NULL",
         "erro_detalhe": "ALTER TABLE notas_fiscais ADD COLUMN erro_detalhe TEXT",
     }
@@ -61,17 +63,19 @@ def ensure_schema():
                 "ELSE local END"
             )
         )
-        connection.execute(text("DROP INDEX IF EXISTS ix_notas_fiscais_centro_custo"))
+        indexes = {index["name"] for index in inspector.get_indexes("notas_fiscais")}
+        if "ix_notas_fiscais_centro_custo" in indexes:
+            if IS_MYSQL:
+                connection.execute(text("DROP INDEX ix_notas_fiscais_centro_custo ON notas_fiscais"))
+            else:
+                connection.execute(text("DROP INDEX IF EXISTS ix_notas_fiscais_centro_custo"))
         if "centro_custo" in columns:
             connection.execute(text("ALTER TABLE notas_fiscais DROP COLUMN centro_custo"))
         if "local_areia" in columns:
             connection.execute(text("ALTER TABLE notas_fiscais DROP COLUMN local_areia"))
-        connection.execute(
-            text(
-                "CREATE INDEX IF NOT EXISTS ix_notas_fiscais_local "
-                "ON notas_fiscais (local)"
-            )
-        )
+        indexes = {index["name"] for index in inspector.get_indexes("notas_fiscais")}
+        if "ix_notas_fiscais_local" not in indexes:
+            connection.execute(text("CREATE INDEX ix_notas_fiscais_local ON notas_fiscais (local)"))
         if "faturistas" in inspector.get_table_names():
             connection.execute(
                 text(
@@ -84,7 +88,7 @@ def ensure_schema():
         user_columns = {column["name"] for column in inspector.get_columns("users")}
         if "role" not in user_columns:
             with engine.begin() as connection:
-                connection.execute(text("ALTER TABLE users ADD COLUMN role VARCHAR DEFAULT 'user'"))
+                connection.execute(text(f"ALTER TABLE users ADD COLUMN role {string_type} DEFAULT 'user'"))
 
 def get_db():
     db = SessionLocal()

@@ -160,6 +160,23 @@ Não publique ou versione a chave da API. Se uma chave real tiver sido exposta, 
 O banco SQLite local é resolvido dentro da pasta `backend`. Exportações são
 transmitidas diretamente ao cliente e os logs seguem para a saída padrão.
 
+### Usar MySQL no servidor local
+
+No servidor local, instale as dependências atualizadas e crie o banco com o
+script versionado em `backend/mysql_setup.sql`. Depois copie
+`backend/.env.mysql.example` para `backend/.env` e ajuste a senha, a chave
+`MEUDANFE_API_KEY` e a `SECRET_KEY`.
+
+Exemplo de `DATABASE_URL` para MySQL local:
+
+```env
+DATABASE_URL=mysql+pymysql://nfe_app:troque_esta_senha@127.0.0.1:3306/nfe_scanner?charset=utf8mb4
+```
+
+O painel web e o app mobile não acessam o MySQL diretamente. Ambos continuam
+acessando o backend FastAPI; portanto, para o painel basta abrir `/painel` no
+servidor, e para o app ajuste `mobile/api_config.json` para o IP do servidor.
+
 ## Executar o backend e o painel
 
 Na raiz do projeto, usando PowerShell:
