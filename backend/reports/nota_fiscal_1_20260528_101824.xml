@@ -1,0 +1,25 @@
+<?xml version='1.0' encoding='utf-8'?>
+<relatorio_notas_fiscais>
+    <metadata>
+        <sistema>NFE Scanner</sistema>
+        <data_geracao>2026-05-28T10:18:24.983267</data_geracao>
+        <filtros>Nota ID: 1</filtros>
+        <total_notas>1</total_notas>
+        <valor_total>1250.75</valor_total>
+    </metadata>
+    <notas>
+        <nota_fiscal>
+            <id>1</id>
+            <numero_nf>1001</numero_nf>
+            <serie>1</serie>
+            <data_emissao>2026-05-27T10:00:00</data_emissao>
+            <cnpj_fornecedor>12.345.678/0001-90</cnpj_fornecedor>
+            <nome_fornecedor>Fornecedor Teste LTDA</nome_fornecedor>
+            <valor_total>1250.75</valor_total>
+            <chave_acesso>31260512345678000190550010000010011000010010</chave_acesso>
+            <observacao>Nota fiscal de teste para geração XML</observacao>
+            <caminho_arquivo_imagem>uploads/teste_nf_1001.jpg</caminho_arquivo_imagem>
+            <data_cadastro>2026-05-27T11:11:15.908138</data_cadastro>
+        </nota_fiscal>
+    </notas>
+</relatorio_notas_fiscais>

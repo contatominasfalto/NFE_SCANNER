@@ -1,0 +1,31 @@
+<?xml version='1.0' encoding='utf-8'?>
+<relatorio_notas_fiscais>
+    <metadata>
+        <sistema>NFE Scanner</sistema>
+        <data_geracao>2026-06-09T15:20:40.955489</data_geracao>
+        <filtros>Nota ID: 1</filtros>
+        <total_notas>1</total_notas>
+        <valor_total>8450.0</valor_total>
+    </metadata>
+    <notas>
+        <nota_fiscal>
+            <id>1</id>
+            <numero_nf>MASSA-001</numero_nf>
+            <serie>T1</serie>
+            <data_emissao>2026-06-01T08:15:00</data_emissao>
+            <cnpj_fornecedor>11000000000101</cnpj_fornecedor>
+            <nome_fornecedor>Mineracao Teste Norte Ltda</nome_fornecedor>
+            <valor_total>8450.0</valor_total>
+            <chave_acesso>92000000000000000000000000000000000000000001</chave_acesso>
+            <local>A1BR</local>
+            <produto>AREIA BRITADA TIPO A</produto>
+            <quantidade>28500.0</quantidade>
+            <transportador>Transportadora Teste Alfa Ltda</transportador>
+            <faturista>BIPE</faturista>
+            <lider_operacional />
+            <observacao>Massa organizada para validacao do fluxo A1BR.</observacao>
+            <caminho_arquivo_imagem />
+            <data_cadastro>2026-06-09T14:38:35.449020</data_cadastro>
+        </nota_fiscal>
+    </notas>
+</relatorio_notas_fiscais>
