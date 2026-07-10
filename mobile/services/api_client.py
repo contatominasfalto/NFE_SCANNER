@@ -12,7 +12,7 @@ class APIError(RuntimeError):
 
 
 class APIClient:
-    DEFAULT_BASE_URL = "http://192.168.1.100:8000"
+    DEFAULT_BASE_URL = "http://192.168.10.114:8000"
     APP_USERNAME = "BIPE"
     APP_PASSWORD = "BIPE"
     session = requests.Session()
@@ -46,14 +46,26 @@ class APIClient:
         if force or cls.authenticated_base_url != base_url:
             cls.session.cookies.clear()
 
-        response = cls.session.post(
-            f"{base_url}/auth/login/",
-            json={"username": cls.APP_USERNAME, "password": cls.APP_PASSWORD},
-            timeout=30,
-        )
+        try:
+            response = cls.session.post(
+                f"{base_url}/auth/login/",
+                json={"username": cls.APP_USERNAME, "password": cls.APP_PASSWORD},
+                timeout=30,
+            )
+        except requests.exceptions.RequestException as error:
+            raise APIError(cls.connection_error_message(base_url, error)) from error
         cls.raise_for_error(response, "/auth/login/")
         cls.authenticated_base_url = base_url
         Logger.info("APIClient: aplicativo autenticado automaticamente como BIPE")
+
+    @staticmethod
+    def connection_error_message(base_url, error):
+        return (
+            f"Nao foi possivel conectar ao servidor da API em {base_url}. "
+            "Confira se o backend esta rodando com --host 0.0.0.0, se o celular esta na mesma rede "
+            "ou se o DDNS e a porta 8000 estao liberados no roteador/firewall. "
+            f"Detalhe: {error}"
+        )
 
     @staticmethod
     def raise_for_error(response, path):
@@ -81,11 +93,17 @@ class APIClient:
     def request(cls, method, path, **kwargs):
         cls.authenticate()
         url = f"{cls.get_base_url()}{path}"
-        response = cls.session.request(method, url, timeout=30, **kwargs)
+        try:
+            response = cls.session.request(method, url, timeout=30, **kwargs)
+        except requests.exceptions.RequestException as error:
+            raise APIError(cls.connection_error_message(cls.get_base_url(), error)) from error
 
         if response.status_code == 401:
             cls.authenticate(force=True)
-            response = cls.session.request(method, url, timeout=30, **kwargs)
+            try:
+                response = cls.session.request(method, url, timeout=30, **kwargs)
+            except requests.exceptions.RequestException as error:
+                raise APIError(cls.connection_error_message(cls.get_base_url(), error)) from error
 
         cls.raise_for_error(response, path)
         return response
