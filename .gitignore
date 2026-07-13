@@ -1,0 +1,32 @@
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+venv-*/
+venv_*/
+.venv/
+
+# Local configuration and runtime files
+.env
+*.log
+*.db
+*.sqlite
+*.sqlite3
+
+# Backend runtime output
+backend/logs/
+backend/uploads/
+backend/reports/
+backend/backups/
+
+# Android/Kivy build output
+mobile/.buildozer/
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

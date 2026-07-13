@@ -4,6 +4,7 @@ import base64
 import hashlib
 import hmac
 from io import BytesIO
+import re
 import time
 from pathlib import Path
 from time import perf_counter
@@ -177,10 +178,17 @@ APK_DIR = PROJECT_DIR / "mobile" / "bin"
 app.mount("/painel-assets", StaticFiles(directory=PANEL_DIR), name="painel-assets")
 
 
+def parse_apk_version(path: Path) -> tuple[int, ...]:
+    match = re.search(r"nfescanner-(\d+(?:\.\d+)*)-", path.name)
+    if not match:
+        return (0,)
+    return tuple(int(part) for part in match.group(1).split("."))
+
+
 def get_latest_apk_path() -> Path | None:
     apks = sorted(
         APK_DIR.glob("nfescanner-*-arm64-v8a-debug.apk"),
-        key=lambda path: path.stat().st_mtime,
+        key=lambda path: (parse_apk_version(path), path.stat().st_mtime),
         reverse=True,
     )
     return apks[0] if apks else None
