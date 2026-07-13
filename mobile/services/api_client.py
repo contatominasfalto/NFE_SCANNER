@@ -12,7 +12,7 @@ class APIError(RuntimeError):
 
 
 class APIClient:
-    DEFAULT_BASE_URL = "http://192.168.10.91:8000"
+    DEFAULT_BASE_URL = "https://nfescanner.gotdns.ch"
     APP_USERNAME = "BIPE"
     APP_PASSWORD = "BIPE"
     session = requests.Session()
