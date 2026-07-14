@@ -287,7 +287,9 @@ def _receipt_share_drawing(recebimento):
     return drawing
 
 
-def _period_from_material(material):
+def _period_from_material(material, operacional=None):
+    if not material["materiais"] and operacional and operacional.get("mes", {}).get("produtos"):
+        return operacional["mes"]
     return {
         "inicio": material["inicio"],
         "fim": material["fim"],
@@ -312,7 +314,7 @@ def generate_operational_pdf(_operacional, material, setor, recebimento, output)
         author="SCAN-NFE MINASFALTO",
     )
 
-    periodo_filtrado = _period_from_material(material)
+    periodo_filtrado = _period_from_material(material, _operacional)
     summary_rows = [["Periodo", "Intervalo", "Total", "Quantidade NF-es"]]
     summary_rows.append([
         "Periodo filtrado",
@@ -390,7 +392,7 @@ def generate_operational_excel(_operacional, material, setor, recebimento, outpu
     summary.append(["Relatorio Operacional NF-e"])
     summary.append([f"Gerado em {datetime.now().strftime('%d/%m/%Y %H:%M')}"])
     summary.append([])
-    periodo_filtrado = _period_from_material(material)
+    periodo_filtrado = _period_from_material(material, _operacional)
     summary.append(["Periodo", "Inicio", "Fim", "Total TON", "Quantidade NF-es"])
     summary.append([
         "Periodo filtrado",

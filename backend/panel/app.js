@@ -200,27 +200,53 @@ function renderMaterialPie(result){
 		produtos:result.materiais.map(item=>({produto:item.material,quantidade_ton:item.quantidade_ton})),
 	},"Month","chartMonthProducts");
 }
+function materialResultFromOperational(period){
+	return {
+		inicio:period.inicio,
+		fim:period.fim,
+		total_ton:period.total_ton,
+		total_nfes:period.total_notas,
+		materiais:period.produtos.map(item=>({
+			material:item.produto,
+			quantidade_ton:item.quantidade_ton,
+			quantidade_nfes:0,
+		})),
+	};
+}
 async function renderReports(){
 	try{
 		const current=getGlobalReportRange();
 		if(!current)return;
 		setReportLoading(true);
 		destroyReports();
-		const materialResult=await renderMaterialReport();
-		if(materialResult)renderMaterialPie(materialResult);
+		const periodParams=new URLSearchParams({data_inicio:current.start,data_fim:current.end});
+		const [operationalResult,materialResult]=await Promise.all([
+			api(`/relatorios/operacional/?${periodParams}`),
+			renderMaterialReport(),
+		]);
+		const chartResult=materialResult?.total_ton>0?materialResult:materialResultFromOperational(operationalResult.mes);
+		if(chartResult){
+			renderMaterialPie(chartResult);
+			if((materialResult?.total_ton||0)<=0&&chartResult.total_ton>0){
+				renderMaterialTable(chartResult);
+			}
+		}
 		await renderSectorReport();
 		await renderReceiptReport();
 	}catch(error){toast(error.message,true)}finally{setReportLoading(false)}
+}
+function renderMaterialTable(result){
+	$("materialReportTotal").textContent=tons(result.total_ton);
+	$("materialReportNotes").textContent=`${new Intl.NumberFormat("pt-BR").format(result.total_nfes)} NF-es`;
+	$("materialReportBody").innerHTML=result.materiais.map(item=>`<tr><td>${esc(item.material)}</td><td>${tons(item.quantidade_ton)}</td><td>${new Intl.NumberFormat("pt-BR").format(item.quantidade_nfes)}</td></tr>`).join("");
+	$("materialReportEmpty").hidden=result.materiais.length>0;
 }
 async function renderMaterialReport(){
 	const range=getGlobalReportRange();
 	if(!range)return;
 	const {start,end}=range;
 	const result=await api(`/relatorios/material/?data_inicio=${encodeURIComponent(start)}&data_fim=${encodeURIComponent(end)}`);
-	$("materialReportTotal").textContent=tons(result.total_ton);
-	$("materialReportNotes").textContent=`${new Intl.NumberFormat("pt-BR").format(result.total_nfes)} NF-es`;
-	$("materialReportBody").innerHTML=result.materiais.map(item=>`<tr><td>${esc(item.material)}</td><td>${tons(item.quantidade_ton)}</td><td>${new Intl.NumberFormat("pt-BR").format(item.quantidade_nfes)}</td></tr>`).join("");
-	$("materialReportEmpty").hidden=result.materiais.length>0;
+	renderMaterialTable(result);
 	return result;
 }
 async function renderSectorReport(){
