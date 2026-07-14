@@ -1,4 +1,5 @@
 const $=id=>document.getElementById(id);let notes=[],faturistas=[],filtered=[],refreshing=false,confirmCallback=null,currentUser=null,tablePage=1,tablePageSize=100;
+const SHOW_USER_FILTER=false;
 const fields=["numero_nf","serie","data_emissao","cnpj_fornecedor","nome_fornecedor","valor_total","chave_acesso","local","produto","quantidade","transportador","faturista","lider_operacional","observacao"];
 const money=v=>new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(v||0);
 const date=v=>v?new Date(v).toLocaleString("pt-BR"):"—";const dateKey=v=>{if(!v)return"";const d=new Date(v);if(Number.isNaN(d.getTime()))return"";return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`};const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
@@ -8,6 +9,7 @@ function showLogin(message){$("loginError").textContent=message||"";document.bod
 function hideLogin(){document.body.classList.add("authenticated");const dialog=$("loginDialog");if(dialog.open){dialog.close();}$("loginError").textContent="";}
 async function ensureAuthenticated(){try{currentUser=await api("/auth/me/");const isAdmin=currentUser.role==="admin",isViewer=currentUser.role==="viewer";$("userBadge").textContent=`${currentUser.username}${isAdmin?" (admin)":isViewer?" (viewer)":""}`;$("logoutButton").hidden=false;$("openNotes").hidden=false;$("mainPanel").hidden=false;$("openBatchScan").hidden=isViewer;$("downloadAll").hidden=isViewer;$("openFaturistas").hidden=!isAdmin;$("openSwagger").hidden=!isAdmin;$("refreshErrorsButton").hidden=!isAdmin;hideLogin();return true;}catch(err){currentUser=null;$("userBadge").textContent="";$("logoutButton").hidden=true;$("openNotes").hidden=false;$("mainPanel").hidden=false;$("openBatchScan").hidden=false;$("downloadAll").hidden=false;$("openFaturistas").hidden=true;$("openSwagger").hidden=true;$("refreshErrorsButton").hidden=true;showLogin("");return false;}}
 async function loginUser(){try{await api("/auth/login/",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:$("loginUsername").value,password:$("loginPassword").value})});await ensureAuthenticated();await loadAll(true);}catch(err){$("loginError").textContent=err.message;}}
+function configureOptionalFilters(){const billingFilter=$("billingFilter");if(billingFilter)billingFilter.hidden=!SHOW_USER_FILTER}
 const NOTES_PAGE_SIZE=500;
 async function fetchAllNotes(){const all=[];let skip=0;while(true){const page=await api(`/notas/?skip=${skip}&limit=${NOTES_PAGE_SIZE}`);all.push(...page);if(page.length<NOTES_PAGE_SIZE)break;skip+=NOTES_PAGE_SIZE;}return all}
 async function loadAll(silent=false){if(refreshing)return;refreshing=true;try{if(currentUser?.role==="admin"){[notes,faturistas]=await Promise.all([fetchAllNotes(),api("/faturistas/?incluir_inativos=true")]);}else{notes=await fetchAllNotes();faturistas=[];}renderBillingOptions();applyFilters({resetPage:false});if(currentUser?.role==="admin")renderFaturistas();$("lastUpdate").textContent=`Atualizado ${new Date().toLocaleTimeString("pt-BR")}`;if(!silent)toast("Dados atualizados")}catch(e){toast(e.message,true)}finally{refreshing=false}}
@@ -75,7 +77,7 @@ $("openBatchScan").onclick=()=>{$("batchForm").reset();$("batchDialog").showModa
 $("tablePageSize").onchange=()=>{tablePageSize=Number($("tablePageSize").value)||100;tablePage=1;render()};$("prevTablePage").onclick=()=>{tablePage-=1;render()};$("nextTablePage").onclick=()=>{tablePage+=1;render()};
 $("downloadAll").onclick=()=>downloadReport("formato=xml","notas_fiscais.xml");
 $("downloadTableExcel").onclick=exportTableExcel;
-showLogin("");
+configureOptionalFilters();showLogin("");
 (async()=>{if(await ensureAuthenticated()){await loadAll(true);setInterval(()=>loadAll(true),4000);}})();
 
 // Reports functionality
