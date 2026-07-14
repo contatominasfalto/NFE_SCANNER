@@ -191,16 +191,23 @@ function renderPeriodReport(period,prefix,canvasId){
 		plugins:[chartGradientBackground,pieValueLabels]
 	});
 }
+function renderMaterialPie(result){
+	renderPeriodReport({
+		inicio:result.inicio,
+		fim:result.fim,
+		total_ton:result.total_ton,
+		total_notas:result.total_nfes,
+		produtos:result.materiais.map(item=>({produto:item.material,quantidade_ton:item.quantidade_ton})),
+	},"Month","chartMonthProducts");
+}
 async function renderReports(){
 	try{
 		const current=getGlobalReportRange();
 		if(!current)return;
 		setReportLoading(true);
-		const periodParams=new URLSearchParams({data_inicio:current.start,data_fim:current.end});
-		const report=await api(`/relatorios/operacional/?${periodParams}`);
 		destroyReports();
-		renderPeriodReport(report.mes,"Month","chartMonthProducts");
-		await renderMaterialReport();
+		const materialResult=await renderMaterialReport();
+		if(materialResult)renderMaterialPie(materialResult);
 		await renderSectorReport();
 		await renderReceiptReport();
 	}catch(error){toast(error.message,true)}finally{setReportLoading(false)}
@@ -214,6 +221,7 @@ async function renderMaterialReport(){
 	$("materialReportNotes").textContent=`${new Intl.NumberFormat("pt-BR").format(result.total_nfes)} NF-es`;
 	$("materialReportBody").innerHTML=result.materiais.map(item=>`<tr><td>${esc(item.material)}</td><td>${tons(item.quantidade_ton)}</td><td>${new Intl.NumberFormat("pt-BR").format(item.quantidade_nfes)}</td></tr>`).join("");
 	$("materialReportEmpty").hidden=result.materiais.length>0;
+	return result;
 }
 async function renderSectorReport(){
 	const range=getGlobalReportRange();
@@ -260,7 +268,16 @@ $("globalReportFilterForm")?.addEventListener("submit",async event=>{
 async function exportOperationalReport(format){
 	const range=getGlobalReportRange();
 	if(!range)return;
-	const values={data_inicio:range.start,data_fim:range.end};
+	const values={
+		data_inicio:range.start,
+		data_fim:range.end,
+		material_inicio:range.start,
+		material_fim:range.end,
+		setor_inicio:range.start,
+		setor_fim:range.end,
+		recebimento_inicio:range.start,
+		recebimento_fim:range.end,
+	};
 	if($("receiptMaterial").value)values.recebimento_material=$("receiptMaterial").value;
 	const button=format==="pdf"?$("exportReportPdf"):$("exportReportExcel"),original=button.textContent;
 	button.disabled=true;button.textContent="Gerando...";
