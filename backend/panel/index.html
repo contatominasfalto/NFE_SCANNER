@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Painel NF-e</title>
-  <link rel="stylesheet" href="/painel-assets/styles.css?v=20260714-2">
+  <link rel="stylesheet" href="/painel-assets/styles.css?v=20260714-3">
 </head>
 <body>
   <dialog class="modal compact" id="loginDialog">
@@ -180,11 +180,6 @@
             <div class="chart-box"><canvas id="chartMonthProducts"></canvas><div class="chart-empty" id="chartMonthEmpty" hidden>Nenhuma nota registrada no período selecionado.</div></div>
             <div class="period-totals"><div><span>Total do período</span><strong id="reportMonthTons">0,000 TON</strong></div><div><span>Notas no período</span><strong id="reportMonthNotes">0</strong></div></div>
           </article>
-          <article class="period-report" hidden>
-            <div class="period-heading"><div><span>ACUMULADO DIA</span><strong id="reportDayRange">Carregando período...</strong></div><small>Do primeiro ao último minuto do dia vigente</small></div>
-            <div class="chart-box"><canvas id="chartDayProducts"></canvas><div class="chart-empty" id="chartDayEmpty" hidden>Nenhuma nota registrada no dia vigente.</div></div>
-            <div class="period-totals"><div><span>Total do dia vigente</span><strong id="reportDayTons">0,000 TON</strong></div><div><span>Notas no dia vigente</span><strong id="reportDayNotes">0</strong></div></div>
-          </article>
         </div>
         <section class="material-report">
           <div class="material-report-heading"><div><p class="eyebrow">CONSULTA DINÂMICA</p><h3>Relatório por Período e por Material</h3></div><div class="material-summary"><span id="materialReportTotal">0,000 TON</span><span id="materialReportNotes">0 NF-es</span></div></div>
@@ -235,6 +230,6 @@
   </dialog>
   <div id="toast" role="status"></div>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="/painel-assets/app.js?v=20260714-2"></script>
+  <script src="/painel-assets/app.js?v=20260714-3"></script>
 </body>
 </html>
