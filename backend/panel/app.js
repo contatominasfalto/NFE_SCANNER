@@ -12,6 +12,8 @@ const NOTES_PAGE_SIZE=500;
 async function fetchAllNotes(){const all=[];let skip=0;while(true){const page=await api(`/notas/?skip=${skip}&limit=${NOTES_PAGE_SIZE}`);all.push(...page);if(page.length<NOTES_PAGE_SIZE)break;skip+=NOTES_PAGE_SIZE;}return all}
 async function loadAll(silent=false){if(refreshing)return;refreshing=true;try{if(currentUser?.role==="admin"){[notes,faturistas]=await Promise.all([fetchAllNotes(),api("/faturistas/?incluir_inativos=true")]);}else{notes=await fetchAllNotes();faturistas=[];}renderBillingOptions();applyFilters({resetPage:false});if(currentUser?.role==="admin")renderFaturistas();$("lastUpdate").textContent=`Atualizado ${new Date().toLocaleTimeString("pt-BR")}`;if(!silent)toast("Dados atualizados")}catch(e){toast(e.message,true)}finally{refreshing=false}}
 function isErrorNote(n){return Boolean(n.erro_salvamento)||fields.some(k=>String(n[k]??"").trim().toUpperCase()==="ERRO")}
+function reportBoolean(value){return value===true||value===1||String(value??"").trim().toLowerCase()==="true"}
+function isReportExcludedNote(n){return reportBoolean(n.erro_salvamento)||String(n.produto??"").trim().toUpperCase()==="ERRO"}
 function noteSortValue(n){const time=new Date(n.data_cadastro||0).getTime();return Number.isNaN(time)?0:time}
 function sortNotesForTable(items){return items.sort((a,b)=>Number(isErrorNote(b))-Number(isErrorNote(a))||noteSortValue(b)-noteSortValue(a)||(b.id||0)-(a.id||0))}
 function applyFilters(options={resetPage:true}){const q=$("searchInput").value.toLowerCase().trim(),onlyErrors=$("errorOnlyFilter").checked,bipDate=$("bipDateFilter").value,issueDate=$("issueDateFilter").value,local=$("localFilter").value,bill=$("billingFilter").value;filtered=sortNotesForTable(notes.filter(n=>(!onlyErrors||isErrorNote(n))&&(!bipDate||dateKey(n.data_cadastro)===bipDate)&&(!issueDate||dateKey(n.data_emissao)===issueDate)&&(!local||n.local===local)&&(!bill||n.faturista===bill)&&(!q||Object.values(n).some(v=>String(v??"").toLowerCase().includes(q)))));if(options.resetPage)tablePage=1;render()}
@@ -217,7 +219,7 @@ function notesInReportRange(start,end){
 	const startTime=new Date(start).getTime(),endTime=new Date(end).getTime();
 	if(Number.isNaN(startTime)||Number.isNaN(endTime))return[];
 	return notes.filter(note=>{
-		if(isErrorNote(note))return false;
+		if(isReportExcludedNote(note))return false;
 		const issueTime=new Date(note.data_emissao||0).getTime();
 		const registerTime=new Date(note.data_cadastro||0).getTime();
 		const inIssue=!Number.isNaN(issueTime)&&issueTime>=startTime&&issueTime<=endTime;
