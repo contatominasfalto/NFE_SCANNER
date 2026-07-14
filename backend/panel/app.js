@@ -253,25 +253,40 @@ function sectorResultFromNotes(start,end){
 	})).sort((a,b)=>(b.quantidade_cdma_ton+b.quantidade_pru_ton)-(a.quantidade_cdma_ton+a.quantidade_pru_ton));
 	return{inicio:start,fim:end,materiais};
 }
+function receiptResultFromNotes(start,end,selectedMaterial=""){
+	const periodNotes=notesInReportRange(start,end);
+	const materiais_disponiveis=[...new Set(periodNotes.map(note=>String(note.produto||"Sem produto").trim()||"Sem produto"))].sort((a,b)=>a.localeCompare(b));
+	const material_normalizado=selectedMaterial||"";
+	const filteredNotes=material_normalizado?periodNotes.filter(note=>(String(note.produto||"Sem produto").trim()||"Sem produto")===material_normalizado):periodNotes;
+	const totals=new Map(),daily=new Map();
+	filteredNotes.forEach(note=>{
+		const material=String(note.produto||"Sem produto").trim()||"Sem produto";
+		const quantity=Number(note.quantidade||0)/1000;
+		const key=dateKey(note.data_emissao);
+		totals.set(material,(totals.get(material)||0)+quantity);
+		if(!daily.has(key))daily.set(key,new Map());
+		daily.get(key).set(material,(daily.get(key).get(material)||0)+quantity);
+	});
+	const totais_materiais=[...totals.entries()].map(([material,total])=>({material,total_ton:Number(total.toFixed(3))})).sort((a,b)=>b.total_ton-a.total_ton);
+	const dias=[];
+	let current=new Date(`${start.slice(0,10)}T00:00:00`),last=new Date(`${end.slice(0,10)}T00:00:00`);
+	while(current<=last){
+		const key=dateKey(current);
+		const values=daily.get(key)||new Map();
+		dias.push({data:key,materiais_ton:Object.fromEntries([...values.entries()].map(([material,total])=>[material,Number(total.toFixed(3))]))});
+		current.setDate(current.getDate()+1);
+	}
+	return{inicio:start,fim:end,material:material_normalizado||null,materiais_disponiveis,totais_materiais,total_ton:Number(totais_materiais.reduce((sum,item)=>sum+item.total_ton,0).toFixed(3)),dias};
+}
 async function renderReports(){
 	try{
 		const current=getGlobalReportRange();
 		if(!current)return;
 		setReportLoading(true);
 		destroyReports();
-		const periodParams=new URLSearchParams({data_inicio:current.start,data_fim:current.end});
-		const [operationalResult,materialResult]=await Promise.all([
-			api(`/relatorios/operacional/?${periodParams}`),
-			renderMaterialReport(),
-		]);
-		const localMaterialResult=materialResultFromNotes(current.start,current.end);
-		const chartResult=materialResult?.total_ton>0?materialResult:operationalResult.mes?.total_ton>0?materialResultFromOperational(operationalResult.mes):localMaterialResult;
-		if(chartResult){
-			renderMaterialPie(chartResult);
-			if((materialResult?.total_ton||0)<=0&&chartResult.total_ton>0){
-				renderMaterialTable(chartResult);
-			}
-		}
+		if(!notes.length)await loadAll(true);
+		const materialResult=await renderMaterialReport();
+		if(materialResult)renderMaterialPie(materialResult);
 		await renderSectorReport();
 		await renderReceiptReport();
 	}catch(error){toast(error.message,true)}finally{setReportLoading(false)}
@@ -286,8 +301,7 @@ async function renderMaterialReport(){
 	const range=getGlobalReportRange();
 	if(!range)return;
 	const {start,end}=range;
-	let result=await api(`/relatorios/material/?data_inicio=${encodeURIComponent(start)}&data_fim=${encodeURIComponent(end)}`);
-	if((result.total_ton||0)<=0)result=materialResultFromNotes(start,end);
+	const result=materialResultFromNotes(start,end);
 	renderMaterialTable(result);
 	return result;
 }
@@ -295,8 +309,7 @@ async function renderSectorReport(){
 	const range=getGlobalReportRange();
 	if(!range)return;
 	const {start,end}=range;
-	let result=await api(`/relatorios/material-local/?data_inicio=${encodeURIComponent(start)}&data_fim=${encodeURIComponent(end)}`);
-	if(!result.materiais.length)result=sectorResultFromNotes(start,end);
+	const result=sectorResultFromNotes(start,end);
 	$("sectorReportBody").innerHTML=result.materiais.map(item=>`<tr><td>${esc(item.material)}</td><td>${tons(item.quantidade_cdma_ton)}</td><td>${new Intl.NumberFormat("pt-BR").format(item.quantidade_nfes_cdma)}</td><td>${tons(item.quantidade_pru_ton)}</td><td>${new Intl.NumberFormat("pt-BR").format(item.quantidade_nfes_pru)}</td></tr>`).join("");
 	$("sectorReportEmpty").hidden=result.materiais.length>0;
 }
@@ -304,8 +317,7 @@ async function renderReceiptReport(){
 	const range=getGlobalReportRange();
 	if(!range)return;
 	const {start,end}=range,material=$("receiptMaterial").value;
-	const params=new URLSearchParams({data_inicio:start,data_fim:end});if(material)params.set("material",material);
-	const result=await api(`/relatorios/recebimento-diario/?${params}`);
+	const result=receiptResultFromNotes(start,end,material);
 	const materialSelect=$("receiptMaterial"),selected=result.material||"";
 	materialSelect.innerHTML='<option value="">Todos os materiais</option>'+result.materiais_disponiveis.map(item=>`<option value="${esc(item)}">${esc(item)}</option>`).join("");
 	materialSelect.value=selected;
