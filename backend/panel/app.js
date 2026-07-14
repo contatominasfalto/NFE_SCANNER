@@ -317,7 +317,8 @@ async function renderMaterialReport(){
 	const range=getGlobalReportRange();
 	if(!range)return;
 	const {start,end}=range;
-	const result=materialResultFromNotes(start,end);
+	const params=new URLSearchParams({data_inicio:start,data_fim:end});
+	const result=await api(`/relatorios/material/?${params}`);
 	renderMaterialTable(result);
 	return result;
 }
