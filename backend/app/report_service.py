@@ -300,7 +300,7 @@ def _period_from_material(material):
     }
 
 
-def generate_operational_pdf(operacional, material, setor, recebimento, output):
+def generate_operational_pdf(_operacional, material, setor, recebimento, output):
     doc = SimpleDocTemplate(
         output,
         pagesize=landscape(A4),
@@ -383,7 +383,7 @@ def _style_sheet(sheet, header_row=1):
         sheet.column_dimensions[get_column_letter(column[0].column)].width = width
 
 
-def generate_operational_excel(operacional, material, setor, recebimento, output):
+def generate_operational_excel(_operacional, material, setor, recebimento, output):
     workbook = Workbook()
     summary = workbook.active
     summary.title = "Resumo"
