@@ -213,6 +213,46 @@ function materialResultFromOperational(period){
 		})),
 	};
 }
+function notesInReportRange(start,end){
+	const startTime=new Date(start).getTime(),endTime=new Date(end).getTime();
+	if(Number.isNaN(startTime)||Number.isNaN(endTime))return[];
+	return notes.filter(note=>{
+		if(isErrorNote(note))return false;
+		const time=new Date(note.data_emissao||0).getTime();
+		return !Number.isNaN(time)&&time>=startTime&&time<=endTime;
+	});
+}
+function materialResultFromNotes(start,end){
+	const grouped=new Map(),items=notesInReportRange(start,end);
+	items.forEach(note=>{
+		const material=String(note.produto||"Sem produto").trim()||"Sem produto";
+		const current=grouped.get(material)||{material,quantidade_ton:0,quantidade_nfes:0};
+		current.quantidade_ton+=Number(note.quantidade||0)/1000;
+		current.quantidade_nfes+=1;
+		grouped.set(material,current);
+	});
+	const materiais=[...grouped.values()].map(item=>({...item,quantidade_ton:Number(item.quantidade_ton.toFixed(3))})).sort((a,b)=>b.quantidade_ton-a.quantidade_ton);
+	return{inicio:start,fim:end,total_ton:Number(materiais.reduce((sum,item)=>sum+item.quantidade_ton,0).toFixed(3)),total_nfes:items.length,materiais};
+}
+function sectorResultFromNotes(start,end){
+	const grouped=new Map();
+	notesInReportRange(start,end).forEach(note=>{
+		const local=note.local==="CDMA"||note.local==="PRU"?note.local:null;
+		if(!local)return;
+		const material=String(note.produto||"Sem produto").trim()||"Sem produto";
+		const current=grouped.get(material)||{material,quantidade_cdma_ton:0,quantidade_nfes_cdma:0,quantidade_pru_ton:0,quantidade_nfes_pru:0};
+		const quantity=Number(note.quantidade||0)/1000;
+		if(local==="CDMA"){current.quantidade_cdma_ton+=quantity;current.quantidade_nfes_cdma+=1}
+		if(local==="PRU"){current.quantidade_pru_ton+=quantity;current.quantidade_nfes_pru+=1}
+		grouped.set(material,current);
+	});
+	const materiais=[...grouped.values()].map(item=>({
+		...item,
+		quantidade_cdma_ton:Number(item.quantidade_cdma_ton.toFixed(3)),
+		quantidade_pru_ton:Number(item.quantidade_pru_ton.toFixed(3)),
+	})).sort((a,b)=>(b.quantidade_cdma_ton+b.quantidade_pru_ton)-(a.quantidade_cdma_ton+a.quantidade_pru_ton));
+	return{inicio:start,fim:end,materiais};
+}
 async function renderReports(){
 	try{
 		const current=getGlobalReportRange();
@@ -224,7 +264,8 @@ async function renderReports(){
 			api(`/relatorios/operacional/?${periodParams}`),
 			renderMaterialReport(),
 		]);
-		const chartResult=materialResult?.total_ton>0?materialResult:materialResultFromOperational(operationalResult.mes);
+		const localMaterialResult=materialResultFromNotes(current.start,current.end);
+		const chartResult=materialResult?.total_ton>0?materialResult:operationalResult.mes?.total_ton>0?materialResultFromOperational(operationalResult.mes):localMaterialResult;
 		if(chartResult){
 			renderMaterialPie(chartResult);
 			if((materialResult?.total_ton||0)<=0&&chartResult.total_ton>0){
@@ -245,7 +286,8 @@ async function renderMaterialReport(){
 	const range=getGlobalReportRange();
 	if(!range)return;
 	const {start,end}=range;
-	const result=await api(`/relatorios/material/?data_inicio=${encodeURIComponent(start)}&data_fim=${encodeURIComponent(end)}`);
+	let result=await api(`/relatorios/material/?data_inicio=${encodeURIComponent(start)}&data_fim=${encodeURIComponent(end)}`);
+	if((result.total_ton||0)<=0)result=materialResultFromNotes(start,end);
 	renderMaterialTable(result);
 	return result;
 }
@@ -253,7 +295,8 @@ async function renderSectorReport(){
 	const range=getGlobalReportRange();
 	if(!range)return;
 	const {start,end}=range;
-	const result=await api(`/relatorios/material-local/?data_inicio=${encodeURIComponent(start)}&data_fim=${encodeURIComponent(end)}`);
+	let result=await api(`/relatorios/material-local/?data_inicio=${encodeURIComponent(start)}&data_fim=${encodeURIComponent(end)}`);
+	if(!result.materiais.length)result=sectorResultFromNotes(start,end);
 	$("sectorReportBody").innerHTML=result.materiais.map(item=>`<tr><td>${esc(item.material)}</td><td>${tons(item.quantidade_cdma_ton)}</td><td>${new Intl.NumberFormat("pt-BR").format(item.quantidade_nfes_cdma)}</td><td>${tons(item.quantidade_pru_ton)}</td><td>${new Intl.NumberFormat("pt-BR").format(item.quantidade_nfes_pru)}</td></tr>`).join("");
 	$("sectorReportEmpty").hidden=result.materiais.length>0;
 }

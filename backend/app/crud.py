@@ -2,11 +2,17 @@ import hashlib
 import hmac
 import os
 from collections import defaultdict
-from sqlalchemy import case
+from sqlalchemy import case, or_
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from . import models, schemas
 from datetime import datetime, timedelta
+
+def _nota_sem_erro():
+    return or_(
+        models.NotaFiscal.erro_salvamento.is_(False),
+        models.NotaFiscal.erro_salvamento.is_(None),
+    )
 
 def create_nota(db: Session, nota: schemas.NotaFiscalCreate, imagem_path: str | None = None):
     data = nota.model_dump()
@@ -164,7 +170,7 @@ def get_relatorio_operacional(
         .filter(
             models.NotaFiscal.data_emissao >= inicio_mes,
             models.NotaFiscal.data_emissao <= fim_mes,
-            models.NotaFiscal.erro_salvamento.is_(False),
+            _nota_sem_erro(),
         )
         .all()
     )
@@ -203,7 +209,7 @@ def get_relatorio_material(db: Session, inicio: datetime, fim: datetime):
         .filter(
             models.NotaFiscal.data_emissao >= inicio,
             models.NotaFiscal.data_emissao <= fim,
-            models.NotaFiscal.erro_salvamento.is_(False),
+            _nota_sem_erro(),
         )
         .all()
     )
@@ -241,7 +247,7 @@ def get_relatorio_material_local(db: Session, inicio: datetime, fim: datetime):
         .filter(
             models.NotaFiscal.data_emissao >= inicio,
             models.NotaFiscal.data_emissao <= fim,
-            models.NotaFiscal.erro_salvamento.is_(False),
+            _nota_sem_erro(),
         )
         .all()
     )
@@ -284,7 +290,7 @@ def get_relatorio_recebimento(db: Session, inicio: datetime, fim: datetime, mate
     query = db.query(models.NotaFiscal).filter(
         models.NotaFiscal.data_emissao >= inicio,
         models.NotaFiscal.data_emissao <= fim,
-        models.NotaFiscal.erro_salvamento.is_(False),
+        _nota_sem_erro(),
     )
     notas_periodo = query.all()
     materiais_disponiveis = sorted(
