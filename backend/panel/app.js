@@ -218,9 +218,18 @@ function notesInReportRange(start,end){
 	if(Number.isNaN(startTime)||Number.isNaN(endTime))return[];
 	return notes.filter(note=>{
 		if(isErrorNote(note))return false;
-		const time=new Date(note.data_emissao||0).getTime();
-		return !Number.isNaN(time)&&time>=startTime&&time<=endTime;
+		const issueTime=new Date(note.data_emissao||0).getTime();
+		const registerTime=new Date(note.data_cadastro||0).getTime();
+		const inIssue=!Number.isNaN(issueTime)&&issueTime>=startTime&&issueTime<=endTime;
+		const inRegister=!Number.isNaN(registerTime)&&registerTime>=startTime&&registerTime<=endTime;
+		return inIssue||inRegister;
 	});
+}
+function reportDateKey(note,start,end){
+	const startTime=new Date(start).getTime(),endTime=new Date(end).getTime();
+	const issueTime=new Date(note.data_emissao||0).getTime();
+	if(!Number.isNaN(issueTime)&&issueTime>=startTime&&issueTime<=endTime)return dateKey(note.data_emissao);
+	return dateKey(note.data_cadastro||note.data_emissao);
 }
 function materialResultFromNotes(start,end){
 	const grouped=new Map(),items=notesInReportRange(start,end);
@@ -262,7 +271,7 @@ function receiptResultFromNotes(start,end,selectedMaterial=""){
 	filteredNotes.forEach(note=>{
 		const material=String(note.produto||"Sem produto").trim()||"Sem produto";
 		const quantity=Number(note.quantidade||0)/1000;
-		const key=dateKey(note.data_emissao);
+		const key=reportDateKey(note,start,end);
 		totals.set(material,(totals.get(material)||0)+quantity);
 		if(!daily.has(key))daily.set(key,new Map());
 		daily.get(key).set(material,(daily.get(key).get(material)||0)+quantity);

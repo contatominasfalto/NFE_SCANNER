@@ -14,6 +14,19 @@ def _nota_sem_erro():
         models.NotaFiscal.erro_salvamento.is_(None),
     )
 
+def _nota_no_periodo(inicio: datetime, fim: datetime):
+    return or_(
+        models.NotaFiscal.data_emissao.between(inicio, fim),
+        models.NotaFiscal.data_cadastro.between(inicio, fim),
+    )
+
+def _data_referencia_periodo(nota: models.NotaFiscal, inicio: datetime, fim: datetime):
+    if nota.data_emissao and inicio <= nota.data_emissao <= fim:
+        return nota.data_emissao
+    if nota.data_cadastro and inicio <= nota.data_cadastro <= fim:
+        return nota.data_cadastro
+    return nota.data_emissao or nota.data_cadastro
+
 def create_nota(db: Session, nota: schemas.NotaFiscalCreate, imagem_path: str | None = None):
     data = nota.model_dump()
     data.pop("caminho_arquivo_imagem", None)
@@ -168,8 +181,7 @@ def get_relatorio_operacional(
     notas = (
         db.query(models.NotaFiscal)
         .filter(
-            models.NotaFiscal.data_emissao >= inicio_mes,
-            models.NotaFiscal.data_emissao <= fim_mes,
+            _nota_no_periodo(inicio_mes, fim_mes),
             _nota_sem_erro(),
         )
         .all()
@@ -181,7 +193,8 @@ def get_relatorio_operacional(
         total_notas = 0
 
         for nota in notas:
-            if nota.data_emissao < inicio or nota.data_emissao > fim:
+            data_referencia = _data_referencia_periodo(nota, inicio, fim)
+            if not data_referencia or data_referencia < inicio or data_referencia > fim:
                 continue
             quantidade = float(nota.quantidade or 0)
             produto = (nota.produto or "Sem produto").strip() or "Sem produto"
@@ -207,8 +220,7 @@ def get_relatorio_material(db: Session, inicio: datetime, fim: datetime):
     notas = (
         db.query(models.NotaFiscal)
         .filter(
-            models.NotaFiscal.data_emissao >= inicio,
-            models.NotaFiscal.data_emissao <= fim,
+            _nota_no_periodo(inicio, fim),
             _nota_sem_erro(),
         )
         .all()
@@ -245,8 +257,7 @@ def get_relatorio_material_local(db: Session, inicio: datetime, fim: datetime):
     notas = (
         db.query(models.NotaFiscal)
         .filter(
-            models.NotaFiscal.data_emissao >= inicio,
-            models.NotaFiscal.data_emissao <= fim,
+            _nota_no_periodo(inicio, fim),
             _nota_sem_erro(),
         )
         .all()
@@ -288,8 +299,7 @@ def get_relatorio_material_local(db: Session, inicio: datetime, fim: datetime):
 
 def get_relatorio_recebimento(db: Session, inicio: datetime, fim: datetime, material: str | None = None):
     query = db.query(models.NotaFiscal).filter(
-        models.NotaFiscal.data_emissao >= inicio,
-        models.NotaFiscal.data_emissao <= fim,
+        _nota_no_periodo(inicio, fim),
         _nota_sem_erro(),
     )
     notas_periodo = query.all()
@@ -309,7 +319,10 @@ def get_relatorio_recebimento(db: Session, inicio: datetime, fim: datetime, mate
         if material_normalizado and produto != material_normalizado:
             continue
         quantidade = float(nota.quantidade or 0)
-        dias[nota.data_emissao.date().isoformat()][produto] += quantidade
+        data_referencia = _data_referencia_periodo(nota, inicio, fim)
+        if not data_referencia:
+            continue
+        dias[data_referencia.date().isoformat()][produto] += quantidade
         totais_materiais[produto] += quantidade
 
     itens = []
