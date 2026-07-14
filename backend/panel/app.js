@@ -78,7 +78,23 @@ showLogin("");
 const reportColors=["#f29129","#ffc46b","#f7a94c","#ffd994","#e68a22","#ffe7b8","#cc741c","#fff0cf","#b86212","#f6d08a"];
 const tons=v=>`${new Intl.NumberFormat("pt-BR",{minimumFractionDigits:3,maximumFractionDigits:3}).format(v||0)} TON`;
 const reportDate=v=>new Date(v).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
-const reportInputDate=v=>String(v||"").slice(0,16);
+const localInputDate=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}T${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+function defaultReportRange(){
+	const now=new Date(),start=new Date(now.getFullYear(),now.getMonth(),1,0,0,0,0),end=new Date(now.getFullYear(),now.getMonth()+1,0,23,59,0,0);
+	return{start:localInputDate(start),end:localInputDate(end)}
+}
+function getGlobalReportRange(){
+	const start=$("reportGlobalStart").value,end=$("reportGlobalEnd").value;
+	if(!start||!end){toast("Preencha o período do relatório.",true);return null}
+	if(start>end){toast("A data inicial deve ser anterior ou igual à data final.",true);return null}
+	return{start,end}
+}
+function setReportLoading(loading){
+	const button=$("applyGlobalReportFilter");
+	if(!button)return;
+	button.disabled=loading;
+	button.textContent=loading?"Aplicando...":"Aplicar filtro";
+}
 const chartGradientBackground={
 	id:"chartGradientBackground",
 	beforeDraw(chart,args,options){
@@ -176,51 +192,40 @@ function renderPeriodReport(period,prefix,canvasId){
 }
 async function renderReports(){
 	try{
-		const report=await api("/relatorios/operacional/");
+		const current=getGlobalReportRange();
+		if(!current)return;
+		setReportLoading(true);
+		const periodParams=new URLSearchParams({data_inicio:current.start,data_fim:current.end});
+		const report=await api(`/relatorios/operacional/?${periodParams}`);
 		destroyReports();
 		renderPeriodReport(report.mes,"Month","chartMonthProducts");
-		renderPeriodReport(report.dia,"Day","chartDayProducts");
-		$("materialStart").value=reportInputDate(report.mes.inicio);
-		$("materialEnd").value=reportInputDate(report.dia.fim);
-		$("sectorStart").value=reportInputDate(report.mes.inicio);
-		$("sectorEnd").value=reportInputDate(report.dia.fim);
-		$("receiptStart").value=reportInputDate(report.mes.inicio);
-		$("receiptEnd").value=reportInputDate(report.dia.fim);
 		await renderMaterialReport();
 		await renderSectorReport();
 		await renderReceiptReport();
-	}catch(error){toast(error.message,true)}
+	}catch(error){toast(error.message,true)}finally{setReportLoading(false)}
 }
 async function renderMaterialReport(){
-	const start=$("materialStart").value,end=$("materialEnd").value;
-	if(!start||!end)return;
-	if(start>end){toast("A data inicial deve ser anterior ou igual à data final.",true);return}
+	const range=getGlobalReportRange();
+	if(!range)return;
+	const {start,end}=range;
 	const result=await api(`/relatorios/material/?data_inicio=${encodeURIComponent(start)}&data_fim=${encodeURIComponent(end)}`);
 	$("materialReportTotal").textContent=tons(result.total_ton);
 	$("materialReportNotes").textContent=`${new Intl.NumberFormat("pt-BR").format(result.total_nfes)} NF-es`;
 	$("materialReportBody").innerHTML=result.materiais.map(item=>`<tr><td>${esc(item.material)}</td><td>${tons(item.quantidade_ton)}</td><td>${new Intl.NumberFormat("pt-BR").format(item.quantidade_nfes)}</td></tr>`).join("");
 	$("materialReportEmpty").hidden=result.materiais.length>0;
 }
-$("materialReportForm").addEventListener("submit",async event=>{
-	event.preventDefault();
-	try{await renderMaterialReport()}catch(error){toast(error.message,true)}
-});
 async function renderSectorReport(){
-	const start=$("sectorStart").value,end=$("sectorEnd").value;
-	if(!start||!end)return;
-	if(start>end){toast("A data inicial deve ser anterior ou igual à data final.",true);return}
+	const range=getGlobalReportRange();
+	if(!range)return;
+	const {start,end}=range;
 	const result=await api(`/relatorios/material-local/?data_inicio=${encodeURIComponent(start)}&data_fim=${encodeURIComponent(end)}`);
 	$("sectorReportBody").innerHTML=result.materiais.map(item=>`<tr><td>${esc(item.material)}</td><td>${tons(item.quantidade_cdma_ton)}</td><td>${new Intl.NumberFormat("pt-BR").format(item.quantidade_nfes_cdma)}</td><td>${tons(item.quantidade_pru_ton)}</td><td>${new Intl.NumberFormat("pt-BR").format(item.quantidade_nfes_pru)}</td></tr>`).join("");
 	$("sectorReportEmpty").hidden=result.materiais.length>0;
 }
-$("sectorReportForm").addEventListener("submit",async event=>{
-	event.preventDefault();
-	try{await renderSectorReport()}catch(error){toast(error.message,true)}
-});
 async function renderReceiptReport(){
-	const start=$("receiptStart").value,end=$("receiptEnd").value,material=$("receiptMaterial").value;
-	if(!start||!end)return;
-	if(start>end){toast("A data inicial deve ser anterior ou igual à data final.",true);return}
+	const range=getGlobalReportRange();
+	if(!range)return;
+	const {start,end}=range,material=$("receiptMaterial").value;
 	const params=new URLSearchParams({data_inicio:start,data_fim:end});if(material)params.set("material",material);
 	const result=await api(`/relatorios/recebimento-diario/?${params}`);
 	const materialSelect=$("receiptMaterial"),selected=result.material||"";
@@ -247,22 +252,15 @@ async function renderReceiptReport(){
 		plugins:[chartGradientBackground,pieValueLabels]
 	});
 }
-$("receiptReportForm").addEventListener("submit",async event=>{
+$("globalReportFilterForm").addEventListener("submit",async event=>{
 	event.preventDefault();
-	try{await renderReceiptReport()}catch(error){toast(error.message,true)}
+	await renderReports();
 });
 async function exportOperationalReport(format){
-	const values={
-		material_inicio:$("materialStart").value,
-		material_fim:$("materialEnd").value,
-		setor_inicio:$("sectorStart").value,
-		setor_fim:$("sectorEnd").value,
-		recebimento_inicio:$("receiptStart").value,
-		recebimento_fim:$("receiptEnd").value,
-	};
+	const range=getGlobalReportRange();
+	if(!range)return;
+	const values={data_inicio:range.start,data_fim:range.end};
 	if($("receiptMaterial").value)values.recebimento_material=$("receiptMaterial").value;
-	if(Object.values(values).some(value=>!value)){toast("Preencha todos os períodos antes de exportar.",true);return}
-	if(values.material_inicio>values.material_fim||values.setor_inicio>values.setor_fim||values.recebimento_inicio>values.recebimento_fim){toast("A data inicial deve ser anterior ou igual à data final.",true);return}
 	const button=format==="pdf"?$("exportReportPdf"):$("exportReportExcel"),original=button.textContent;
 	button.disabled=true;button.textContent="Gerando...";
 	try{
@@ -279,6 +277,9 @@ $("exportReportExcel").onclick=()=>exportOperationalReport("xlsx");
 async function openReportsModal(){
 	$("reportsModalSection").classList.add("maximized");
 	if(!$("reportsDialog").open)$("reportsDialog").showModal();
+	const range=defaultReportRange();
+	if(!$("reportGlobalStart").value)$("reportGlobalStart").value=range.start;
+	if(!$("reportGlobalEnd").value)$("reportGlobalEnd").value=range.end;
 	await renderReports();
 }
 $("openReports").addEventListener("click",async event=>{
@@ -286,3 +287,4 @@ $("openReports").addEventListener("click",async event=>{
 	if(!await ensureAuthenticated())return;
 	await openReportsModal();
 });
+

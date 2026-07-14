@@ -168,13 +168,19 @@
     <section class="modal xlarge" id="reportsModalSection">
       <header><div><p class="eyebrow">RELATÓRIOS</p><h2>Acumulado operacional</h2></div><div class="report-export-actions"><button class="secondary export-pdf" id="exportReportPdf" type="button">↓ Baixar PDF</button><button class="secondary export-excel" id="exportReportExcel" type="button">↓ Baixar Excel</button><button class="icon-button close" type="button" data-close="reportsDialog">×</button></div></header>
       <div class="reports-scroll">
+        <form id="globalReportFilterForm" class="global-report-filter">
+          <label>Data Início<input id="reportGlobalStart" type="datetime-local" required></label>
+          <label>Data Fim<input id="reportGlobalEnd" type="datetime-local" required></label>
+          <label>Material<select id="receiptMaterial"><option value="">Todos os materiais</option></select></label>
+          <button class="primary" id="applyGlobalReportFilter" type="submit">Aplicar filtro</button>
+        </form>
         <div class="reports-container" id="reportsContainer">
           <article class="period-report">
-            <div class="period-heading"><div><span>ACUMULADO MÊS</span><strong id="reportMonthRange">Carregando período...</strong></div><small>Do primeiro ao último dia do mês vigente</small></div>
-            <div class="chart-box"><canvas id="chartMonthProducts"></canvas><div class="chart-empty" id="chartMonthEmpty" hidden>Nenhuma nota registrada no mês vigente.</div></div>
-            <div class="period-totals"><div><span>Total do mês vigente</span><strong id="reportMonthTons">0,000 TON</strong></div><div><span>Notas no mês vigente</span><strong id="reportMonthNotes">0</strong></div></div>
+            <div class="period-heading"><div><span>ACUMULADO DO PERÍODO</span><strong id="reportMonthRange">Carregando período...</strong></div><small>Conforme filtro aplicado acima</small></div>
+            <div class="chart-box"><canvas id="chartMonthProducts"></canvas><div class="chart-empty" id="chartMonthEmpty" hidden>Nenhuma nota registrada no período selecionado.</div></div>
+            <div class="period-totals"><div><span>Total do período</span><strong id="reportMonthTons">0,000 TON</strong></div><div><span>Notas no período</span><strong id="reportMonthNotes">0</strong></div></div>
           </article>
-          <article class="period-report">
+          <article class="period-report" hidden>
             <div class="period-heading"><div><span>ACUMULADO DIA</span><strong id="reportDayRange">Carregando período...</strong></div><small>Do primeiro ao último minuto do dia vigente</small></div>
             <div class="chart-box"><canvas id="chartDayProducts"></canvas><div class="chart-empty" id="chartDayEmpty" hidden>Nenhuma nota registrada no dia vigente.</div></div>
             <div class="period-totals"><div><span>Total do dia vigente</span><strong id="reportDayTons">0,000 TON</strong></div><div><span>Notas no dia vigente</span><strong id="reportDayNotes">0</strong></div></div>
@@ -182,11 +188,6 @@
         </div>
         <section class="material-report">
           <div class="material-report-heading"><div><p class="eyebrow">CONSULTA DINÂMICA</p><h3>Relatório por Período e por Material</h3></div><div class="material-summary"><span id="materialReportTotal">0,000 TON</span><span id="materialReportNotes">0 NF-es</span></div></div>
-          <form id="materialReportForm" class="material-filters">
-            <label>Data Início<input id="materialStart" type="datetime-local" required></label>
-            <label>Data Fim<input id="materialEnd" type="datetime-local" required></label>
-            <button class="primary" type="submit">Atualizar relatório</button>
-          </form>
           <div class="material-table-wrap">
             <table class="material-table">
               <thead><tr><th>Material</th><th>Quantidade Produto</th><th>Quantidade NF-es</th></tr></thead>
@@ -197,11 +198,6 @@
         </section>
         <section class="material-report">
           <div class="material-report-heading"><div><p class="eyebrow">CONSULTA POR SETOR</p><h3>Relatório por Período, Material e Local</h3></div></div>
-          <form id="sectorReportForm" class="material-filters">
-            <label>Data Início<input id="sectorStart" type="datetime-local" required></label>
-            <label>Data Fim<input id="sectorEnd" type="datetime-local" required></label>
-            <button class="primary" type="submit">Atualizar relatório</button>
-          </form>
           <div class="material-table-wrap">
             <table class="material-table sector-table">
               <thead><tr><th>Material</th><th>Quantidade Produto CDMA</th><th>Quantidade NF CDMA</th><th>Quantidade Produto PRU</th><th>Quantidade NF PRU</th></tr></thead>
@@ -212,12 +208,6 @@
         </section>
         <section class="material-report">
           <div class="material-report-heading"><div><p class="eyebrow">RECEBIMENTO DIÁRIO</p><h3>Quantidade e Proporção de Materiais por Dia</h3></div><div class="material-summary" id="receiptMaterialTotals"><span>Total: 0,000 TON</span></div></div>
-          <form id="receiptReportForm" class="receipt-filters">
-            <label>Data Início<input id="receiptStart" type="datetime-local" required></label>
-            <label>Data Fim<input id="receiptEnd" type="datetime-local" required></label>
-            <label>Material<select id="receiptMaterial"><option value="">Todos os materiais</option></select></label>
-            <button class="primary" type="submit">Atualizar gráfico</button>
-          </form>
           <div class="receipt-charts">
             <div class="receipt-chart-box"><canvas id="receiptDailyChart"></canvas><div class="chart-empty" id="receiptDailyEmpty" hidden>Nenhum recebimento encontrado no período.</div></div>
             <div class="receipt-chart-box receipt-doughnut"><canvas id="receiptShareChart"></canvas><div class="chart-empty" id="receiptShareEmpty" hidden>Nenhum recebimento encontrado no período.</div></div>

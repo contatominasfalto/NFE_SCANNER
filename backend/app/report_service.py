@@ -299,8 +299,11 @@ def generate_operational_pdf(operacional, material, setor, recebimento, output):
         author="SCAN-NFE MINASFALTO",
     )
 
+    periodos_operacionais = [("Periodo filtrado", operacional["mes"])]
+    if operacional["mes"]["inicio"] != operacional["dia"]["inicio"] or operacional["mes"]["fim"] != operacional["dia"]["fim"]:
+        periodos_operacionais = [("Mes vigente", operacional["mes"]), ("Dia vigente", operacional["dia"])]
     summary_rows = [["Periodo", "Intervalo", "Total", "Quantidade NF-es"]]
-    for label, periodo in [("Mes vigente", operacional["mes"]), ("Dia vigente", operacional["dia"])]:
+    for label, periodo in periodos_operacionais:
         summary_rows.append([label, format_period(periodo["inicio"], periodo["fim"]), format_ton(periodo["total_ton"]), periodo["total_notas"]])
     material_rows = [["Material", "Quantidade Produto", "Quantidade NF-es"]]
     material_rows.extend([[item["material"], format_ton(item["quantidade_ton"]), item["quantidade_nfes"]] for item in material["materiais"]])
@@ -318,17 +321,13 @@ def generate_operational_pdf(operacional, material, setor, recebimento, output):
         ]
     )
     story = [
-        _section_heading("Resumo operacional", "Visao consolidada dos recebimentos do mes e do dia vigentes."),
+        _section_heading("Resumo operacional", "Visao consolidada dos recebimentos conforme o filtro aplicado."),
         Spacer(1, 10),
         _pdf_table(summary_rows, [35 * mm, 95 * mm, 40 * mm, 40 * mm]),
         PageBreak(),
-        _section_heading("Acumulado do mes", format_period(operacional["mes"]["inicio"], operacional["mes"]["fim"])),
+        _section_heading("Acumulado do periodo", format_period(operacional["mes"]["inicio"], operacional["mes"]["fim"])),
         Spacer(1, 10),
         _chart_card(_pie_drawing(operacional["mes"], "Quantidade por produto")),
-        PageBreak(),
-        _section_heading("Acumulado do dia", format_period(operacional["dia"]["inicio"], operacional["dia"]["fim"])),
-        Spacer(1, 10),
-        _chart_card(_pie_drawing(operacional["dia"], "Quantidade por produto")),
         PageBreak(),
         _section_heading("Relatorio por Periodo e por Material", format_period(material["inicio"], material["fim"])),
         Spacer(1, 10),
@@ -376,17 +375,21 @@ def generate_operational_excel(operacional, material, setor, recebimento, output
     summary.append(["Relatorio Operacional NF-e"])
     summary.append([f"Gerado em {datetime.now().strftime('%d/%m/%Y %H:%M')}"])
     summary.append([])
+    periodos_operacionais = [("Periodo filtrado", operacional["mes"])]
+    if operacional["mes"]["inicio"] != operacional["dia"]["inicio"] or operacional["mes"]["fim"] != operacional["dia"]["fim"]:
+        periodos_operacionais = [("Mes vigente", operacional["mes"]), ("Dia vigente", operacional["dia"])]
     summary.append(["Periodo", "Inicio", "Fim", "Total TON", "Quantidade NF-es"])
-    for label, periodo in [("Mes vigente", operacional["mes"]), ("Dia vigente", operacional["dia"])]:
+    for label, periodo in periodos_operacionais:
         summary.append([label, periodo["inicio"], periodo["fim"], periodo["total_ton"], periodo["total_notas"]])
     summary.append([])
-    summary.append(["Produto mes", "Quantidade TON"])
+    summary.append(["Produto periodo", "Quantidade TON"])
     for item in operacional["mes"]["produtos"]:
         summary.append([item["produto"], item["quantidade_ton"]])
-    summary.append([])
-    summary.append(["Produto dia", "Quantidade TON"])
-    for item in operacional["dia"]["produtos"]:
-        summary.append([item["produto"], item["quantidade_ton"]])
+    if len(periodos_operacionais) > 1:
+        summary.append([])
+        summary.append(["Produto dia", "Quantidade TON"])
+        for item in operacional["dia"]["produtos"]:
+            summary.append([item["produto"], item["quantidade_ton"]])
     _style_sheet(summary, 4)
 
     material_sheet = workbook.create_sheet("Materiais")

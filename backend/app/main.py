@@ -737,20 +737,30 @@ def list_notas(
     ),
 )
 def relatorio_operacional(
+    data_inicio: datetime | None = Query(None, description="Data e hora inicial inclusiva."),
+    data_fim: datetime | None = Query(None, description="Data e hora final inclusiva."),
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    agora = datetime.now()
-    inicio_mes = agora.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    fim_mes = agora.replace(
-        day=monthrange(agora.year, agora.month)[1],
-        hour=23,
-        minute=59,
-        second=59,
-        microsecond=999999,
-    )
-    inicio_dia = agora.replace(hour=0, minute=0, second=0, microsecond=0)
-    fim_dia = agora.replace(hour=23, minute=59, second=59, microsecond=999999)
+    if data_inicio and data_fim:
+        if data_inicio > data_fim:
+            raise HTTPException(status_code=400, detail="A data inicial deve ser anterior ou igual a data final.")
+        if data_fim.second == 0 and data_fim.microsecond == 0:
+            data_fim = data_fim.replace(second=59, microsecond=999999)
+        inicio_mes = inicio_dia = data_inicio
+        fim_mes = fim_dia = data_fim
+    else:
+        agora = datetime.now()
+        inicio_mes = agora.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        fim_mes = agora.replace(
+            day=monthrange(agora.year, agora.month)[1],
+            hour=23,
+            minute=59,
+            second=59,
+            microsecond=999999,
+        )
+        inicio_dia = agora.replace(hour=0, minute=0, second=0, microsecond=0)
+        fim_dia = agora.replace(hour=23, minute=59, second=59, microsecond=999999)
     return crud.get_relatorio_operacional(db, inicio_mes, fim_mes, inicio_dia, fim_dia)
 
 
@@ -833,16 +843,23 @@ def relatorio_recebimento_diario(
 )
 def exportar_relatorio_operacional(
     formato: str = Query(pattern="^(pdf|xlsx)$"),
-    material_inicio: datetime = Query(),
-    material_fim: datetime = Query(),
-    setor_inicio: datetime = Query(),
-    setor_fim: datetime = Query(),
-    recebimento_inicio: datetime = Query(),
-    recebimento_fim: datetime = Query(),
+    data_inicio: datetime | None = Query(None),
+    data_fim: datetime | None = Query(None),
+    material_inicio: datetime | None = Query(None),
+    material_fim: datetime | None = Query(None),
+    setor_inicio: datetime | None = Query(None),
+    setor_fim: datetime | None = Query(None),
+    recebimento_inicio: datetime | None = Query(None),
+    recebimento_fim: datetime | None = Query(None),
     recebimento_material: str | None = Query(None),
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    if data_inicio and data_fim:
+        material_inicio = setor_inicio = recebimento_inicio = data_inicio
+        material_fim = setor_fim = recebimento_fim = data_fim
+    if not all([material_inicio, material_fim, setor_inicio, setor_fim, recebimento_inicio, recebimento_fim]):
+        raise HTTPException(status_code=400, detail="Informe o periodo inicial e final do relatorio.")
     if material_inicio > material_fim or setor_inicio > setor_fim or recebimento_inicio > recebimento_fim:
         raise HTTPException(status_code=400, detail="A data inicial deve ser anterior ou igual a data final.")
     if material_fim.second == 0 and material_fim.microsecond == 0:
@@ -853,16 +870,8 @@ def exportar_relatorio_operacional(
         recebimento_fim = recebimento_fim.replace(second=59, microsecond=999999)
 
     agora = datetime.now()
-    inicio_mes = agora.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    fim_mes = agora.replace(
-        day=monthrange(agora.year, agora.month)[1],
-        hour=23,
-        minute=59,
-        second=59,
-        microsecond=999999,
-    )
-    inicio_dia = agora.replace(hour=0, minute=0, second=0, microsecond=0)
-    fim_dia = agora.replace(hour=23, minute=59, second=59, microsecond=999999)
+    inicio_mes = inicio_dia = material_inicio
+    fim_mes = fim_dia = material_fim
     operacional = crud.get_relatorio_operacional(db, inicio_mes, fim_mes, inicio_dia, fim_dia)
     material = crud.get_relatorio_material(db, material_inicio, material_fim)
     setor = crud.get_relatorio_material_local(db, setor_inicio, setor_fim)
