@@ -84,6 +84,7 @@ function defaultReportRange(){
 	return{start:localInputDate(start),end:localInputDate(end)}
 }
 function getGlobalReportRange(){
+	if(!$("reportGlobalStart")||!$("reportGlobalEnd")){toast("Atualize o painel com Ctrl+F5 para carregar a nova tela de relatórios.",true);return null}
 	const start=$("reportGlobalStart").value,end=$("reportGlobalEnd").value;
 	if(!start||!end){toast("Preencha o período do relatório.",true);return null}
 	if(start>end){toast("A data inicial deve ser anterior ou igual à data final.",true);return null}
@@ -252,7 +253,7 @@ async function renderReceiptReport(){
 		plugins:[chartGradientBackground,pieValueLabels]
 	});
 }
-$("globalReportFilterForm").addEventListener("submit",async event=>{
+$("globalReportFilterForm")?.addEventListener("submit",async event=>{
 	event.preventDefault();
 	await renderReports();
 });
@@ -275,6 +276,7 @@ async function exportOperationalReport(format){
 $("exportReportPdf").onclick=()=>exportOperationalReport("pdf");
 $("exportReportExcel").onclick=()=>exportOperationalReport("xlsx");
 async function openReportsModal(){
+	if(!$("globalReportFilterForm")){toast("Atualize o painel com Ctrl+F5 para carregar a nova tela de relatórios.",true);return}
 	$("reportsModalSection").classList.add("maximized");
 	if(!$("reportsDialog").open)$("reportsDialog").showModal();
 	const range=defaultReportRange();
