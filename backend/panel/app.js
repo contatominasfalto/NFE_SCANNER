@@ -278,13 +278,18 @@ function receiptResultFromNotes(start,end,selectedMaterial=""){
 	}
 	return{inicio:start,fim:end,material:material_normalizado||null,materiais_disponiveis,totais_materiais,total_ton:Number(totais_materiais.reduce((sum,item)=>sum+item.total_ton,0).toFixed(3)),dias};
 }
+async function refreshReportNotes(){
+	notes=await fetchAllNotes();
+	applyFilters({resetPage:false});
+	return notes;
+}
 async function renderReports(){
 	try{
 		const current=getGlobalReportRange();
 		if(!current)return;
 		setReportLoading(true);
 		destroyReports();
-		if(!notes.length)await loadAll(true);
+		await refreshReportNotes();
 		const materialResult=await renderMaterialReport();
 		if(materialResult)renderMaterialPie(materialResult);
 		await renderSectorReport();
