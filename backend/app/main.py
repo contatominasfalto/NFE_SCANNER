@@ -22,6 +22,7 @@ from sqlalchemy.orm import Session
 from . import barcode_service, crud, integra_api, models, report_service, schemas, config
 from .database import engine, ensure_schema, get_db, SessionLocal
 from .logging_config import configure_logging, mask_access_key
+from .note_author import aplicar_usuario_lancamento, usuario_lancamento
 
 logger = configure_logging()
 models.Base.metadata.create_all(bind=engine)
@@ -445,6 +446,7 @@ def importar_barcode(
         **barcode_result.nota.model_dump(exclude={"local"}),
         local=barcode_data.local,
     )
+    nota_data = aplicar_usuario_lancamento(nota_data, current_user.username)
 
     try:
         nota = crud.create_nota(db, nota_data)
@@ -514,6 +516,7 @@ def importar_remessa(
         try:
             nota_api = integra_api.consultar_nfe(chave_acesso)
             nota_data = schemas.NotaFiscalCreate(**nota_api, local=remessa_data.local)
+            nota_data = aplicar_usuario_lancamento(nota_data, current_user.username)
             nota = crud.create_nota(db, nota_data)
             cadastradas += 1
             itens.append(
@@ -600,6 +603,7 @@ def create_nota(
     db: Session = Depends(get_db),
 ):
     ensure_not_viewer(current_user)
+    nota_data = aplicar_usuario_lancamento(nota_data, current_user.username)
     try:
         nota = crud.create_nota(db, nota_data, nota_data.caminho_arquivo_imagem)
     except IntegrityError as error:
@@ -666,6 +670,7 @@ def refresh_notas_erro(
         try:
             chave_acesso = barcode_service.extract_access_key(chave_acesso)
             nota_data = integra_api.consultar_nfe(chave_acesso)
+            nota_data["faturista"] = usuario_lancamento(current_user.username)
             crud.resolve_nota_erro(db, nota, nota_data)
             atualizadas += 1
             detalhe = "Atualizada com sucesso."
