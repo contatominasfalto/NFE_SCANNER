@@ -660,7 +660,7 @@ def refresh_notas_erro(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    ensure_admin(current_user)
+    ensure_not_viewer(current_user)
     notas_erro = crud.get_notas_erro(db)
     itens = []
     atualizadas = 0
