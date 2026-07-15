@@ -198,7 +198,7 @@ function renderPeriodReport(period,prefix,canvasId){
 	reportCharts[prefix.toLowerCase()]=new Chart(canvas.getContext("2d"),{
 		type:"pie",
 		data:{labels:period.produtos.map(item=>item.produto),datasets:[{data:period.produtos.map(item=>item.quantidade_ton),backgroundColor:period.produtos.map((_,index)=>reportColors[index%reportColors.length]),borderColor:"#fff",borderWidth:2,radius:"74%"}]},
-		options:{responsive:true,maintainAspectRatio:false,radius:"74%",layout:{padding:{left:90,right:90,top:28,bottom:28}},plugins:{chartGradientBackground:{colors:["#eef6ff","#fbfdff","#d8e5f0"]},title:{display:true,text:"Quantidade por produto",color:"#29292e",font:{size:17,weight:"bold"}},legend:{position:"bottom",labels:{boxWidth:14,padding:14,color:"#29292e",font:{size:12}}},tooltip:{callbacks:{label:context=>`${context.label}: ${tons(context.raw)}`}}}},
+		options:{responsive:true,maintainAspectRatio:false,radius:"74%",layout:{padding:{left:90,right:90,top:28,bottom:28}},plugins:{chartGradientBackground:{colors:["#eef6ff","#fbfdff","#d8e5f0"]},title:{display:true,text:"Quantidade por produto (data de emissão)",color:"#29292e",font:{size:17,weight:"bold"}},legend:{position:"bottom",labels:{boxWidth:14,padding:14,color:"#29292e",font:{size:12}}},tooltip:{callbacks:{label:context=>`${context.label}: ${tons(context.raw)}`}}}},
 		plugins:[chartGradientBackground,pieValueLabels]
 	});
 }
@@ -360,13 +360,13 @@ async function renderReceiptReport(){
 	reportCharts.receiptDaily=new Chart($("receiptDailyChart").getContext("2d"),{
 		type:"bar",
 		data:{labels,datasets},
-		options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:30,right:12}},plugins:{chartGradientBackground:{colors:["#eef6ff","#fbfdff","#d8e5f0"]},title:{display:true,text:selected?`Recebimento diário - ${selected}`:"Composição diária por material",color:"#29292e",font:{size:17,weight:"bold"}},tooltip:{callbacks:{label:context=>`${context.dataset.label}: ${tons(context.raw)}`}}},scales:{x:{stacked:true,title:{display:true,text:"Data de emissão"}},y:{stacked:true,beginAtZero:true,grace:"15%",title:{display:true,text:"Toneladas"},ticks:{callback:value=>new Intl.NumberFormat("pt-BR").format(value)}}}},
+		options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:30,right:12}},plugins:{chartGradientBackground:{colors:["#eef6ff","#fbfdff","#d8e5f0"]},title:{display:true,text:selected?`Recebimento diário por data de emissão - ${selected}`:"Composição diária por material (data de emissão)",color:"#29292e",font:{size:17,weight:"bold"}},tooltip:{callbacks:{label:context=>`${context.dataset.label}: ${tons(context.raw)}`}}},scales:{x:{stacked:true,title:{display:true,text:"Data de emissão"}},y:{stacked:true,beginAtZero:true,grace:"15%",title:{display:true,text:"Toneladas"},ticks:{callback:value=>new Intl.NumberFormat("pt-BR").format(value)}}}},
 		plugins:[chartGradientBackground]
 	});
 	reportCharts.receiptShare=new Chart($("receiptShareChart").getContext("2d"),{
 		type:"doughnut",
 		data:{labels:materials,datasets:[{data:result.totais_materiais.map(item=>item.total_ton),backgroundColor:materials.map((_,index)=>reportColors[index%reportColors.length]),borderColor:"#fff",borderWidth:2}]},
-		options:{responsive:true,maintainAspectRatio:false,cutout:"58%",layout:{padding:{left:20,right:20,top:8}},plugins:{chartGradientBackground:{colors:["#eef6ff","#fbfdff","#d8e5f0"]},title:{display:true,text:"Participação total por material",color:"#29292e",font:{size:17,weight:"bold"}},legend:{position:"bottom"},tooltip:{callbacks:{label:context=>`${context.label}: ${tons(context.raw)}`}}}},
+		options:{responsive:true,maintainAspectRatio:false,cutout:"58%",layout:{padding:{left:20,right:20,top:8}},plugins:{chartGradientBackground:{colors:["#eef6ff","#fbfdff","#d8e5f0"]},title:{display:true,text:"Participação total por material (data de emissão)",color:"#29292e",font:{size:17,weight:"bold"}},legend:{position:"bottom"},tooltip:{callbacks:{label:context=>`${context.label}: ${tons(context.raw)}`}}}},
 		plugins:[chartGradientBackground,pieValueLabels]
 	});
 }
