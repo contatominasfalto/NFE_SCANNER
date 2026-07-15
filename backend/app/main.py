@@ -558,6 +558,16 @@ def importar_remessa(
                     )
                 )
                 erros += 1
+                registrar_auditoria(
+                    db,
+                    current_user,
+                    "Registrou nota com erro",
+                    "Notas fiscais",
+                    "Registrou chave invalida da remessa para tratamento.",
+                    "NotaFiscal",
+                    nota.id,
+                    f"Local: {nota.local} | Chave: {mask_access_key(nota.chave_acesso)} | Motivo: {detalhe}",
+                )
             except IntegrityError:
                 duplicadas += 1
                 itens.append(
@@ -585,6 +595,16 @@ def importar_remessa(
                 )
             )
             logger.info("Nota importada por remessa | id=%s | numero=%s | local=%s", nota.id, nota.numero_nf, nota.local)
+            registrar_auditoria(
+                db,
+                current_user,
+                "Cadastrou nota por remessa",
+                "Notas fiscais",
+                f"Cadastrou NF {nota.numero_nf} pela remessa.",
+                "NotaFiscal",
+                nota.id,
+                f"Local: {nota.local} | Chave: {mask_access_key(nota.chave_acesso)}",
+            )
         except IntegrityError:
             duplicadas += 1
             itens.append(
@@ -621,6 +641,16 @@ def importar_remessa(
                     nota.id,
                     mask_access_key(chave_acesso),
                     detalhe,
+                )
+                registrar_auditoria(
+                    db,
+                    current_user,
+                    "Registrou nota com erro",
+                    "Notas fiscais",
+                    "Registrou falha de consulta da remessa para tratamento.",
+                    "NotaFiscal",
+                    nota.id,
+                    f"Local: {nota.local} | Chave: {mask_access_key(nota.chave_acesso)} | Motivo: {detalhe}",
                 )
             except IntegrityError:
                 duplicadas += 1
