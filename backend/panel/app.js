@@ -34,7 +34,7 @@ function render(){const body=$("notesTable"),page=getTablePage();body.innerHTML=
 		return `<tr class="save-error">
 <td class="sticky"><div class="row-actions">${editAction}${deleteAction}</div></td>
 <td title="${esc(n.chave_acesso)}">${esc(n.chave_acesso)}</td><td>${date(n.data_cadastro)}</td>${errorCell.repeat(3)}
-<td><span class="badge">${esc(n.local||"—")}</span></td>${errorCell.repeat(7)}</tr>`;
+<td><span class="badge">${esc(n.local||"—")}</span></td>${errorCell.repeat(4)}<td>${esc(n.faturista||"—")}</td>${errorCell.repeat(2)}</tr>`;
 	}
 	return `<tr>
 <td class="sticky"><div class="row-actions">${editAction}${xmlAction}${deleteAction}</div></td>

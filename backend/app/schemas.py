@@ -87,6 +87,7 @@ class NotaFiscalErrorCreate(BaseModel):
     chave_acesso: str = Field(min_length=1, max_length=100)
     local: Optional[str] = None
     detalhe: Optional[str] = Field(None, max_length=2000)
+    faturista: str = "BIPE"
 
 
 class NotaFiscalErrorRefreshItem(BaseModel):

@@ -58,7 +58,7 @@ def create_nota_erro(db: Session, erro: schemas.NotaFiscalErrorCreate):
         produto="ERRO",
         quantidade=None,
         transportador="ERRO",
-        faturista="ERRO",
+        faturista=erro.faturista or "BIPE",
         lider_operacional="ERRO",
         observacao="ERRO",
         erro_salvamento=True,

@@ -491,7 +491,12 @@ def importar_remessa(
             try:
                 nota = crud.create_nota_erro(
                     db,
-                    schemas.NotaFiscalErrorCreate(chave_acesso=chave_erro, local=remessa_data.local.value, detalhe=detalhe),
+                    schemas.NotaFiscalErrorCreate(
+                        chave_acesso=chave_erro,
+                        local=remessa_data.local.value,
+                        detalhe=detalhe,
+                        faturista=usuario_lancamento(current_user.username),
+                    ),
                 )
                 itens.append(
                     schemas.BarcodeBatchItem(
@@ -544,7 +549,12 @@ def importar_remessa(
             try:
                 nota = crud.create_nota_erro(
                     db,
-                    schemas.NotaFiscalErrorCreate(chave_acesso=chave_acesso, local=remessa_data.local.value, detalhe=detalhe),
+                    schemas.NotaFiscalErrorCreate(
+                        chave_acesso=chave_acesso,
+                        local=remessa_data.local.value,
+                        detalhe=detalhe,
+                        faturista=usuario_lancamento(current_user.username),
+                    ),
                 )
                 erros += 1
                 itens.append(
@@ -631,6 +641,7 @@ def create_nota_erro(
     db: Session = Depends(get_db),
 ):
     ensure_not_viewer(current_user)
+    erro_data = erro_data.model_copy(update={"faturista": usuario_lancamento(current_user.username)})
     try:
         nota = crud.create_nota_erro(db, erro_data)
     except IntegrityError as error:
