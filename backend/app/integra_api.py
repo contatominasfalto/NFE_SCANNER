@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 from datetime import datetime
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote
@@ -100,7 +101,17 @@ def parse_nfe_xml(xml_content: bytes, chave_acesso: str) -> dict:
     try:
         root = ElementTree.fromstring(xml_content)
     except ElementTree.ParseError as error:
-        raise IntegracaoAPIError("XML retornado pela API fiscal e invalido.") from error
+        if "unbound prefix" not in str(error):
+            raise IntegracaoAPIError("XML retornado pela API fiscal e invalido.") from error
+        sanitized_content = sanitize_unbound_prefix_xml(xml_content)
+        try:
+            root = ElementTree.fromstring(sanitized_content)
+            logger.warning(
+                "XML da API fiscal sanitizado por prefixo invalido | chave=%s",
+                mask_access_key(chave_acesso),
+            )
+        except ElementTree.ParseError as sanitized_error:
+            raise IntegracaoAPIError("XML retornado pela API fiscal e invalido.") from sanitized_error
 
     data_emissao = find_text(root, "dhEmi") or find_text(root, "dEmi")
     produtos = find_all_text(root, "xProd")
@@ -119,6 +130,15 @@ def parse_nfe_xml(xml_content: bytes, chave_acesso: str) -> dict:
         "faturista": "BIPE",
         "observacao": find_text(root, "infCpl") or None,
     }
+
+
+def sanitize_unbound_prefix_xml(xml_content: bytes) -> bytes:
+    text = xml_content.decode("utf-8", errors="replace")
+    text = re.sub(r"<xmlns:[^>]+>.*?</xmlns:[^>]+>", "", text)
+    text = re.sub(r"\sxmlns:[A-Za-z_][\w.-]*=\"[^\"]*\"", "", text)
+    text = re.sub(r"(<\/?)[A-Za-z_][\w.-]*:", r"\1", text)
+    text = re.sub(r"\s[A-Za-z_][\w.-]*:([A-Za-z_][\w.-]*)=", r" \1=", text)
+    return text.encode("utf-8")
 
 
 def find_text(root, tag_name: str) -> str:
