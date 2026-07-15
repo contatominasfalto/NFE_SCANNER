@@ -33,7 +33,7 @@ function render(){const body=$("notesTable"),page=getTablePage();body.innerHTML=
 		const errorCell = `<td class="error-value" title="${esc(n.erro_detalhe||"Falha ao salvar nota")}">ERRO</td>`;
 		return `<tr class="save-error">
 <td class="sticky"><div class="row-actions">${editAction}${deleteAction}</div></td>
-<td title="${esc(n.chave_acesso)}">${esc(n.chave_acesso)}</td>${errorCell.repeat(4)}
+<td title="${esc(n.chave_acesso)}">${esc(n.chave_acesso)}</td><td>${date(n.data_cadastro)}</td>${errorCell.repeat(3)}
 <td><span class="badge">${esc(n.local||"—")}</span></td>${errorCell.repeat(7)}</tr>`;
 	}
 	return `<tr>
