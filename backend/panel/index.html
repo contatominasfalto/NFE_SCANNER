@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Painel NF-e</title>
-  <link rel="stylesheet" href="/painel-assets/styles.css?v=20260715-03">
+  <link rel="stylesheet" href="/painel-assets/styles.css?v=20260715-04">
 </head>
 <body>
   <dialog class="modal compact" id="loginDialog">
@@ -75,8 +75,10 @@
       <div class="toolbar">
         <label class="search"><span>⌕</span><input id="searchInput" placeholder="Buscar NF, chave, produto, fornecedor, transportador..."></label>
         <label class="flag-filter"><input id="errorOnlyFilter" type="checkbox" onchange="applyFilters()" onclick="applyFilters()"><span>Com erro</span></label>
-        <label class="date-filter"><span>Bip</span><input id="bipDateFilter" type="date" aria-label="Filtrar por data do bip"></label>
-        <label class="date-filter"><span>Emissão</span><input id="issueDateFilter" type="date" aria-label="Filtrar por data de emissão"></label>
+        <label class="date-filter"><span>Bip inicial</span><input id="bipStartDateFilter" type="date" aria-label="Data bip inicial"></label>
+        <label class="date-filter"><span>Bip final</span><input id="bipEndDateFilter" type="date" aria-label="Data bip final"></label>
+        <label class="date-filter"><span>Emissão inicial</span><input id="issueStartDateFilter" type="date" aria-label="Data emissão inicial"></label>
+        <label class="date-filter"><span>Emissão final</span><input id="issueEndDateFilter" type="date" aria-label="Data emissão final"></label>
         <select id="localFilter" aria-label="Filtrar por local">
           <option value="">Todos os locais</option>
           <option>CDMA</option><option>PRU</option>
@@ -230,6 +232,6 @@
   </dialog>
   <div id="toast" role="status"></div>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="/painel-assets/app.js?v=20260715-03"></script>
+  <script src="/painel-assets/app.js?v=20260715-04"></script>
 </body>
 </html>
