@@ -22,7 +22,7 @@ from sqlalchemy.orm import Session
 from . import barcode_service, crud, integra_api, models, report_service, schemas, config
 from .database import engine, ensure_schema, get_db, SessionLocal
 from .logging_config import configure_logging, mask_access_key
-from .note_author import aplicar_usuario_lancamento, usuario_lancamento
+from .note_author import aplicar_usuario_lancamento, usuario_efetivo_erro, usuario_lancamento
 
 logger = configure_logging()
 models.Base.metadata.create_all(bind=engine)
@@ -681,7 +681,7 @@ def refresh_notas_erro(
         try:
             chave_acesso = barcode_service.extract_access_key(chave_acesso)
             nota_data = integra_api.consultar_nfe(chave_acesso)
-            nota_data["faturista"] = usuario_lancamento(current_user.username)
+            nota_data["faturista"] = usuario_efetivo_erro(nota.faturista, current_user.username)
             crud.resolve_nota_erro(db, nota, nota_data)
             atualizadas += 1
             detalhe = "Atualizada com sucesso."
