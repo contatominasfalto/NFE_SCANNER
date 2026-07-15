@@ -459,3 +459,18 @@ tbody tr:hover td {
         height: 340px;
     }
 }
+
+.audit-modal{width:min(1180px,calc(100vw - 34px));padding:22px}
+.audit-summary{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:12px;padding:13px 14px;border:1px solid #f4c78f;border-left:4px solid var(--orange);border-radius:6px;background:#fff8ec}
+.audit-summary strong{font-size:14px}
+.audit-summary span{font-size:12px;color:var(--muted)}
+.audit-table-wrap{border:1px solid var(--line);border-radius:8px;overflow:auto;max-height:62vh;background:#fff}
+.audit-table{min-width:1120px;width:100%;border-collapse:separate;border-spacing:0}
+.audit-table th{position:sticky;top:0;z-index:1;background:#f8f7f4;color:#555;font-size:11px;text-transform:uppercase}
+.audit-table th,.audit-table td{padding:10px 12px;border-bottom:1px solid #ecebea;border-right:1px solid #f4f2ef;text-align:left;vertical-align:top;white-space:normal;max-width:260px}
+.audit-table td:first-child{white-space:nowrap;width:150px}
+.audit-table td:nth-child(2),.audit-table td:nth-child(3),.audit-table td:nth-child(4){white-space:nowrap}
+.audit-table tbody tr:hover td{background:#fff9f1}
+.audit-user{display:inline-block;padding:3px 7px;border-radius:4px;background:#f4f4f5;border:1px solid var(--line);font-weight:800}
+.audit-action{display:inline-block;padding:4px 8px;border-radius:4px;background:#fff2de;border:1px solid #f4c78f;color:#7a4300;font-weight:800}
+.audit-empty{padding:38px;text-align:center;color:var(--muted);background:#fff}

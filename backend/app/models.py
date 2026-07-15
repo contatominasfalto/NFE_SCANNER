@@ -48,3 +48,17 @@ class User(Base):
     @property
     def data_cadastro(self):
         return self.created_at
+
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    created_at = Column(DateTime, default=datetime.now, index=True)
+    usuario = Column(String, index=True)
+    acao = Column(String, index=True)
+    area = Column(String, index=True)
+    entidade = Column(String, nullable=True)
+    entidade_id = Column(String, nullable=True)
+    descricao = Column(Text)
+    detalhes = Column(Text, nullable=True)

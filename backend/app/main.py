@@ -162,6 +162,31 @@ def ensure_not_viewer(user: models.User):
         raise HTTPException(status_code=403, detail="Usuario de visualizacao nao possui acesso a esta operacao.")
 
 
+def registrar_auditoria(
+    db: Session,
+    current_user: models.User,
+    acao: str,
+    area: str,
+    descricao: str,
+    entidade: str | None = None,
+    entidade_id: str | int | None = None,
+    detalhes: str | None = None,
+):
+    try:
+        crud.create_audit_log(
+            db,
+            usuario=current_user.username,
+            acao=acao,
+            area=area,
+            descricao=descricao,
+            entidade=entidade,
+            entidade_id=entidade_id,
+            detalhes=detalhes,
+        )
+    except Exception:
+        logger.exception("Falha ao registrar auditoria | usuario=%s | acao=%s", current_user.username, acao)
+
+
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, error: RequestValidationError):
     logger.warning(
@@ -372,6 +397,22 @@ def auth_me(current_user: models.User = Depends(get_current_user)):
     return current_user
 
 
+@app.get(
+    "/auditoria/",
+    response_model=list[schemas.AuditLogResponse],
+    tags=["Sistema"],
+    summary="Listar rastreabilidade do sistema",
+)
+def list_auditoria(
+    skip: int = Query(0, ge=0, description="Quantidade de registros a ignorar."),
+    limit: int = Query(200, ge=1, le=500, description="Quantidade maxima de eventos retornados."),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    ensure_admin(current_user)
+    return crud.list_audit_logs(db, skip=skip, limit=limit)
+
+
 @app.post(
     "/barcode-nf/",
     response_model=schemas.BarcodeResult,
@@ -454,6 +495,16 @@ def importar_barcode(
         logger.warning("Importacao duplicada | chave=%s", mask_access_key(nota_data.chave_acesso))
         raise HTTPException(status_code=409, detail="Nota fiscal ja cadastrada para esta chave de acesso.") from error
     logger.info("Nota importada | id=%s | numero=%s | local=%s", nota.id, nota.numero_nf, nota.local)
+    registrar_auditoria(
+        db,
+        current_user,
+        "Importou nota",
+        "Notas fiscais",
+        f"Importou NF {nota.numero_nf} pela chave de acesso.",
+        "NotaFiscal",
+        nota.id,
+        f"Local: {nota.local} | Chave: {mask_access_key(nota.chave_acesso)}",
+    )
     return nota
 
 
@@ -581,7 +632,7 @@ def importar_remessa(
                     )
                 )
 
-    return schemas.BarcodeBatchResponse(
+    response = schemas.BarcodeBatchResponse(
         total=len(itens),
         cadastradas=cadastradas,
         erros=erros,
@@ -589,6 +640,17 @@ def importar_remessa(
         invalidas=invalidas,
         itens=itens,
     )
+    registrar_auditoria(
+        db,
+        current_user,
+        "Importou remessa",
+        "Notas fiscais",
+        f"Processou remessa com {response.total} chave(s).",
+        "Remessa",
+        None,
+        f"Local: {remessa_data.local.value} | Cadastradas: {cadastradas} | Erros: {erros} | Duplicadas: {duplicadas} | Invalidas: {invalidas}",
+    )
+    return response
 
 
 @app.post(
@@ -620,6 +682,16 @@ def create_nota(
         logger.warning("Cadastro duplicado | chave=%s", mask_access_key(nota_data.chave_acesso))
         raise HTTPException(status_code=409, detail="Nota fiscal ja cadastrada para esta chave de acesso.") from error
     logger.info("Nota cadastrada | id=%s | numero=%s | local=%s", nota.id, nota.numero_nf, nota.local)
+    registrar_auditoria(
+        db,
+        current_user,
+        "Cadastrou nota",
+        "Notas fiscais",
+        f"Cadastrou NF {nota.numero_nf}.",
+        "NotaFiscal",
+        nota.id,
+        f"Local: {nota.local} | Chave: {mask_access_key(nota.chave_acesso)}",
+    )
     return nota
 
 
@@ -652,6 +724,16 @@ def create_nota_erro(
         nota.id,
         mask_access_key(nota.chave_acesso),
         erro_data.detalhe,
+    )
+    registrar_auditoria(
+        db,
+        current_user,
+        "Registrou nota com erro",
+        "Notas fiscais",
+        "Registrou chave pendente para tratamento.",
+        "NotaFiscal",
+        nota.id,
+        f"Local: {nota.local} | Chave: {mask_access_key(nota.chave_acesso)} | Motivo: {erro_data.detalhe}",
     )
     return nota
 
@@ -706,12 +788,23 @@ def refresh_notas_erro(
             )
         )
 
-    return schemas.NotaFiscalErrorRefreshResponse(
+    response = schemas.NotaFiscalErrorRefreshResponse(
         encontradas=len(notas_erro),
         atualizadas=atualizadas,
         falhas=len(notas_erro) - atualizadas,
         itens=itens,
     )
+    registrar_auditoria(
+        db,
+        current_user,
+        "Atualizou notas com erro",
+        "Notas fiscais",
+        "Executou refresh das NF-es sinalizadas com erro.",
+        "RefreshErro",
+        None,
+        f"Encontradas: {response.encontradas} | Atualizadas: {response.atualizadas} | Falhas: {response.falhas}",
+    )
+    return response
 
 
 @app.get(
@@ -937,6 +1030,16 @@ def update_nota(nota_id: int, nota_data: schemas.NotaFiscalUpdate, current_user:
         logger.warning("Edicao recusada: nota nao encontrada | id=%s", nota_id)
         raise HTTPException(status_code=404, detail="Nota fiscal nao encontrada.")
     logger.info("Nota atualizada | id=%s | numero=%s | local=%s", nota.id, nota.numero_nf, nota.local)
+    registrar_auditoria(
+        db,
+        current_user,
+        "Editou nota",
+        "Notas fiscais",
+        f"Editou NF {nota.numero_nf}.",
+        "NotaFiscal",
+        nota.id,
+        f"Local: {nota.local} | Chave: {mask_access_key(nota.chave_acesso)}",
+    )
     return nota
 
 
@@ -961,6 +1064,16 @@ def delete_nota(nota_id: int, current_user: models.User = Depends(get_current_us
         raise HTTPException(status_code=404, detail="Nota fiscal nao encontrada.")
 
     logger.info("Nota excluida | id=%s | numero=%s", nota.id, nota.numero_nf)
+    registrar_auditoria(
+        db,
+        current_user,
+        "Excluiu nota",
+        "Notas fiscais",
+        f"Excluiu NF {nota.numero_nf}.",
+        "NotaFiscal",
+        nota.id,
+        f"Chave: {mask_access_key(nota.chave_acesso)}",
+    )
     return schemas.NotaFiscalDeleteResponse(
         id=nota.id,
         numero_nf=nota.numero_nf,
@@ -983,6 +1096,16 @@ def create_faturista(faturista_data: schemas.FaturistaCreate, current_user: mode
     except IntegrityError as error:
         raise HTTPException(status_code=409, detail="Faturista ja cadastrado.") from error
     logger.info("Faturista cadastrado | id=%s | nome=%s | admin=%s", faturista.id, faturista.nome, current_user.username)
+    registrar_auditoria(
+        db,
+        current_user,
+        "Cadastrou usuario",
+        "Usuarios",
+        f"Cadastrou usuario {faturista.nome}.",
+        "Usuario",
+        faturista.id,
+        f"Perfil: {faturista.role}",
+    )
     return faturista
 
 
@@ -1027,6 +1150,16 @@ def update_faturista(
     except IntegrityError as error:
         raise HTTPException(status_code=409, detail="Ja existe um faturista com este nome.") from error
     logger.info("Faturista atualizado | id=%s | nome=%s | ativo=%s | admin=%s", faturista.id, faturista.nome, faturista.ativo, current_user.username)
+    registrar_auditoria(
+        db,
+        current_user,
+        "Editou usuario",
+        "Usuarios",
+        f"Editou usuario {faturista.nome}.",
+        "Usuario",
+        faturista.id,
+        f"Ativo: {faturista.ativo}",
+    )
     return faturista
 
 
@@ -1048,6 +1181,15 @@ def delete_faturista(faturista_id: int, current_user: models.User = Depends(get_
         raise HTTPException(status_code=409, detail="O usuario de visualizacao nao pode ser excluido.")
     faturista = crud.delete_faturista(db, faturista_id)
     logger.info("Faturista excluido | id=%s | nome=%s | admin=%s", faturista.id, faturista.nome, current_user.username)
+    registrar_auditoria(
+        db,
+        current_user,
+        "Excluiu usuario",
+        "Usuarios",
+        f"Excluiu usuario {faturista.nome}.",
+        "Usuario",
+        faturista.id,
+    )
     return schemas.FaturistaDeleteResponse(
         id=faturista.id,
         nome=faturista.nome,

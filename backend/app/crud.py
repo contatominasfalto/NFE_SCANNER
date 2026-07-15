@@ -152,6 +152,39 @@ def delete_nota(db: Session, nota_id: int):
         db.commit()
     return nota
 
+def create_audit_log(
+    db: Session,
+    usuario: str,
+    acao: str,
+    area: str,
+    descricao: str,
+    entidade: str | None = None,
+    entidade_id: str | int | None = None,
+    detalhes: str | None = None,
+):
+    log = models.AuditLog(
+        usuario=usuario,
+        acao=acao,
+        area=area,
+        entidade=entidade,
+        entidade_id=str(entidade_id) if entidade_id is not None else None,
+        descricao=descricao,
+        detalhes=detalhes,
+    )
+    db.add(log)
+    db.commit()
+    db.refresh(log)
+    return log
+
+def list_audit_logs(db: Session, skip: int = 0, limit: int = 200):
+    return (
+        db.query(models.AuditLog)
+        .order_by(models.AuditLog.created_at.desc(), models.AuditLog.id.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+
 def filter_notas(db: Session, data_inicio=None, data_fim=None, fornecedor=None, valor_min=None, valor_max=None, nota_id=None):
     query = db.query(models.NotaFiscal)
     

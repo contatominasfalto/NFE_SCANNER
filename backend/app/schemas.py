@@ -221,3 +221,18 @@ class UserResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class AuditLogResponse(BaseModel):
+    id: int
+    created_at: datetime
+    usuario: str
+    acao: str
+    area: str
+    entidade: Optional[str] = None
+    entidade_id: Optional[str] = None
+    descricao: str
+    detalhes: Optional[str] = None
+
+    class Config:
+        from_attributes = True
