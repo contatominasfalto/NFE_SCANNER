@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Painel NF-e</title>
-  <link rel="stylesheet" href="/painel-assets/styles.css?v=20260715-07">
+  <link rel="stylesheet" href="/painel-assets/styles.css?v=20260717-01">
 </head>
 <body>
   <dialog class="modal compact" id="loginDialog">
@@ -39,10 +39,10 @@
     </div>
     <nav>
       <button class="nav-item active" id="openNotes" data-view="notas"><span>▦</span> Notas fiscais</button>
-      <button class="nav-item" id="openFaturistas"><span>◉</span> Usuários</button>
-      <button class="nav-item" id="openReports"><span>📊</span> Relatórios</button>
+      <button class="nav-item" id="openFaturistas" hidden><span>◉</span> Usuários</button>
+      <button class="nav-item" id="openReports" hidden><span>📊</span> Relatórios</button>
       <button class="nav-item" id="openAudit" hidden><span>⏱</span> Rastreabilidade</button>
-      <a class="nav-item" id="openSwagger" href="/docs" target="_blank"><span>↗</span> Swagger API</a>
+      <a class="nav-item" id="openSwagger" href="/docs" target="_blank" hidden><span>↗</span> Swagger API</a>
     </nav>    
     <div class="connection"><i></i><span>Atualização automática ativa</span></div>
     <div class="sidebar-footer">
@@ -247,6 +247,6 @@
   </dialog>
   <div id="toast" role="status"></div>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="/painel-assets/app.js?v=20260715-07"></script>
+  <script src="/painel-assets/app.js?v=20260717-01"></script>
 </body>
 </html>
