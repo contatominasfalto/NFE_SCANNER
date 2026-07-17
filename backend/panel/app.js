@@ -3,7 +3,7 @@ const SHOW_USER_FILTER=false;
 const ROLE_PERMISSIONS={
 	admin:{notes:true,users:true,reports:true,audit:true,swagger:true,batch:true,download:true,refreshErrors:true},
 	user:{notes:true,users:false,reports:true,audit:false,swagger:false,batch:true,download:true,refreshErrors:true},
-	viewer:{notes:true,users:false,reports:false,audit:false,swagger:false,batch:false,download:false,refreshErrors:false}
+	viewer:{notes:true,users:false,reports:true,audit:false,swagger:false,batch:false,download:false,refreshErrors:false}
 };
 const fields=["numero_nf","serie","data_emissao","cnpj_fornecedor","nome_fornecedor","valor_total","chave_acesso","local","produto","quantidade","transportador","faturista","lider_operacional","observacao"];
 const money=v=>new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(v||0);
