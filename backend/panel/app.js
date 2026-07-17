@@ -13,7 +13,7 @@ function toast(message,error=false){const el=$("toast");el.textContent=message;e
 function showLogin(message){$("loginError").textContent=message||"";document.body.classList.remove("authenticated");const dialog=$("loginDialog");if(!dialog.open){dialog.showModal();}}
 function hideLogin(){document.body.classList.add("authenticated");const dialog=$("loginDialog");if(dialog.open){dialog.close();}$("loginError").textContent="";}
 function getPermissions(){return ROLE_PERMISSIONS[currentUser?.role]||ROLE_PERMISSIONS.viewer}
-function setVisible(id,visible){const el=$(id);if(el)el.hidden=!visible}
+function setVisible(id,visible){const el=$(id);if(!el)return;el.hidden=!visible;el.style.display=visible?"":"none"}
 function applyAccessRules(){
 	const p=getPermissions(),isAdmin=currentUser?.role==="admin",isViewer=currentUser?.role==="viewer";
 	$("userBadge").textContent=currentUser?`${currentUser.username}${isAdmin?" (admin)":isViewer?" (viewer)":""}`:"";
