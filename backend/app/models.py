@@ -6,23 +6,23 @@ class NotaFiscal(Base):
     __tablename__ = "notas_fiscais"
 
     id = Column(Integer, primary_key=True, index=True)
-    numero_nf = Column(String, index=True)
-    serie = Column(String)
+    numero_nf = Column(String(30), index=True)
+    serie = Column(String(10))
     data_emissao = Column(DateTime)
-    cnpj_fornecedor = Column(String, index=True)
-    nome_fornecedor = Column(String, index=True)
+    cnpj_fornecedor = Column(String(20), index=True)
+    nome_fornecedor = Column(String(255), index=True)
     valor_total = Column(Float)
-    chave_acesso = Column(String, unique=True, index=True)
-    local = Column(String, index=True, nullable=True)
+    chave_acesso = Column(String(44), unique=True, index=True)
+    local = Column(String(20), index=True, nullable=True)
     produto = Column(Text)
     quantidade = Column(Float)
-    transportador = Column(String)
-    faturista = Column(String, default="BIPE")
-    lider_operacional = Column(String)
+    transportador = Column(String(255))
+    faturista = Column(String(100), default="BIPE")
+    lider_operacional = Column(String(100))
     observacao = Column(Text)
     erro_salvamento = Column(Boolean, default=False, nullable=False)
     erro_detalhe = Column(Text)
-    caminho_arquivo_imagem = Column(String)
+    caminho_arquivo_imagem = Column(String(500))
     data_cadastro = Column(DateTime, default=datetime.now)
 
 
@@ -30,10 +30,10 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, unique=True, index=True, nullable=False)
-    password_hash = Column(String, nullable=False)
-    salt = Column(String, nullable=False)
-    role = Column(String, default="user", nullable=False)
+    username = Column(String(100), unique=True, index=True, nullable=False)
+    password_hash = Column(String(128), nullable=False)
+    salt = Column(String(64), nullable=False)
+    role = Column(String(30), default="user", nullable=False)
     active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=datetime.now)
 
