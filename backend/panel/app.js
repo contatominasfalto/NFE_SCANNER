@@ -359,10 +359,8 @@ async function renderMaterialReport(){
 	const range=getGlobalReportRange();
 	if(!range)return;
 	const {start,end}=range;
-	const params=new URLSearchParams({data_inicio:start,data_fim:end});
 	const material=selectedReportMaterial();
-	if(material)params.set("material",material);
-	const result=await api(`/relatorios/material/?${params}`);
+	const result=materialResultFromNotes(start,end,material);
 	renderMaterialTable(result);
 	return result;
 }
