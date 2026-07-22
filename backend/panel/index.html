@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Painel NF-e</title>
-  <link rel="stylesheet" href="/painel-assets/styles.css?v=20260722-02">
+  <link rel="stylesheet" href="/painel-assets/styles.css?v=20260722-03">
 </head>
 <body>
   <dialog class="modal compact" id="loginDialog">
@@ -233,7 +233,7 @@
   </dialog>
   <dialog id="auditDialog">
     <section class="modal audit-modal">
-      <header><div><p class="eyebrow">RASTREABILIDADE</p><h2>Modificações do sistema</h2></div><button class="icon-button close" type="button" data-close="auditDialog">×</button></header>
+      <header><div><p class="eyebrow">RASTREABILIDADE</p><h2>Modificações do sistema</h2></div><div class="audit-header-actions"><button class="secondary export-excel" id="exportAuditExcel" type="button">↓ Baixar Excel</button><button class="icon-button close" type="button" data-close="auditDialog">×</button></div></header>
       <div class="audit-summary" id="auditSummary"><strong>Carregando eventos...</strong><span>Histórico administrativo de alterações</span></div>
       <div class="audit-table-wrap">
         <table class="audit-table">
@@ -247,6 +247,6 @@
   </dialog>
   <div id="toast" role="status"></div>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="/painel-assets/app.js?v=20260722-02"></script>
+  <script src="/painel-assets/app.js?v=20260722-03"></script>
 </body>
 </html>

@@ -462,6 +462,7 @@ tbody tr:hover td {
 }
 
 .audit-modal{width:min(1180px,calc(100vw - 34px));padding:22px}
+.audit-header-actions{display:flex;align-items:center;gap:10px}.audit-header-actions .export-excel{border-color:#28865c;color:#176b45}.audit-header-actions .export-excel:hover{background:#effaf4;border-color:#28865c}
 .audit-summary{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:12px;padding:13px 14px;border:1px solid #f4c78f;border-left:4px solid var(--orange);border-radius:6px;background:#fff8ec}
 .audit-summary strong{font-size:14px}
 .audit-summary span{font-size:12px;color:var(--muted)}
