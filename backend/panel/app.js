@@ -269,8 +269,10 @@ function reportDateKey(note,start,end){
 	if(!Number.isNaN(issueTime)&&issueTime>=startTime&&issueTime<=endTime)return dateKey(note.data_emissao);
 	return dateKey(note.data_cadastro||note.data_emissao);
 }
-function materialResultFromNotes(start,end){
-	const grouped=new Map(),items=notesInReportRange(start,end);
+function selectedReportMaterial(){return $("receiptMaterial")?.value||""}
+function materialResultFromNotes(start,end,selectedMaterial=""){
+	const material_normalizado=selectedMaterial||"";
+	const grouped=new Map(),items=notesInReportRange(start,end).filter(note=>!material_normalizado||(String(note.produto||"Sem produto").trim()||"Sem produto")===material_normalizado);
 	items.forEach(note=>{
 		const material=String(note.produto||"Sem produto").trim()||"Sem produto";
 		const current=grouped.get(material)||{material,quantidade_ton:0,quantidade_nfes:0};
@@ -281,12 +283,14 @@ function materialResultFromNotes(start,end){
 	const materiais=[...grouped.values()].map(item=>({...item,quantidade_ton:Number(item.quantidade_ton.toFixed(3))})).sort((a,b)=>b.quantidade_ton-a.quantidade_ton);
 	return{inicio:start,fim:end,total_ton:Number(materiais.reduce((sum,item)=>sum+item.quantidade_ton,0).toFixed(3)),total_nfes:items.length,materiais};
 }
-function sectorResultFromNotes(start,end){
+function sectorResultFromNotes(start,end,selectedMaterial=""){
+	const material_normalizado=selectedMaterial||"";
 	const grouped=new Map();
 	notesInReportRange(start,end).forEach(note=>{
 		const local=note.local==="CDMA"||note.local==="PRU"?note.local:null;
 		if(!local)return;
 		const material=String(note.produto||"Sem produto").trim()||"Sem produto";
+		if(material_normalizado&&material!==material_normalizado)return;
 		const current=grouped.get(material)||{material,quantidade_cdma_ton:0,quantidade_nfes_cdma:0,quantidade_pru_ton:0,quantidade_nfes_pru:0};
 		const quantity=Number(note.quantidade||0)/1000;
 		if(local==="CDMA"){current.quantidade_cdma_ton+=quantity;current.quantidade_nfes_cdma+=1}
@@ -356,6 +360,8 @@ async function renderMaterialReport(){
 	if(!range)return;
 	const {start,end}=range;
 	const params=new URLSearchParams({data_inicio:start,data_fim:end});
+	const material=selectedReportMaterial();
+	if(material)params.set("material",material);
 	const result=await api(`/relatorios/material/?${params}`);
 	renderMaterialTable(result);
 	return result;
@@ -364,14 +370,14 @@ async function renderSectorReport(){
 	const range=getGlobalReportRange();
 	if(!range)return;
 	const {start,end}=range;
-	const result=sectorResultFromNotes(start,end);
+	const result=sectorResultFromNotes(start,end,selectedReportMaterial());
 	$("sectorReportBody").innerHTML=result.materiais.map(item=>`<tr><td>${esc(item.material)}</td><td>${tons(item.quantidade_cdma_ton)}</td><td>${new Intl.NumberFormat("pt-BR").format(item.quantidade_nfes_cdma)}</td><td>${tons(item.quantidade_pru_ton)}</td><td>${new Intl.NumberFormat("pt-BR").format(item.quantidade_nfes_pru)}</td></tr>`).join("");
 	$("sectorReportEmpty").hidden=result.materiais.length>0;
 }
 async function renderReceiptReport(){
 	const range=getGlobalReportRange();
 	if(!range)return;
-	const {start,end}=range,material=$("receiptMaterial").value;
+	const {start,end}=range,material=selectedReportMaterial();
 	const result=receiptResultFromNotes(start,end,material);
 	const materialSelect=$("receiptMaterial"),selected=result.material||"";
 	materialSelect.innerHTML='<option value="">Todos os materiais</option>'+result.materiais_disponiveis.map(item=>`<option value="${esc(item)}">${esc(item)}</option>`).join("");
@@ -414,7 +420,8 @@ async function exportOperationalReport(format){
 		recebimento_inicio:range.start,
 		recebimento_fim:range.end,
 	};
-	if($("receiptMaterial").value)values.recebimento_material=$("receiptMaterial").value;
+	const material=selectedReportMaterial();
+	if(material){values.material=material;values.recebimento_material=material}
 	const button=format==="pdf"?$("exportReportPdf"):$("exportReportExcel"),original=button.textContent;
 	button.disabled=true;button.textContent="Gerando...";
 	try{

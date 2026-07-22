@@ -878,6 +878,7 @@ def list_notas(
 def relatorio_operacional(
     data_inicio: datetime | None = Query(None, description="Data e hora inicial inclusiva."),
     data_fim: datetime | None = Query(None, description="Data e hora final inclusiva."),
+    material: str | None = Query(None, description="Material especifico. Omitir para considerar todos."),
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -900,7 +901,7 @@ def relatorio_operacional(
         )
         inicio_dia = agora.replace(hour=0, minute=0, second=0, microsecond=0)
         fim_dia = agora.replace(hour=23, minute=59, second=59, microsecond=999999)
-    return crud.get_relatorio_operacional(db, inicio_mes, fim_mes, inicio_dia, fim_dia)
+    return crud.get_relatorio_operacional(db, inicio_mes, fim_mes, inicio_dia, fim_dia, material)
 
 
 @app.get(
@@ -916,6 +917,7 @@ def relatorio_operacional(
 def relatorio_material(
     data_inicio: datetime = Query(description="Data e hora inicial inclusiva."),
     data_fim: datetime = Query(description="Data e hora final inclusiva."),
+    material: str | None = Query(None, description="Material especifico. Omitir para considerar todos."),
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -923,7 +925,7 @@ def relatorio_material(
         raise HTTPException(status_code=400, detail="A data inicial deve ser anterior ou igual a data final.")
     if data_fim.second == 0 and data_fim.microsecond == 0:
         data_fim = data_fim.replace(second=59, microsecond=999999)
-    return crud.get_relatorio_material(db, data_inicio, data_fim)
+    return crud.get_relatorio_material(db, data_inicio, data_fim, material)
 
 
 @app.get(
@@ -939,6 +941,7 @@ def relatorio_material(
 def relatorio_material_local(
     data_inicio: datetime = Query(description="Data e hora inicial inclusiva."),
     data_fim: datetime = Query(description="Data e hora final inclusiva."),
+    material: str | None = Query(None, description="Material especifico. Omitir para considerar todos."),
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -946,7 +949,7 @@ def relatorio_material_local(
         raise HTTPException(status_code=400, detail="A data inicial deve ser anterior ou igual a data final.")
     if data_fim.second == 0 and data_fim.microsecond == 0:
         data_fim = data_fim.replace(second=59, microsecond=999999)
-    return crud.get_relatorio_material_local(db, data_inicio, data_fim)
+    return crud.get_relatorio_material_local(db, data_inicio, data_fim, material)
 
 
 @app.get(
@@ -991,6 +994,7 @@ def exportar_relatorio_operacional(
     recebimento_inicio: datetime | None = Query(None),
     recebimento_fim: datetime | None = Query(None),
     recebimento_material: str | None = Query(None),
+    material: str | None = Query(None),
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -1011,10 +1015,11 @@ def exportar_relatorio_operacional(
     agora = datetime.now()
     inicio_mes = inicio_dia = material_inicio
     fim_mes = fim_dia = material_fim
-    operacional = crud.get_relatorio_operacional(db, inicio_mes, fim_mes, inicio_dia, fim_dia)
-    material = crud.get_relatorio_material(db, material_inicio, material_fim)
-    setor = crud.get_relatorio_material_local(db, setor_inicio, setor_fim)
-    recebimento = crud.get_relatorio_recebimento(db, recebimento_inicio, recebimento_fim, recebimento_material)
+    material_filtrado = material or recebimento_material
+    operacional = crud.get_relatorio_operacional(db, inicio_mes, fim_mes, inicio_dia, fim_dia, material_filtrado)
+    material = crud.get_relatorio_material(db, material_inicio, material_fim, material_filtrado)
+    setor = crud.get_relatorio_material_local(db, setor_inicio, setor_fim, material_filtrado)
+    recebimento = crud.get_relatorio_recebimento(db, recebimento_inicio, recebimento_fim, material_filtrado)
 
     timestamp = agora.strftime("%Y%m%d_%H%M%S")
     filename = f"relatorio_operacional_{timestamp}.{formato}"

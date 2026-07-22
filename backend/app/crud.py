@@ -210,7 +210,9 @@ def get_relatorio_operacional(
     fim_mes: datetime,
     inicio_dia: datetime,
     fim_dia: datetime,
+    material: str | None = None,
 ):
+    material_normalizado = material.strip() if material else None
     notas = (
         db.query(models.NotaFiscal)
         .filter(
@@ -231,6 +233,8 @@ def get_relatorio_operacional(
                 continue
             quantidade = float(nota.quantidade or 0)
             produto = (nota.produto or "Sem produto").strip() or "Sem produto"
+            if material_normalizado and produto != material_normalizado:
+                continue
             produtos[produto] += quantidade
             total_quantidade += quantidade
             total_notas += 1
@@ -249,7 +253,7 @@ def get_relatorio_operacional(
     return {"mes": resumir(inicio_mes, fim_mes), "dia": resumir(inicio_dia, fim_dia)}
 
 
-def get_relatorio_material(db: Session, inicio: datetime, fim: datetime):
+def get_relatorio_material(db: Session, inicio: datetime, fim: datetime, material: str | None = None):
     notas = (
         db.query(models.NotaFiscal)
         .filter(
@@ -259,9 +263,12 @@ def get_relatorio_material(db: Session, inicio: datetime, fim: datetime):
         .all()
     )
     materiais = defaultdict(lambda: {"quantidade": 0.0, "nfes": 0})
+    material_normalizado = material.strip() if material else None
 
     for nota in notas:
         material = (nota.produto or "Sem produto").strip() or "Sem produto"
+        if material_normalizado and material != material_normalizado:
+            continue
         materiais[material]["quantidade"] += float(nota.quantidade or 0)
         materiais[material]["nfes"] += 1
 
@@ -280,13 +287,13 @@ def get_relatorio_material(db: Session, inicio: datetime, fim: datetime):
     return {
         "inicio": inicio,
         "fim": fim,
-        "total_ton": round(sum(float(nota.quantidade or 0) for nota in notas) / 1000, 3),
-        "total_nfes": len(notas),
+        "total_ton": round(sum(dados["quantidade"] for dados in materiais.values()) / 1000, 3),
+        "total_nfes": sum(dados["nfes"] for dados in materiais.values()),
         "materiais": itens,
     }
 
 
-def get_relatorio_material_local(db: Session, inicio: datetime, fim: datetime):
+def get_relatorio_material_local(db: Session, inicio: datetime, fim: datetime, material: str | None = None):
     notas = (
         db.query(models.NotaFiscal)
         .filter(
@@ -301,9 +308,12 @@ def get_relatorio_material_local(db: Session, inicio: datetime, fim: datetime):
             "PRU": {"quantidade": 0.0, "nfes": 0},
         }
     )
+    material_normalizado = material.strip() if material else None
 
     for nota in notas:
         material = (nota.produto or "Sem produto").strip() or "Sem produto"
+        if material_normalizado and material != material_normalizado:
+            continue
         local = nota.local if nota.local in {"CDMA", "PRU"} else None
         if not local:
             continue
