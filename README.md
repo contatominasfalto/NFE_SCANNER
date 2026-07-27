@@ -391,4 +391,8 @@ Depois do deploy, validar:
 
 ## Autor
 
+Maxwell Viana
+
 Projeto desenvolvido para uso operacional da Minasfalto.
+
+Assinatura visual utilizada no painel: `backend/panel/assinatura-maxwell.png`.
