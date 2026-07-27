@@ -297,6 +297,26 @@ with engine.connect() as conn:
 '@ | .\venv\Scripts\python.exe
 ```
 
+## Integracao Power BI
+
+O projeto possui uma camada pronta de views para consumo no Power BI.
+
+Arquivos:
+
+| Arquivo | Finalidade |
+| --- | --- |
+| `docs/powerbi_setup.sql` | Cria o schema `powerbi` e as views de indicadores |
+| `docs/powerbi_guia.md` | Passo a passo para conectar o Power BI ao PostgreSQL Render |
+
+Fluxo recomendado:
+
+```text
+aplicar docs/powerbi_setup.sql no PostgreSQL Render
+criar usuario somente leitura para Power BI
+conectar Power BI Desktop usando a External Database URL
+selecionar as views do schema powerbi
+```
+
 ## Endpoints principais
 
 | Metodo | Endpoint | Finalidade |
