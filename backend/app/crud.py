@@ -106,6 +106,43 @@ def get_notas_erro(db: Session):
     )
 
 
+def corrigir_fuso_emissao_suspeito(db: Session, horas: int = 3):
+    notas = (
+        db.query(models.NotaFiscal)
+        .filter(
+            models.NotaFiscal.data_emissao.isnot(None),
+            _nota_sem_erro(),
+        )
+        .order_by(models.NotaFiscal.id)
+        .all()
+    )
+    deslocamento = timedelta(hours=horas)
+    corrigidas = []
+
+    for nota in notas:
+        data_emissao = nota.data_emissao
+        if not data_emissao or data_emissao.hour >= horas:
+            continue
+
+        antes = data_emissao
+        depois = antes - deslocamento
+        nota.data_emissao = depois
+        corrigidas.append(
+            {
+                "id": nota.id,
+                "chave_acesso": nota.chave_acesso,
+                "numero_nf": nota.numero_nf,
+                "antes": antes,
+                "depois": depois,
+            }
+        )
+
+    if corrigidas:
+        db.commit()
+
+    return corrigidas
+
+
 def resolve_nota_erro(db: Session, nota: models.NotaFiscal, nota_data: dict):
     local_original = nota.local
     for field, value in nota_data.items():

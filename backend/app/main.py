@@ -769,6 +769,41 @@ def create_nota_erro(
 
 
 @app.post(
+    "/notas/corrigir-fuso-emissao/",
+    response_model=schemas.NotaFiscalTimezoneFixResponse,
+    tags=["Notas fiscais"],
+    summary="Corrigir fuso da data de emissao das notas",
+    description=(
+        "Corrige registros antigos salvos com conversao UTC indevida. "
+        "Notas sem erro com data de emissao entre 00:00 e 02:59 recebem -3h, "
+        "preservando o horario original da NF-e no Brasil."
+    ),
+)
+def corrigir_fuso_emissao(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    ensure_admin(current_user)
+    itens = crud.corrigir_fuso_emissao_suspeito(db)
+    response = schemas.NotaFiscalTimezoneFixResponse(
+        encontradas=len(itens),
+        corrigidas=len(itens),
+        itens=itens,
+    )
+    registrar_auditoria(
+        db,
+        current_user,
+        "Corrigiu fuso de emissao",
+        "Notas fiscais",
+        "Aplicou correcao UTC-3 em datas de emissao suspeitas.",
+        "NotaFiscal",
+        None,
+        f"Corrigidas: {response.corrigidas}",
+    )
+    return response
+
+
+@app.post(
     "/notas/erro/refresh/",
     response_model=schemas.NotaFiscalErrorRefreshResponse,
     tags=["Notas fiscais"],

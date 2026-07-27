@@ -103,6 +103,20 @@ class NotaFiscalErrorRefreshResponse(BaseModel):
     itens: list[NotaFiscalErrorRefreshItem]
 
 
+class NotaFiscalTimezoneFixItem(BaseModel):
+    id: int
+    chave_acesso: Optional[str] = None
+    numero_nf: Optional[str] = None
+    antes: datetime
+    depois: datetime
+
+
+class NotaFiscalTimezoneFixResponse(BaseModel):
+    encontradas: int
+    corrigidas: int
+    itens: list[NotaFiscalTimezoneFixItem]
+
+
 class RelatorioProduto(BaseModel):
     produto: str
     quantidade_ton: float
