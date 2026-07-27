@@ -476,3 +476,25 @@ tbody tr:hover td {
 .audit-user{display:inline-block;padding:3px 7px;border-radius:4px;background:#f4f4f5;border:1px solid var(--line);font-weight:800}
 .audit-action{display:inline-block;padding:4px 8px;border-radius:4px;background:#fff2de;border:1px solid #f4c78f;color:#7a4300;font-weight:800}
 .audit-empty{padding:38px;text-align:center;color:var(--muted);background:#fff}
+.mobile-notes{display:none}
+
+@media(max-width:760px){
+    body{background:#fff}
+    .sidebar{position:sticky;top:0;z-index:30;width:100%;height:auto;inset:auto;padding:10px 12px;display:block}
+    .brand{padding:0 0 10px;gap:10px}.brand-mark{width:44px;height:44px}.brand strong{font-size:13px}.brand small{font-size:11px}
+    .sidebar nav{display:flex;gap:6px;margin-top:10px;overflow-x:auto;padding-bottom:2px}.nav-item{flex:0 0 auto;border-left:0;border-bottom:3px solid transparent;padding:9px 10px;font-size:12px}.nav-item span{font-size:14px}
+    .connection,.sidebar-footer{display:none}
+    main{margin-left:0;min-width:0;width:100%}
+    .topbar{height:auto;display:block;padding:14px 14px 12px}.topbar h1{font-size:22px}.top-actions{margin-top:12px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;white-space:normal}.top-actions>span,.top-actions .user-badge{grid-column:span 2;text-align:left}.top-actions .icon-button,.top-actions #logoutButton,.top-actions #openBatchScan,.top-actions .export-action{width:100%;min-width:0;flex:auto}
+    .metrics{grid-template-columns:1fr;padding:10px 12px 0}.metrics article{min-height:70px}
+    .workspace{margin:10px 12px 18px;border-radius:8px;overflow:visible}.toolbar{display:grid;grid-template-columns:1fr;overflow:visible;padding:10px}.toolbar .search,.toolbar .date-filter,.toolbar select{width:100%;min-width:0;flex:auto}.toolbar .search{height:40px}.toolbar .date-filter{height:40px;justify-content:space-between}.toolbar .date-filter input{width:auto;min-width:132px}.toolbar .flag-filter{justify-content:flex-start}
+    .table-summary{display:block;line-height:1.5}.table-summary span{display:none}.table-pagination{display:grid;gap:10px}.table-pagination label,.pagination-actions{justify-content:space-between}.pagination-actions{display:grid;grid-template-columns:1fr auto 1fr}.pagination-actions .secondary{height:36px}
+    .table-wrap{display:none}.mobile-notes{display:grid;gap:10px;padding:10px;background:#fffaf1}
+    .mobile-note-card{background:#fff;border:1px solid var(--line);border-top:3px solid var(--orange);border-radius:8px;padding:12px;box-shadow:0 1px 2px #29292e14}.mobile-note-card.save-error{border-top-color:var(--danger);background:#fff8f8}
+    .mobile-note-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.mobile-note-head span{display:block;font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase}.mobile-note-head strong{display:block;font-size:20px;margin-top:2px}.mobile-note-product{margin-top:10px;font-weight:800;line-height:1.35}
+    .mobile-note-card dl{display:grid;grid-template-columns:1fr 1fr;gap:9px 12px;margin:12px 0 0}.mobile-note-card dl div{min-width:0}.mobile-note-card dt{font-size:10px;text-transform:uppercase;color:var(--muted);font-weight:800}.mobile-note-card dd{margin:3px 0 0;font-size:13px;line-height:1.35;word-break:break-word}
+    .mobile-note-key{margin-top:12px;padding:8px;border-radius:6px;background:#faf9f7;border:1px solid #eee7dd;color:#555;font-size:11px;line-height:1.35;word-break:break-all}
+    .mobile-note-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.mobile-note-actions button{height:34px;border:1px solid var(--line);border-radius:6px;background:#fff;padding:0 12px;font-weight:800}.mobile-note-actions .danger-link{border-color:#efb0ae;color:var(--danger);background:#fff8f8}
+    .mobile-empty{padding:28px 14px;text-align:center;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:8px}
+    .modal.wide,.modal.medium,.modal.compact,.modal.xlarge,.audit-modal{width:calc(100vw - 18px);max-height:92vh;padding:16px}.form-grid,.inline-form{display:grid;grid-template-columns:1fr}.span-2,.span-3{grid-column:auto}.modal footer{display:grid;grid-template-columns:1fr}.modal footer button{width:100%}
+}
