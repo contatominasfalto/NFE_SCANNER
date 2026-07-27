@@ -168,12 +168,20 @@ def parse_datetime(value: str) -> datetime:
         raise IntegracaoAPIError("XML da NF-e sem data de emissao.")
 
     try:
-        return datetime.fromisoformat(value)
+        parsed = datetime.fromisoformat(value)
     except ValueError:
         try:
             return datetime.strptime(value, "%Y-%m-%d")
         except ValueError as error:
             raise IntegracaoAPIError("Data de emissao invalida no XML da NF-e.") from error
+
+    # A NF-e informa dhEmi no horario local da propria nota, por exemplo:
+    # 2026-07-26T21:00:04-03:00. Para painel e Excel, devemos preservar
+    # 21:00:04, e nao converter para 2026-07-27 00:00:04 UTC.
+    if parsed.tzinfo is not None:
+        return parsed.replace(tzinfo=None)
+
+    return parsed
 
 
 def parse_float(value: str) -> float:
