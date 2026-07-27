@@ -129,6 +129,26 @@ def update_nota_erro_detalhe(db: Session, nota: models.NotaFiscal, detalhe: str)
     return nota
 
 
+def refresh_nota_from_api_data(db: Session, nota: models.NotaFiscal, nota_data: dict):
+    local_original = nota.local
+    faturista_original = nota.faturista
+    data_cadastro_original = nota.data_cadastro
+
+    for field, value in nota_data.items():
+        if hasattr(nota, field) and field not in {"id", "local", "data_cadastro"}:
+            setattr(nota, field, value)
+
+    nota.local = local_original
+    nota.faturista = faturista_original or nota_data.get("faturista") or "BIPE"
+    nota.data_cadastro = data_cadastro_original
+    nota.erro_salvamento = False
+    nota.erro_detalhe = None
+
+    db.commit()
+    db.refresh(nota)
+    return nota
+
+
 def update_nota(db: Session, nota_id: int, nota_data: schemas.NotaFiscalUpdate):
     nota = get_nota(db, nota_id)
     if not nota:

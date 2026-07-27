@@ -1118,6 +1118,49 @@ def delete_nota(nota_id: int, current_user: models.User = Depends(get_current_us
 
 
 @app.post(
+    "/notas/{nota_id}/refresh/",
+    response_model=schemas.NotaFiscalResponse,
+    tags=["Notas fiscais"],
+    summary="Reprocessar nota fiscal pela API fiscal",
+    description=(
+        "Reconsulta a NF-e pela chave de acesso e atualiza a mesma linha, "
+        "preservando local, faturista e data/hora do bip. Use para corrigir "
+        "dados fiscais vindos do XML, como data de emissao."
+    ),
+)
+def refresh_nota(
+    nota_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    ensure_admin(current_user)
+    nota = crud.get_nota(db, nota_id)
+    if not nota:
+        raise HTTPException(status_code=404, detail="Nota fiscal nao encontrada.")
+
+    try:
+        chave_acesso = barcode_service.extract_access_key(nota.chave_acesso or "")
+        nota_data = integra_api.consultar_nfe(chave_acesso)
+        nota_atualizada = crud.refresh_nota_from_api_data(db, nota, nota_data)
+    except Exception as error:
+        db.rollback()
+        logger.exception("Falha ao reprocessar nota | id=%s", nota_id)
+        raise HTTPException(status_code=502, detail=str(error)) from error
+
+    registrar_auditoria(
+        db,
+        current_user,
+        "Reprocessou nota",
+        "Notas fiscais",
+        f"Reprocessou NF {nota_atualizada.numero_nf} pela API fiscal.",
+        "NotaFiscal",
+        nota_atualizada.id,
+        f"Local: {nota_atualizada.local} | Chave: {mask_access_key(nota_atualizada.chave_acesso)}",
+    )
+    return nota_atualizada
+
+
+@app.post(
     "/faturistas/",
     response_model=schemas.FaturistaResponse,
     tags=["Faturistas"],
