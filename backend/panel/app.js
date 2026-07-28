@@ -38,7 +38,8 @@ function setDefaultBipRange(force=false){const start=$("bipStartDateFilter"),end
 function getDateRange(startId,endId,label,showMessage=true){const start=$(startId).value,end=$(endId).value;if(Boolean(start)!==Boolean(end)){if(showMessage)toast(`Informe data inicial e final para filtrar por ${label}.`,true);return false}if(start&&end&&start>end){if(showMessage)toast(`A data inicial de ${label} nao pode ser maior que a final.`,true);return false}return start&&end?{start,end}:null}
 function inDateRange(value,range){const key=dateKey(value);return !range||Boolean(key&&key>=range.start&&key<=range.end)}
 function buildBipQuery(skip,limit,showMessage=true){const range=getDateRange("bipStartDateFilter","bipEndDateFilter","Bip",showMessage);if(range===false)return null;const params=new URLSearchParams({skip:String(skip),limit:String(limit)});if(range){params.set("data_cadastro_inicio",`${range.start}T00:00:00`);params.set("data_cadastro_fim",`${range.end}T23:59:59`)}return params}
-async function fetchAllNotes(showMessage=true){const all=[];let skip=0;while(true){const params=buildBipQuery(skip,NOTES_PAGE_SIZE,showMessage);if(!params)return null;const page=await api(`/notas/?${params.toString()}`);all.push(...page);if(page.length<NOTES_PAGE_SIZE)break;skip+=NOTES_PAGE_SIZE;}return all}
+function buildAllNotesQuery(skip,limit){return new URLSearchParams({skip:String(skip),limit:String(limit)})}
+async function fetchAllNotes(showMessage=true,buildQuery=buildBipQuery){const all=[];let skip=0;while(true){const params=buildQuery(skip,NOTES_PAGE_SIZE,showMessage);if(!params)return null;const page=await api(`/notas/?${params.toString()}`);all.push(...page);if(page.length<NOTES_PAGE_SIZE)break;skip+=NOTES_PAGE_SIZE;}return all}
 async function loadAll(silent=false){if(refreshing)return;refreshing=true;try{const loadedNotes=await fetchAllNotes(!silent);if(loadedNotes===null)return;notes=loadedNotes;if(currentUser?.role==="admin"){faturistas=await api("/faturistas/?incluir_inativos=true")}else{faturistas=[];}renderBillingOptions();applyFilters({resetPage:false,showMessage:!silent});if(currentUser?.role==="admin")renderFaturistas();$("lastUpdate").textContent=`Atualizado ${new Date().toLocaleTimeString("pt-BR")}`;if(!silent)toast("Dados atualizados")}catch(e){toast(e.message,true)}finally{refreshing=false}}
 function isErrorNote(n){return Boolean(n.erro_salvamento)||fields.some(k=>String(n[k]??"").trim().toUpperCase()==="ERRO")}
 function displayFaturista(n){const value=String(n.faturista??"").trim();return isErrorNote(n)&&(!value||value.toUpperCase()==="ERRO")?(currentUser?.username||"—"):(value||"BIPE")}
@@ -335,7 +336,7 @@ function receiptResultFromNotes(start,end,selectedMaterial=""){
 	return{inicio:start,fim:end,material:material_normalizado||null,materiais_disponiveis,totais_materiais,total_ton:Number(totais_materiais.reduce((sum,item)=>sum+item.total_ton,0).toFixed(3)),dias};
 }
 async function refreshReportNotes(){
-	const loadedNotes=await fetchAllNotes();
+	const loadedNotes=await fetchAllNotes(false,buildAllNotesQuery);
 	if(loadedNotes===null)return notes;
 	notes=loadedNotes;
 	applyFilters({resetPage:false});
