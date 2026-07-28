@@ -144,10 +144,14 @@ def corrigir_fuso_emissao_suspeito(db: Session, horas: int = 3):
     return corrigidas
 
 
-def corrigir_fuso_bip(db: Session, horas: int = 3):
+def corrigir_fuso_bip_suspeito(db: Session, horas: int = 3, tolerancia_minutos: int = 5):
+    limite_futuro = local_now() + timedelta(minutes=tolerancia_minutos)
     notas = (
         db.query(models.NotaFiscal)
-        .filter(models.NotaFiscal.data_cadastro.isnot(None))
+        .filter(
+            models.NotaFiscal.data_cadastro.isnot(None),
+            models.NotaFiscal.data_cadastro > limite_futuro,
+        )
         .order_by(models.NotaFiscal.id)
         .all()
     )

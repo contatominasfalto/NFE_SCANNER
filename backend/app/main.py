@@ -829,7 +829,7 @@ def corrigir_fuso_bip(
     if ja_executado and not forcar:
         return schemas.NotaFiscalTimezoneFixResponse(encontradas=0, corrigidas=0, itens=[])
 
-    itens = crud.corrigir_fuso_bip(db)
+    itens = crud.corrigir_fuso_bip_suspeito(db)
     response = schemas.NotaFiscalTimezoneFixResponse(
         encontradas=len(itens),
         corrigidas=len(itens),
@@ -840,7 +840,7 @@ def corrigir_fuso_bip(
         current_user,
         acao,
         "Notas fiscais",
-        "Aplicou correcao UTC-3 no horario de bip salvo em data_cadastro.",
+        "Aplicou correcao UTC-3 somente em horarios de bip futuros em data_cadastro.",
         "NotaFiscal",
         None,
         f"Corrigidas: {response.corrigidas}",
