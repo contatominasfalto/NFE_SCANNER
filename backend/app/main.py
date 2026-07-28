@@ -271,7 +271,7 @@ def health_check():
 
 @app.get("/painel", include_in_schema=False, response_class=FileResponse)
 def painel():
-    return FileResponse(PANEL_DIR / "index.html")
+    return FileResponse(PANEL_DIR / "index.html", headers={"Cache-Control": "no-store"})
 
 
 @app.get("/app-download", include_in_schema=False, response_class=FileResponse)
