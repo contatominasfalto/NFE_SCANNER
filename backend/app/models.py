@@ -1,6 +1,6 @@
 from sqlalchemy import Boolean, Column, Integer, String, Float, DateTime, Text
-from datetime import datetime
 from .database import Base
+from .time_utils import local_now
 
 class NotaFiscal(Base):
     __tablename__ = "notas_fiscais"
@@ -23,7 +23,7 @@ class NotaFiscal(Base):
     erro_salvamento = Column(Boolean, default=False, nullable=False)
     erro_detalhe = Column(Text)
     caminho_arquivo_imagem = Column(String(500))
-    data_cadastro = Column(DateTime, default=datetime.now)
+    data_cadastro = Column(DateTime, default=local_now)
 
 
 class User(Base):
@@ -35,7 +35,7 @@ class User(Base):
     salt = Column(String(64), nullable=False)
     role = Column(String(30), default="user", nullable=False)
     active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(DateTime, default=datetime.now)
+    created_at = Column(DateTime, default=local_now)
 
     @property
     def nome(self):
@@ -54,7 +54,7 @@ class AuditLog(Base):
     __tablename__ = "audit_logs"
 
     id = Column(Integer, primary_key=True, index=True)
-    created_at = Column(DateTime, default=datetime.now, index=True)
+    created_at = Column(DateTime, default=local_now, index=True)
     usuario = Column(String(100), index=True)
     acao = Column(String(120), index=True)
     area = Column(String(120), index=True)

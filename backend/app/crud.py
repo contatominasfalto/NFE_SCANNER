@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from . import models, schemas
 from datetime import datetime, timedelta
+from .time_utils import local_now
 
 def _nota_sem_erro():
     return or_(
@@ -33,7 +34,7 @@ def create_nota(db: Session, nota: schemas.NotaFiscalCreate, imagem_path: str | 
     db_nota = models.NotaFiscal(
         **data,
         caminho_arquivo_imagem=imagem_path or nota.caminho_arquivo_imagem,
-        data_cadastro=datetime.now()
+        data_cadastro=local_now()
     )
     db.add(db_nota)
     try:
@@ -49,7 +50,7 @@ def create_nota_erro(db: Session, erro: schemas.NotaFiscalErrorCreate):
     db_nota = models.NotaFiscal(
         numero_nf="ERRO",
         serie="ERRO",
-        data_emissao=datetime.now(),
+        data_emissao=local_now(),
         cnpj_fornecedor="ERRO",
         nome_fornecedor="ERRO",
         valor_total=0,
@@ -63,7 +64,7 @@ def create_nota_erro(db: Session, erro: schemas.NotaFiscalErrorCreate):
         observacao="ERRO",
         erro_salvamento=True,
         erro_detalhe=erro.detalhe,
-        data_cadastro=datetime.now(),
+        data_cadastro=local_now(),
     )
     db.add(db_nota)
     try:
@@ -127,6 +128,36 @@ def corrigir_fuso_emissao_suspeito(db: Session, horas: int = 3):
         antes = data_emissao
         depois = antes - deslocamento
         nota.data_emissao = depois
+        corrigidas.append(
+            {
+                "id": nota.id,
+                "chave_acesso": nota.chave_acesso,
+                "numero_nf": nota.numero_nf,
+                "antes": antes,
+                "depois": depois,
+            }
+        )
+
+    if corrigidas:
+        db.commit()
+
+    return corrigidas
+
+
+def corrigir_fuso_bip(db: Session, horas: int = 3):
+    notas = (
+        db.query(models.NotaFiscal)
+        .filter(models.NotaFiscal.data_cadastro.isnot(None))
+        .order_by(models.NotaFiscal.id)
+        .all()
+    )
+    deslocamento = timedelta(hours=horas)
+    corrigidas = []
+
+    for nota in notas:
+        antes = nota.data_cadastro
+        depois = antes - deslocamento
+        nota.data_cadastro = depois
         corrigidas.append(
             {
                 "id": nota.id,

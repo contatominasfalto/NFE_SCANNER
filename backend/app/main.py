@@ -23,6 +23,7 @@ from . import barcode_service, crud, integra_api, models, report_service, schema
 from .database import engine, ensure_schema, get_db, SessionLocal
 from .logging_config import configure_logging, mask_access_key
 from .note_author import aplicar_usuario_lancamento, usuario_efetivo_erro, usuario_lancamento
+from .time_utils import local_now
 
 logger = configure_logging()
 models.Base.metadata.create_all(bind=engine)
@@ -804,6 +805,50 @@ def corrigir_fuso_emissao(
 
 
 @app.post(
+    "/notas/corrigir-fuso-bip/",
+    response_model=schemas.NotaFiscalTimezoneFixResponse,
+    include_in_schema=False,
+)
+def corrigir_fuso_bip(
+    confirmar: bool = Query(False),
+    forcar: bool = Query(False),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    ensure_admin(current_user)
+    if not confirmar:
+        raise HTTPException(status_code=400, detail="Informe confirmar=true para executar a correcao.")
+
+    acao = "Corrigiu fuso do bip"
+    ja_executado = (
+        db.query(models.AuditLog)
+        .filter(models.AuditLog.acao == acao)
+        .order_by(models.AuditLog.id.desc())
+        .first()
+    )
+    if ja_executado and not forcar:
+        return schemas.NotaFiscalTimezoneFixResponse(encontradas=0, corrigidas=0, itens=[])
+
+    itens = crud.corrigir_fuso_bip(db)
+    response = schemas.NotaFiscalTimezoneFixResponse(
+        encontradas=len(itens),
+        corrigidas=len(itens),
+        itens=itens,
+    )
+    registrar_auditoria(
+        db,
+        current_user,
+        acao,
+        "Notas fiscais",
+        "Aplicou correcao UTC-3 no horario de bip salvo em data_cadastro.",
+        "NotaFiscal",
+        None,
+        f"Corrigidas: {response.corrigidas}",
+    )
+    return response
+
+
+@app.post(
     "/notas/erro/refresh/",
     response_model=schemas.NotaFiscalErrorRefreshResponse,
     tags=["Notas fiscais"],
@@ -925,7 +970,7 @@ def relatorio_operacional(
         inicio_mes = inicio_dia = data_inicio
         fim_mes = fim_dia = data_fim
     else:
-        agora = datetime.now()
+        agora = local_now()
         inicio_mes = agora.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         fim_mes = agora.replace(
             day=monthrange(agora.year, agora.month)[1],
@@ -1047,7 +1092,7 @@ def exportar_relatorio_operacional(
     if recebimento_fim.second == 0 and recebimento_fim.microsecond == 0:
         recebimento_fim = recebimento_fim.replace(second=59, microsecond=999999)
 
-    agora = datetime.now()
+    agora = local_now()
     inicio_mes = inicio_dia = material_inicio
     fim_mes = fim_dia = material_fim
     material_filtrado = material or recebimento_material
