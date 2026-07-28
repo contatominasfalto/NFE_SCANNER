@@ -817,7 +817,10 @@ def corrigir_fuso_bip(
 ):
     ensure_admin(current_user)
     if not confirmar:
-        raise HTTPException(status_code=400, detail="Informe confirmar=true para executar a correcao.")
+        raise HTTPException(
+            status_code=400,
+            detail="Informe confirmar=true para corrigir somente bipes com horario futuro.",
+        )
 
     acao = "Corrigiu fuso do bip"
     ja_executado = (
