@@ -281,14 +281,6 @@ class ScanScreen(Screen):
     def registrar_nota_bipada(self):
         self.bipes_sequencia += 1
 
-    def informar_nota_bipada(self, identificador):
-        total = self.bipes_sequencia
-        nota_texto = "nota bipada" if total == 1 else "notas bipadas"
-        self.status_label.text = (
-            f"Nota {identificador} bipada com sucesso!\n"
-            f"Total desta sequencia: {total} {nota_texto}."
-        )
-
     def iniciar_leitura_camera(self, instance):
         if self.validando:
             return

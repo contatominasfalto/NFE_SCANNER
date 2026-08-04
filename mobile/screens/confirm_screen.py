@@ -228,7 +228,12 @@ class ConfirmScreen(Screen):
         try:
             identificador = self.identificador_nota_atual()
             self.salvar_nota_atual()
-            self.preparar_leitor_para_proxima(identificador)
+            self.show_dialog(
+                "Nota bipada com sucesso",
+                self.mensagem_nota_bipada(identificador),
+                on_ok=self.preparar_leitor_para_proxima,
+                button_text="Seguir",
+            )
         except Exception as error:
             self.show_dialog("Erro ao salvar", str(error))
 
@@ -267,6 +272,9 @@ class ConfirmScreen(Screen):
         nota_texto = "nota bipada" if total == 1 else "notas bipadas"
         return f"Total desta sequencia: {total} {nota_texto}."
 
+    def mensagem_nota_bipada(self, identificador):
+        return f"Nota {identificador} bipada com sucesso!\n{self.mensagem_total_bipes()}"
+
     def encerrar_para_lista(self):
         self.manager.get_screen("scan").limpar_local()
         App.get_running_app().root.current = "list"
@@ -275,7 +283,7 @@ class ConfirmScreen(Screen):
         self.manager.get_screen("scan").limpar_local()
         self.manager.current = "home"
 
-    def show_dialog(self, title, message, on_ok=None):
+    def show_dialog(self, title, message, on_ok=None, button_text="OK"):
         if self.dialog:
             self.dialog.dismiss()
 
@@ -289,7 +297,7 @@ class ConfirmScreen(Screen):
             text=message,
             buttons=[
                 MDFlatButton(
-                    text="OK",
+                    text=button_text,
                     theme_text_color="Custom",
                     text_color=PRIMARY,
                     on_release=confirmar,
