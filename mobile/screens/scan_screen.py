@@ -149,8 +149,8 @@ class ScanScreen(Screen):
 
         scroll.add_widget(content)
         root.add_widget(scroll)
+        self.screen_root = screen_root
         self.loading_overlay = self.criar_overlay_validacao()
-        screen_root.add_widget(self.loading_overlay)
         self.add_widget(screen_root)
 
     def criar_overlay_validacao(self):
@@ -214,6 +214,10 @@ class ScanScreen(Screen):
 
     def mostrar_validacao_api(self, ativo):
         self.validando = ativo
+        if ativo and not self.loading_overlay.parent:
+            self.screen_root.add_widget(self.loading_overlay)
+        elif not ativo and self.loading_overlay.parent:
+            self.screen_root.remove_widget(self.loading_overlay)
         self.loading_overlay.opacity = 1 if ativo else 0
         self.loading_overlay.disabled = not ativo
         self.barcode_input.disabled = ativo
@@ -224,6 +228,7 @@ class ScanScreen(Screen):
         self.preparar_nova_leitura()
 
     def preparar_nova_leitura(self):
+        self.mostrar_validacao_api(False)
         self.chave_acesso = None
         self.barcode_input.text = ""
         if self.local:
