@@ -446,7 +446,7 @@ class ScanScreen(Screen):
         nota_texto = "nota bipada" if total == 1 else "notas bipadas"
         self.status_label.text = "Chave de nota desconhecida pela API."
         self.barcode_input.text = chave_acesso
-        self.barcode_input.select_all()
+        self.barcode_input.cancel_selection()
         self.barcode_input.focus = False
         self.show_dialog(
             "Chave desconhecida pela API",
