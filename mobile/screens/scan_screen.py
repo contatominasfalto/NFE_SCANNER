@@ -7,14 +7,16 @@ from kivy.uix.screenmanager import Screen
 from kivy.uix.scrollview import ScrollView
 from kivy.utils import platform
 from kivymd.uix.boxlayout import MDBoxLayout
+from kivymd.uix.button import MDFlatButton
 from kivymd.uix.card import MDCard
+from kivymd.uix.dialog import MDDialog
 from kivymd.uix.label import MDLabel
 from kivymd.uix.textfield import MDTextField
 from kivymd.uix.toolbar import MDTopAppBar
 import re
 from threading import Thread
 
-from services.api_client import APIClient
+from services.api_client import APIClient, APIError
 from ui import (
     BG,
     DANGER_SOFT,
@@ -41,6 +43,8 @@ class ScanScreen(Screen):
         self.local = None
         self.scanner_listeners = []
         self.validando = False
+        self.bipes_sequencia = 0
+        self.dialog = None
         self.build_ui()
 
     def build_ui(self):
@@ -240,11 +244,13 @@ class ScanScreen(Screen):
     def set_local(self, local):
         self.local = local
         self.local_label.text = local
+        self.bipes_sequencia = 0
         self.preparar_nova_leitura()
 
     def limpar_local(self):
         self.local = None
         self.local_label.text = "Nao selecionado"
+        self.bipes_sequencia = 0
 
     def iniciar_leitura_camera(self, instance):
         if self.validando:
@@ -408,6 +414,7 @@ class ScanScreen(Screen):
             return
         self.barcode_input.text = chave_acesso
         self.status_label.text = "Validando nota na API. Aguarde..."
+        self.bipes_sequencia += 1
         self.mostrar_validacao_api(True)
         Thread(target=self.validar_codigo_na_api, args=(chave_acesso,), daemon=True).start()
 
@@ -415,12 +422,37 @@ class ScanScreen(Screen):
         try:
             result = APIClient.ler_codigo_barras(chave_acesso)
             Clock.schedule_once(lambda *_: self.concluir_validacao_api(result), 0)
+        except APIError as error:
+            if error.status_code == 404:
+                Clock.schedule_once(lambda *_: self.informar_chave_desconhecida(chave_acesso), 0)
+                return
+            nota_erro = {
+                "chave_acesso": chave_acesso,
+                "erro_consulta": str(error),
+            }
+            Clock.schedule_once(lambda *_: self.concluir_validacao_com_erro(chave_acesso, nota_erro), 0)
         except Exception as error:
             nota_erro = {
                 "chave_acesso": chave_acesso,
                 "erro_consulta": str(error),
             }
             Clock.schedule_once(lambda *_: self.concluir_validacao_com_erro(chave_acesso, nota_erro), 0)
+
+    def informar_chave_desconhecida(self, chave_acesso):
+        self.mostrar_validacao_api(False)
+        total = self.bipes_sequencia
+        nota_texto = "nota bipada" if total == 1 else "notas bipadas"
+        self.status_label.text = "Chave de nota desconhecida pela API."
+        self.barcode_input.text = chave_acesso
+        self.barcode_input.select_all()
+        self.barcode_input.focus = False
+        self.show_dialog(
+            "Chave desconhecida pela API",
+            (
+                "A chave lida nao foi reconhecida pela API fiscal.\n\n"
+                f"Total desta sequencia: {total} {nota_texto}."
+            ),
+        )
 
     def concluir_validacao_api(self, result):
         self.chave_acesso = result["chave_acesso"]
@@ -442,3 +474,20 @@ class ScanScreen(Screen):
     def voltar(self, instance):
         self.limpar_local()
         self.manager.current = "home"
+
+    def show_dialog(self, title, message):
+        if self.dialog:
+            self.dialog.dismiss()
+        self.dialog = MDDialog(
+            title=title,
+            text=message,
+            buttons=[
+                MDFlatButton(
+                    text="OK",
+                    theme_text_color="Custom",
+                    text_color=PRIMARY,
+                    on_release=lambda *_: self.dialog.dismiss(),
+                )
+            ],
+        )
+        self.dialog.open()
