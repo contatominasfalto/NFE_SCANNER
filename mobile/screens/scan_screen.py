@@ -45,6 +45,7 @@ class ScanScreen(Screen):
         self.validando = False
         self.bipes_sequencia = 0
         self.dialog = None
+        self.loading_event = None
         self.build_ui()
 
     def build_ui(self):
@@ -172,24 +173,21 @@ class ScanScreen(Screen):
             radius=[12, 12, 12, 12],
             elevation=4,
             padding=dp(20),
-            spacing=dp(10),
+            spacing=dp(14),
             md_bg_color=WHITE,
             size_hint=(None, None),
             size=(dp(280), dp(190)),
             pos_hint={"center_x": 0.5, "center_y": 0.5},
         )
-        card.add_widget(
-            MDLabel(
-                text="⏳",
-                font_style="H4",
-                bold=True,
-                halign="center",
-                theme_text_color="Custom",
-                text_color=PRIMARY,
-                size_hint_y=None,
-                height=dp(58),
-            )
-        )
+        self.loading_bar_value = 8
+        self.loading_bar = FloatLayout(size_hint_y=None, height=dp(8))
+        with self.loading_bar.canvas.before:
+            Color(1.0, 0.91, 0.80, 1)
+            self.loading_track_rect = Rectangle(pos=self.loading_bar.pos, size=self.loading_bar.size)
+            Color(*PRIMARY)
+            self.loading_fill_rect = Rectangle(pos=self.loading_bar.pos, size=(0, dp(8)))
+        self.loading_bar.bind(pos=self.atualizar_loading_bar, size=self.atualizar_loading_bar)
+        card.add_widget(self.loading_bar)
         card.add_widget(
             MDLabel(
                 text="Validando nota na API...",
@@ -220,13 +218,41 @@ class ScanScreen(Screen):
         self.validando = ativo
         if ativo and not self.loading_overlay.parent:
             self.screen_root.add_widget(self.loading_overlay)
+            self.iniciar_loading_bar()
         elif not ativo and self.loading_overlay.parent:
             self.screen_root.remove_widget(self.loading_overlay)
+            self.parar_loading_bar()
         self.loading_overlay.opacity = 1 if ativo else 0
         self.loading_overlay.disabled = not ativo
         self.barcode_input.disabled = ativo
         self.camera_button.disabled = ativo
         self.validate_button.disabled = ativo
+
+    def iniciar_loading_bar(self):
+        self.loading_bar_value = 8
+        self.atualizar_loading_bar()
+        if not self.loading_event:
+            self.loading_event = Clock.schedule_interval(self.animar_loading_bar, 0.03)
+
+    def parar_loading_bar(self):
+        if self.loading_event:
+            self.loading_event.cancel()
+            self.loading_event = None
+        self.loading_bar_value = 0
+        self.atualizar_loading_bar()
+
+    def animar_loading_bar(self, interval):
+        self.loading_bar_value = 8 if self.loading_bar_value >= 100 else self.loading_bar_value + 2.5
+        self.atualizar_loading_bar()
+
+    def atualizar_loading_bar(self, *args):
+        self.loading_track_rect.pos = self.loading_bar.pos
+        self.loading_track_rect.size = self.loading_bar.size
+        self.loading_fill_rect.pos = self.loading_bar.pos
+        self.loading_fill_rect.size = (
+            self.loading_bar.width * (self.loading_bar_value / 100),
+            self.loading_bar.height,
+        )
 
     def on_pre_enter(self):
         self.preparar_nova_leitura()
