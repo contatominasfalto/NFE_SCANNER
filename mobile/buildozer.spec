@@ -8,8 +8,8 @@ source.dir = .
 source.include_exts = py,kv,png,jpg,jpeg,json
 source.exclude_dirs = tests,__pycache__,.git
 
-version = 0.1.13
-android.numeric_version = 14
+version = 0.1.14
+android.numeric_version = 15
 requirements = python3,kivy==2.2.1,kivymd==1.1.1,requests,plyer
 
 orientation = portrait

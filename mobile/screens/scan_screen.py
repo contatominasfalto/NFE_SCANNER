@@ -1,6 +1,8 @@
 from kivy.clock import Clock
 from kivy.core.window import Window
+from kivy.graphics import Color, Rectangle
 from kivy.metrics import dp
+from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.screenmanager import Screen
 from kivy.uix.scrollview import ScrollView
 from kivy.utils import platform
@@ -10,6 +12,7 @@ from kivymd.uix.label import MDLabel
 from kivymd.uix.textfield import MDTextField
 from kivymd.uix.toolbar import MDTopAppBar
 import re
+from threading import Thread
 
 from services.api_client import APIClient
 from ui import (
@@ -37,10 +40,13 @@ class ScanScreen(Screen):
         self.chave_acesso = None
         self.local = None
         self.scanner_listeners = []
+        self.validando = False
         self.build_ui()
 
     def build_ui(self):
+        screen_root = FloatLayout()
         root = MDBoxLayout(orientation="vertical", md_bg_color=BG)
+        screen_root.add_widget(root)
 
         root.add_widget(
             MDTopAppBar(
@@ -131,20 +137,88 @@ class ScanScreen(Screen):
         content.add_widget(self.status_label)
         self.camera_button = primary_button("Abrir leitor pela camera", "camera", self.iniciar_leitura_camera)
         content.add_widget(self.camera_button)
-        content.add_widget(
-            soft_button(
-                "Validar codigo digitado",
-                "barcode-scan",
-                self.processar_codigo_barras,
-                SUCCESS_SOFT,
-                SUCCESS_TEXT,
-            )
+        self.validate_button = soft_button(
+            "Validar codigo digitado",
+            "barcode-scan",
+            self.processar_codigo_barras,
+            SUCCESS_SOFT,
+            SUCCESS_TEXT,
         )
+        content.add_widget(self.validate_button)
         content.add_widget(soft_button("Voltar ao inicio", "arrow-left", self.voltar, DANGER_SOFT, DANGER_TEXT))
 
         scroll.add_widget(content)
         root.add_widget(scroll)
-        self.add_widget(root)
+        self.loading_overlay = self.criar_overlay_validacao()
+        screen_root.add_widget(self.loading_overlay)
+        self.add_widget(screen_root)
+
+    def criar_overlay_validacao(self):
+        overlay = FloatLayout(size_hint=(1, 1), opacity=0, disabled=True)
+        with overlay.canvas.before:
+            Color(0, 0, 0, 0.45)
+            overlay.bg_rect = Rectangle(pos=overlay.pos, size=overlay.size)
+        overlay.bind(
+            pos=lambda instance, value: setattr(instance.bg_rect, "pos", value),
+            size=lambda instance, value: setattr(instance.bg_rect, "size", value),
+        )
+
+        card = MDCard(
+            orientation="vertical",
+            radius=[12, 12, 12, 12],
+            elevation=4,
+            padding=dp(20),
+            spacing=dp(10),
+            md_bg_color=WHITE,
+            size_hint=(None, None),
+            size=(dp(280), dp(190)),
+            pos_hint={"center_x": 0.5, "center_y": 0.5},
+        )
+        card.add_widget(
+            MDLabel(
+                text="⏳",
+                font_style="H4",
+                bold=True,
+                halign="center",
+                theme_text_color="Custom",
+                text_color=PRIMARY,
+                size_hint_y=None,
+                height=dp(58),
+            )
+        )
+        card.add_widget(
+            MDLabel(
+                text="Validando nota na API...",
+                font_style="H6",
+                bold=True,
+                halign="center",
+                theme_text_color="Custom",
+                text_color=TEXT,
+                size_hint_y=None,
+                height=dp(34),
+            )
+        )
+        card.add_widget(
+            MDLabel(
+                text="Aguarde a conferencia terminar.",
+                font_style="Body2",
+                halign="center",
+                theme_text_color="Custom",
+                text_color=MUTED,
+                size_hint_y=None,
+                height=dp(34),
+            )
+        )
+        overlay.add_widget(card)
+        return overlay
+
+    def mostrar_validacao_api(self, ativo):
+        self.validando = ativo
+        self.loading_overlay.opacity = 1 if ativo else 0
+        self.loading_overlay.disabled = not ativo
+        self.barcode_input.disabled = ativo
+        self.camera_button.disabled = ativo
+        self.validate_button.disabled = ativo
 
     def on_pre_enter(self):
         self.preparar_nova_leitura()
@@ -168,6 +242,8 @@ class ScanScreen(Screen):
         self.local_label.text = "Nao selecionado"
 
     def iniciar_leitura_camera(self, instance):
+        if self.validando:
+            return
         self.fechar_teclado()
         self.barcode_input.focus = False
         if not self.local:
@@ -306,6 +382,9 @@ class ScanScreen(Screen):
         return match.group(0) if match else None
 
     def processar_codigo_barras(self, instance):
+        if self.validando:
+            return
+
         if not self.local:
             self.status_label.text = "Volte e selecione o local antes da leitura."
             return
@@ -323,22 +402,33 @@ class ScanScreen(Screen):
             self.barcode_input.focus = True
             return
         self.barcode_input.text = chave_acesso
+        self.status_label.text = "Validando nota na API. Aguarde..."
+        self.mostrar_validacao_api(True)
+        Thread(target=self.validar_codigo_na_api, args=(chave_acesso,), daemon=True).start()
 
+    def validar_codigo_na_api(self, chave_acesso):
         try:
             result = APIClient.ler_codigo_barras(chave_acesso)
-            self.chave_acesso = result["chave_acesso"]
-            self.status_label.text = "Nota consultada. Abrindo conferencia..."
-            Clock.schedule_once(lambda *_: self.ir_confirmar(result["nota"]), 0.3)
+            Clock.schedule_once(lambda *_: self.concluir_validacao_api(result), 0)
         except Exception as error:
-            self.chave_acesso = chave_acesso
-            self.status_label.text = "API fiscal indisponivel. Abrindo registro de erro..."
             nota_erro = {
                 "chave_acesso": chave_acesso,
                 "erro_consulta": str(error),
             }
-            Clock.schedule_once(lambda *_: self.ir_confirmar(nota_erro), 0.3)
+            Clock.schedule_once(lambda *_: self.concluir_validacao_com_erro(chave_acesso, nota_erro), 0)
+
+    def concluir_validacao_api(self, result):
+        self.chave_acesso = result["chave_acesso"]
+        self.status_label.text = "Nota consultada. Abrindo conferencia..."
+        Clock.schedule_once(lambda *_: self.ir_confirmar(result["nota"]), 0.3)
+
+    def concluir_validacao_com_erro(self, chave_acesso, nota_erro):
+        self.chave_acesso = chave_acesso
+        self.status_label.text = "API fiscal indisponivel. Abrindo registro de erro..."
+        Clock.schedule_once(lambda *_: self.ir_confirmar(nota_erro), 0.3)
 
     def ir_confirmar(self, nota_data):
+        self.mostrar_validacao_api(False)
         nota_data = dict(nota_data)
         nota_data["local"] = self.local
         self.manager.get_screen("confirm").set_nota_data(nota_data)
