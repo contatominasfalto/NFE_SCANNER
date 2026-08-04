@@ -211,14 +211,18 @@ class ConfirmScreen(Screen):
     def salvar_nota_atual(self):
         payload = self.build_payload()
         if self.erro_consulta:
-            return APIClient.save_nota_erro_com_fallback(
+            result = APIClient.save_nota_erro_com_fallback(
                 {
                     "chave_acesso": payload["chave_acesso"],
                     "local": payload["local"],
                     "detalhe": self.erro_consulta,
                 }
             )
-        return APIClient.save_nota_com_fallback(payload)
+        else:
+            result = APIClient.save_nota_com_fallback(payload)
+
+        self.manager.get_screen("scan").registrar_nota_bipada()
+        return result
 
     def salvar_e_proxima(self, instance):
         try:

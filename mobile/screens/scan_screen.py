@@ -252,6 +252,9 @@ class ScanScreen(Screen):
         self.local_label.text = "Nao selecionado"
         self.bipes_sequencia = 0
 
+    def registrar_nota_bipada(self):
+        self.bipes_sequencia += 1
+
     def iniciar_leitura_camera(self, instance):
         if self.validando:
             return
@@ -414,7 +417,6 @@ class ScanScreen(Screen):
             return
         self.barcode_input.text = chave_acesso
         self.status_label.text = "Validando nota na API. Aguarde..."
-        self.bipes_sequencia += 1
         self.mostrar_validacao_api(True)
         Thread(target=self.validar_codigo_na_api, args=(chave_acesso,), daemon=True).start()
 
