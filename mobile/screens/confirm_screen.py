@@ -230,8 +230,11 @@ class ConfirmScreen(Screen):
     def salvar_e_finalizar(self, instance):
         try:
             self.salvar_nota_atual()
-            self.manager.get_screen("scan").limpar_local()
-            App.get_running_app().root.current = "list"
+            self.show_dialog(
+                "Bipagem finalizada",
+                self.mensagem_total_bipes(),
+                on_ok=self.encerrar_para_lista,
+            )
         except Exception as error:
             self.show_dialog("Erro ao salvar", str(error))
 
@@ -241,12 +244,34 @@ class ConfirmScreen(Screen):
         scan_screen.preparar_nova_leitura()
 
     def cancelar(self, instance):
+        self.show_dialog(
+            "Bipagem cancelada",
+            self.mensagem_total_bipes(),
+            on_ok=self.encerrar_para_inicio,
+        )
+
+    def mensagem_total_bipes(self):
+        total = self.manager.get_screen("scan").bipes_sequencia
+        nota_texto = "nota bipada" if total == 1 else "notas bipadas"
+        return f"Total desta sequencia: {total} {nota_texto}."
+
+    def encerrar_para_lista(self):
+        self.manager.get_screen("scan").limpar_local()
+        App.get_running_app().root.current = "list"
+
+    def encerrar_para_inicio(self):
         self.manager.get_screen("scan").limpar_local()
         self.manager.current = "home"
 
-    def show_dialog(self, title, message):
+    def show_dialog(self, title, message, on_ok=None):
         if self.dialog:
             self.dialog.dismiss()
+
+        def confirmar(*_):
+            self.dialog.dismiss()
+            if on_ok:
+                on_ok()
+
         self.dialog = MDDialog(
             title=title,
             text=message,
@@ -255,7 +280,7 @@ class ConfirmScreen(Screen):
                     text="OK",
                     theme_text_color="Custom",
                     text_color=PRIMARY,
-                    on_release=lambda *_: self.dialog.dismiss(),
+                    on_release=confirmar,
                 )
             ],
         )
