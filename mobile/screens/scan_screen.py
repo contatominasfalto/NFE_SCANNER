@@ -480,6 +480,7 @@ class ScanScreen(Screen):
                 "A chave lida nao foi reconhecida pela API fiscal.\n\n"
                 f"Total desta sequencia: {total} {nota_texto}."
             ),
+            on_ok=self.encerrar_para_inicio,
         )
 
     def concluir_validacao_api(self, result):
@@ -503,9 +504,19 @@ class ScanScreen(Screen):
         self.limpar_local()
         self.manager.current = "home"
 
-    def show_dialog(self, title, message):
+    def encerrar_para_inicio(self):
+        self.limpar_local()
+        self.manager.current = "home"
+
+    def show_dialog(self, title, message, on_ok=None):
         if self.dialog:
             self.dialog.dismiss()
+
+        def confirmar(*_):
+            self.dialog.dismiss()
+            if on_ok:
+                on_ok()
+
         self.dialog = MDDialog(
             title=title,
             text=message,
@@ -514,7 +525,7 @@ class ScanScreen(Screen):
                     text="OK",
                     theme_text_color="Custom",
                     text_color=PRIMARY,
-                    on_release=lambda *_: self.dialog.dismiss(),
+                    on_release=confirmar,
                 )
             ],
         )
