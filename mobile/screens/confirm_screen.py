@@ -226,8 +226,9 @@ class ConfirmScreen(Screen):
 
     def salvar_e_proxima(self, instance):
         try:
+            identificador = self.identificador_nota_atual()
             self.salvar_nota_atual()
-            self.preparar_leitor_para_proxima()
+            self.preparar_leitor_para_proxima(identificador)
         except Exception as error:
             self.show_dialog("Erro ao salvar", str(error))
 
@@ -242,10 +243,17 @@ class ConfirmScreen(Screen):
         except Exception as error:
             self.show_dialog("Erro ao salvar", str(error))
 
-    def preparar_leitor_para_proxima(self):
+    def identificador_nota_atual(self):
+        numero_nf = self.campos["numero_nf"].text.strip()
+        chave = self.campos["chave_acesso"].text.strip()
+        return numero_nf or chave or "sem identificacao"
+
+    def preparar_leitor_para_proxima(self, identificador=None):
         self.manager.current = "scan"
         scan_screen = self.manager.get_screen("scan")
         scan_screen.preparar_nova_leitura()
+        if identificador:
+            scan_screen.informar_nota_bipada(identificador)
 
     def cancelar(self, instance):
         self.show_dialog(
