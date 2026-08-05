@@ -1,13 +1,14 @@
 import json
 import logging
 import re
+import time
 from datetime import datetime
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
 from xml.etree import ElementTree
 
-from .config import MEUDANFE_API_BASE_URL, MEUDANFE_API_KEY
+from .config import MEUDANFE_404_RETRY_DELAYS, MEUDANFE_API_BASE_URL, MEUDANFE_API_KEY
 from .logging_config import mask_access_key
 
 
@@ -37,27 +38,7 @@ def consultar_nfe(chave_acesso: str) -> dict:
         method="GET",
     )
 
-    try:
-        with urlopen(request, timeout=30) as response:
-            payload = response.read()
-            logger.info(
-                "API fiscal respondeu | chave=%s | status=%s | bytes=%s",
-                masked_key,
-                response.status,
-                len(payload),
-            )
-    except HTTPError as error:
-        if error.code == 404:
-            logger.warning("Nota nao encontrada na API fiscal | chave=%s | status=404", masked_key)
-            raise IntegracaoAPIError(
-                "Nota fiscal nao encontrada na API fiscal. Confirme a chave ou tente novamente mais tarde.",
-                status_code=404,
-            ) from error
-        logger.error("Falha HTTP na API fiscal | chave=%s | status=%s", masked_key, error.code)
-        raise IntegracaoAPIError(f"API fiscal indisponivel ou recusou a consulta (HTTP {error.code}).") from error
-    except URLError as error:
-        logger.error("Falha de conexao com API fiscal | chave=%s | motivo=%s", masked_key, error.reason)
-        raise IntegracaoAPIError("Nao foi possivel acessar a API fiscal.", status_code=503) from error
+    payload = request_nfe_xml_with_retry(request, masked_key)
 
     try:
         xml_content = extract_xml_content(payload)
@@ -73,6 +54,69 @@ def consultar_nfe(chave_acesso: str) -> dict:
         nota["nome_fornecedor"],
     )
     return nota
+
+
+def parse_retry_delays() -> list[int]:
+    delays = []
+    for raw_delay in str(MEUDANFE_404_RETRY_DELAYS or "").split(","):
+        raw_delay = raw_delay.strip()
+        if not raw_delay:
+            continue
+        try:
+            delay = int(raw_delay)
+        except ValueError:
+            logger.warning("Delay de retry MeuDANFE invalido ignorado | valor=%s", raw_delay)
+            continue
+        if delay > 0:
+            delays.append(delay)
+    return delays
+
+
+def request_nfe_xml_with_retry(request: Request, masked_key: str) -> bytes:
+    retry_delays = parse_retry_delays()
+    total_attempts = len(retry_delays) + 1
+    last_404_error = None
+
+    for attempt in range(1, total_attempts + 1):
+        try:
+            with urlopen(request, timeout=30) as response:
+                payload = response.read()
+                logger.info(
+                    "API fiscal respondeu | chave=%s | status=%s | bytes=%s | tentativa=%s/%s",
+                    masked_key,
+                    response.status,
+                    len(payload),
+                    attempt,
+                    total_attempts,
+                )
+                return payload
+        except HTTPError as error:
+            if error.code != 404:
+                logger.error("Falha HTTP na API fiscal | chave=%s | status=%s", masked_key, error.code)
+                raise IntegracaoAPIError(f"API fiscal indisponivel ou recusou a consulta (HTTP {error.code}).") from error
+
+            last_404_error = error
+            if attempt >= total_attempts:
+                break
+
+            delay = retry_delays[attempt - 1]
+            logger.warning(
+                "Nota ainda nao disponivel na API fiscal | chave=%s | status=404 | tentativa=%s/%s | aguardando=%ss",
+                masked_key,
+                attempt,
+                total_attempts,
+                delay,
+            )
+            time.sleep(delay)
+        except URLError as error:
+            logger.error("Falha de conexao com API fiscal | chave=%s | motivo=%s", masked_key, error.reason)
+            raise IntegracaoAPIError("Nao foi possivel acessar a API fiscal.", status_code=503) from error
+
+    logger.warning("Nota nao encontrada na API fiscal apos retries | chave=%s | status=404", masked_key)
+    raise IntegracaoAPIError(
+        "Nota fiscal nao encontrada na API fiscal apos novas tentativas. Confirme a chave ou tente novamente mais tarde.",
+        status_code=404,
+    ) from last_404_error
 
 
 def extract_xml_content(payload: bytes) -> bytes:

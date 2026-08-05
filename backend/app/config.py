@@ -29,4 +29,5 @@ MEUDANFE_API_BASE_URL = os.getenv(
     "https://api.meudanfe.com.br/v2/fd/get/xml",
 )
 MEUDANFE_API_KEY = os.getenv("MEUDANFE_API_KEY", "")
+MEUDANFE_404_RETRY_DELAYS = os.getenv("MEUDANFE_404_RETRY_DELAYS", "5,15,30")
 SECRET_KEY = os.getenv("SECRET_KEY", "nfe_scanner_default_secret_2026")
