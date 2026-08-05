@@ -8,7 +8,14 @@ from urllib.parse import quote
 from urllib.request import Request, urlopen
 from xml.etree import ElementTree
 
-from .config import MEUDANFE_404_RETRY_DELAYS, MEUDANFE_API_BASE_URL, MEUDANFE_API_KEY
+from .config import (
+    MEUDANFE_404_RETRY_DELAYS,
+    MEUDANFE_ADD_BASE_URL,
+    MEUDANFE_ADD_BEFORE_GET,
+    MEUDANFE_ADD_WAIT_SECONDS,
+    MEUDANFE_API_BASE_URL,
+    MEUDANFE_API_KEY,
+)
 from .logging_config import mask_access_key
 
 
@@ -26,6 +33,9 @@ def consultar_nfe(chave_acesso: str) -> dict:
     if not MEUDANFE_API_KEY:
         logger.error("Consulta fiscal bloqueada: MEUDANFE_API_KEY nao configurada")
         raise IntegracaoAPIError("Integracao fiscal nao configurada no servidor.", status_code=503)
+
+    if should_add_before_get():
+        add_nfe_before_get(chave_acesso, masked_key)
 
     url = f"{MEUDANFE_API_BASE_URL.rstrip('/')}/{quote(chave_acesso)}"
     logger.info("Consultando API fiscal | chave=%s", masked_key)
@@ -54,6 +64,57 @@ def consultar_nfe(chave_acesso: str) -> dict:
         nota["nome_fornecedor"],
     )
     return nota
+
+
+def should_add_before_get() -> bool:
+    return str(MEUDANFE_ADD_BEFORE_GET).strip().lower() in {"1", "true", "sim", "yes", "on"}
+
+
+def parse_add_wait_seconds() -> float:
+    try:
+        wait_seconds = float(str(MEUDANFE_ADD_WAIT_SECONDS).replace(",", "."))
+    except ValueError:
+        logger.warning("Espera MeuDANFE add invalida; usando 2s | valor=%s", MEUDANFE_ADD_WAIT_SECONDS)
+        return 2
+    return max(0, wait_seconds)
+
+
+def add_nfe_before_get(chave_acesso: str, masked_key: str) -> None:
+    add_url = f"{MEUDANFE_ADD_BASE_URL.rstrip('/')}/{quote(chave_acesso)}"
+    request = Request(
+        add_url,
+        headers={
+            "api-key": MEUDANFE_API_KEY,
+            "Accept": "application/json",
+        },
+        method="PUT",
+    )
+
+    try:
+        with urlopen(request, timeout=30) as response:
+            response.read()
+            logger.info(
+                "Nota enviada para cadastro na API fiscal | chave=%s | status=%s",
+                masked_key,
+                response.status,
+            )
+    except HTTPError as error:
+        logger.warning(
+            "API fiscal recusou pre-cadastro; seguindo para GET | chave=%s | status=%s",
+            masked_key,
+            error.code,
+        )
+    except URLError as error:
+        logger.warning(
+            "Falha de conexao no pre-cadastro; seguindo para GET | chave=%s | motivo=%s",
+            masked_key,
+            error.reason,
+        )
+
+    wait_seconds = parse_add_wait_seconds()
+    if wait_seconds:
+        logger.info("Aguardando API fiscal processar pre-cadastro | chave=%s | segundos=%s", masked_key, wait_seconds)
+        time.sleep(wait_seconds)
 
 
 def parse_retry_delays() -> list[int]:
