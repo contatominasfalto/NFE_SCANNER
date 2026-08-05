@@ -74,8 +74,8 @@ def parse_add_wait_seconds() -> float:
     try:
         wait_seconds = float(str(MEUDANFE_ADD_WAIT_SECONDS).replace(",", "."))
     except ValueError:
-        logger.warning("Espera MeuDANFE add invalida; usando 2s | valor=%s", MEUDANFE_ADD_WAIT_SECONDS)
-        return 2
+        logger.warning("Espera MeuDANFE add invalida; usando 1s | valor=%s", MEUDANFE_ADD_WAIT_SECONDS)
+        return 1
     return max(0, wait_seconds)
 
 
