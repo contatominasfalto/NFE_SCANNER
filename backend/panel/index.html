@@ -7,7 +7,7 @@
   <link rel="icon" type="image/jpeg" href="/painel-assets/logo.jpg?v=20260723-01">
   <link rel="shortcut icon" type="image/jpeg" href="/painel-assets/logo.jpg?v=20260723-01">
   <link rel="apple-touch-icon" href="/painel-assets/logo.jpg?v=20260723-01">
-  <link rel="stylesheet" href="/painel-assets/styles.css?v=20260727-01">
+  <link rel="stylesheet" href="/painel-assets/styles.css?v=20260807-01">
 </head>
 <body>
   <dialog class="modal compact" id="loginDialog">
@@ -35,10 +35,11 @@
       </div>
     </form>
   </dialog>
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidebar">
     <div class="brand">
       <span class="brand-mark"><img src="/painel-assets/logo.jpg" alt="Logo Minasfalto"></span>
       <div><strong>MINASFALTO</strong><small>Painel NF-e</small></div>
+      <button class="sidebar-toggle" id="sidebarToggle" type="button" title="Recolher menu" aria-label="Recolher menu" aria-expanded="true"><span id="sidebarToggleIcon">&lt;</span></button>
     </div>
     <nav>
       <button class="nav-item active" id="openNotes" data-view="notas"><span>▦</span> Notas fiscais</button>
@@ -251,6 +252,6 @@
   </dialog>
   <div id="toast" role="status"></div>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="/painel-assets/app.js?v=20260728-02"></script>
+  <script src="/painel-assets/app.js?v=20260807-01"></script>
 </body>
 </html>

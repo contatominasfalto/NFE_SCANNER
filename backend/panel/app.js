@@ -15,6 +15,8 @@ function showLogin(message){$("loginError").textContent=message||"";document.bod
 function hideLogin(){document.body.classList.add("authenticated");const dialog=$("loginDialog");if(dialog.open){dialog.close();}$("loginError").textContent="";}
 function getPermissions(){return ROLE_PERMISSIONS[currentUser?.role]||ROLE_PERMISSIONS.viewer}
 function setVisible(id,visible){const el=$(id);if(!el)return;el.hidden=!visible;el.style.display=visible?"":"none"}
+function setSidebarCollapsed(collapsed){document.body.classList.toggle("sidebar-collapsed",collapsed);localStorage.setItem("sidebarCollapsed",collapsed?"1":"0");const button=$("sidebarToggle"),icon=$("sidebarToggleIcon");if(button){button.setAttribute("aria-expanded",collapsed?"false":"true");button.title=collapsed?"Expandir menu":"Recolher menu";button.setAttribute("aria-label",collapsed?"Expandir menu":"Recolher menu")}if(icon)icon.textContent=collapsed?">":"<"}
+function initSidebarToggle(){const saved=localStorage.getItem("sidebarCollapsed")==="1";setSidebarCollapsed(saved);$("sidebarToggle")?.addEventListener("click",()=>setSidebarCollapsed(!document.body.classList.contains("sidebar-collapsed")))}
 function applyAccessRules(){
 	const p=getPermissions(),isAdmin=currentUser?.role==="admin",isViewer=currentUser?.role==="viewer";
 	$("userBadge").textContent=currentUser?`${currentUser.username}${isAdmin?" (admin)":isViewer?" (viewer)":""}`:"";
@@ -115,7 +117,7 @@ $("openBatchScan").onclick=()=>{if(!getPermissions().batch){toast("Acesso nao au
 $("tablePageSize").onchange=()=>{tablePageSize=Number($("tablePageSize").value)||100;tablePage=1;render()};$("prevTablePage").onclick=()=>{tablePage-=1;render()};$("nextTablePage").onclick=()=>{tablePage+=1;render()};
 $("downloadAll").onclick=()=>{if(!getPermissions().download){toast("Acesso nao autorizado.",true);return}downloadReport("formato=xml","notas_fiscais.xml")};
 $("downloadTableExcel").onclick=exportTableExcel;
-configureOptionalFilters();showLogin("");
+configureOptionalFilters();initSidebarToggle();showLogin("");
 (async()=>{if(await ensureAuthenticated()){await loadAll(true);setInterval(()=>loadAll(true),4000);}})();
 
 // Reports functionality
