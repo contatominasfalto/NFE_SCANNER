@@ -454,17 +454,9 @@ class ScanScreen(Screen):
             if error.status_code == 404:
                 Clock.schedule_once(lambda *_: self.informar_chave_desconhecida(chave_acesso), 0)
                 return
-            nota_erro = {
-                "chave_acesso": chave_acesso,
-                "erro_consulta": str(error),
-            }
-            Clock.schedule_once(lambda *_: self.concluir_validacao_com_erro(chave_acesso, nota_erro), 0)
+            Clock.schedule_once(lambda *_: self.informar_falha_validacao(str(error)), 0)
         except Exception as error:
-            nota_erro = {
-                "chave_acesso": chave_acesso,
-                "erro_consulta": str(error),
-            }
-            Clock.schedule_once(lambda *_: self.concluir_validacao_com_erro(chave_acesso, nota_erro), 0)
+            Clock.schedule_once(lambda *_: self.informar_falha_validacao(str(error)), 0)
 
     def informar_chave_desconhecida(self, chave_acesso):
         self.mostrar_validacao_api(False)
@@ -489,9 +481,22 @@ class ScanScreen(Screen):
         Clock.schedule_once(lambda *_: self.ir_confirmar(result["nota"]), 0.3)
 
     def concluir_validacao_com_erro(self, chave_acesso, nota_erro):
-        self.chave_acesso = chave_acesso
-        self.status_label.text = "API fiscal indisponivel. Abrindo registro de erro..."
-        Clock.schedule_once(lambda *_: self.ir_confirmar(nota_erro), 0.3)
+        self.informar_falha_validacao(nota_erro.get("erro_consulta") or "Falha ao validar a chave na API fiscal.")
+
+    def informar_falha_validacao(self, detalhe):
+        self.mostrar_validacao_api(False)
+        total = self.bipes_sequencia
+        nota_texto = "nota bipada" if total == 1 else "notas bipadas"
+        self.status_label.text = "Nota nao validada pela API fiscal."
+        self.show_dialog(
+            "Falha na validacao da API",
+            (
+                "A nota nao foi salva porque a validacao na API fiscal nao foi concluida.\n\n"
+                f"Detalhe: {detalhe}\n\n"
+                f"Total desta sequencia: {total} {nota_texto}."
+            ),
+            on_ok=self.encerrar_para_inicio,
+        )
 
     def ir_confirmar(self, nota_data):
         self.mostrar_validacao_api(False)

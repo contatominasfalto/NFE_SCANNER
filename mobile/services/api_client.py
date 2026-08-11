@@ -125,41 +125,11 @@ class APIClient:
 
     @staticmethod
     def save_nota_com_fallback(nota_data):
-        try:
-            return APIClient.save_nota(nota_data)
-        except APIError as error:
-            if error.status_code == 409:
-                raise
-            detalhe = str(error)
-        except Exception as error:
-            detalhe = str(error)
-
-        return APIClient.save_nota_erro_com_fallback(
-            {
-                "chave_acesso": nota_data.get("chave_acesso"),
-                "local": nota_data.get("local"),
-                "detalhe": detalhe[:2000],
-            }
-        )
+        return APIClient.save_nota(nota_data)
 
     @staticmethod
     def save_nota_erro_com_fallback(erro_data):
-        erro_data = {
-            "chave_acesso": erro_data.get("chave_acesso"),
-            "local": erro_data.get("local"),
-            "detalhe": (erro_data.get("detalhe") or "Falha ao consultar ou salvar a nota.")[:2000],
-        }
-        try:
-            response = APIClient.request("POST", "/notas/erro/", json=erro_data)
-            return response.json()
-        except APIError as error:
-            if error.status_code == 409:
-                raise
-            APIClient.queue_pending_error(erro_data)
-        except Exception:
-            APIClient.queue_pending_error(erro_data)
-
-        return {"chave_acesso": erro_data["chave_acesso"], "erro_salvamento": True}
+        raise APIError("Nota nao salva: a chave precisa ser validada pela API fiscal antes do cadastro.")
 
     @staticmethod
     def get_pending_errors_path():
@@ -208,19 +178,8 @@ class APIClient:
         errors = APIClient.load_pending_errors()
         if not errors:
             return
-
-        remaining = []
-        for index, erro_data in enumerate(errors):
-            try:
-                APIClient.request("POST", "/notas/erro/", json=erro_data)
-            except APIError as error:
-                if error.status_code != 409:
-                    remaining.append(erro_data)
-            except Exception:
-                remaining.append(erro_data)
-                remaining.extend(errors[index + 1 :])
-                break
-        APIClient.save_pending_errors(remaining)
+        APIClient.save_pending_errors([])
+        Logger.warning("APIClient: fila antiga de notas com erro descartada; app salva apenas notas validadas.")
 
     @staticmethod
     def list_notas(skip=0, limit=100, data_cadastro_inicio=None, data_cadastro_fim=None):

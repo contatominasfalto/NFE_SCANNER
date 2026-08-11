@@ -9,7 +9,7 @@ from kivymd.uix.label import MDLabel
 from kivymd.uix.textfield import MDTextField
 from kivymd.uix.toolbar import MDTopAppBar
 
-from services.api_client import APIClient
+from services.api_client import APIClient, APIError
 from ui import (
     BG,
     DANGER_SOFT,
@@ -211,15 +211,9 @@ class ConfirmScreen(Screen):
     def salvar_nota_atual(self):
         payload = self.build_payload()
         if self.erro_consulta:
-            result = APIClient.save_nota_erro_com_fallback(
-                {
-                    "chave_acesso": payload["chave_acesso"],
-                    "local": payload["local"],
-                    "detalhe": self.erro_consulta,
-                }
-            )
+            raise APIError("Nota nao salva: a chave precisa ser validada pela API fiscal antes do cadastro.")
         else:
-            result = APIClient.save_nota_com_fallback(payload)
+            result = APIClient.save_nota(payload)
 
         self.manager.get_screen("scan").registrar_nota_bipada()
         return result
