@@ -454,9 +454,11 @@ class ScanScreen(Screen):
             if error.status_code == 404:
                 Clock.schedule_once(lambda *_: self.informar_chave_desconhecida(chave_acesso), 0)
                 return
-            Clock.schedule_once(lambda *_: self.informar_falha_validacao(str(error)), 0)
+            detalhe = str(error)
+            Clock.schedule_once(lambda *_, detalhe=detalhe: self.informar_falha_validacao(detalhe), 0)
         except Exception as error:
-            Clock.schedule_once(lambda *_: self.informar_falha_validacao(str(error)), 0)
+            detalhe = str(error)
+            Clock.schedule_once(lambda *_, detalhe=detalhe: self.informar_falha_validacao(detalhe), 0)
 
     def informar_chave_desconhecida(self, chave_acesso):
         self.mostrar_validacao_api(False)
