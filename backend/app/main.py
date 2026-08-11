@@ -516,8 +516,8 @@ def importar_barcode(
     summary="Consultar e cadastrar notas por remessa",
     description=(
         "Recebe uma ou mais chaves de NF-e, consulta a API fiscal e cadastra as notas "
-        "em lote. Quando uma chave nao e reconhecida ou a API falha, registra a chave "
-        "como nota com erro no painel para tratamento posterior."
+        "em lote. Chaves invalidas, nao reconhecidas pela API fiscal ou com falha de "
+        "consulta nao sao cadastradas no painel."
     ),
 )
 def importar_remessa(
@@ -538,46 +538,14 @@ def importar_remessa(
             chave_acesso = barcode_service.extract_access_key(raw_code)
         except ValueError as error:
             invalidas += 1
-            chave_erro = raw_code[:100]
             detalhe = str(error)
-            try:
-                nota = crud.create_nota_erro(
-                    db,
-                    schemas.NotaFiscalErrorCreate(
-                        chave_acesso=chave_erro,
-                        local=remessa_data.local.value,
-                        detalhe=detalhe,
-                        faturista=usuario_lancamento(current_user.username),
-                    ),
+            itens.append(
+                schemas.BarcodeBatchItem(
+                    chave_acesso=raw_code[:100],
+                    status="invalida",
+                    detalhe=f"Chave nao cadastrada: {detalhe}",
                 )
-                itens.append(
-                    schemas.BarcodeBatchItem(
-                        chave_acesso=chave_erro,
-                        status="erro",
-                        detalhe=f"Chave invalida registrada com erro: {detalhe}",
-                        id=nota.id,
-                    )
-                )
-                erros += 1
-                registrar_auditoria(
-                    db,
-                    current_user,
-                    "Registrou nota com erro",
-                    "Notas fiscais",
-                    "Registrou chave invalida da remessa para tratamento.",
-                    "NotaFiscal",
-                    nota.id,
-                    f"Local: {nota.local} | Chave: {mask_access_key(nota.chave_acesso)} | Motivo: {detalhe}",
-                )
-            except IntegrityError:
-                duplicadas += 1
-                itens.append(
-                    schemas.BarcodeBatchItem(
-                        chave_acesso=chave_erro,
-                        status="duplicada",
-                        detalhe="Chave invalida ja cadastrada anteriormente.",
-                    )
-                )
+            )
             continue
 
         try:
@@ -618,50 +586,19 @@ def importar_remessa(
             logger.warning("Importacao por remessa duplicada | chave=%s", mask_access_key(chave_acesso))
         except Exception as error:
             detalhe = str(error)[:2000] or "Falha ao consultar ou salvar a nota."
-            try:
-                nota = crud.create_nota_erro(
-                    db,
-                    schemas.NotaFiscalErrorCreate(
-                        chave_acesso=chave_acesso,
-                        local=remessa_data.local.value,
-                        detalhe=detalhe,
-                        faturista=usuario_lancamento(current_user.username),
-                    ),
+            erros += 1
+            itens.append(
+                schemas.BarcodeBatchItem(
+                    chave_acesso=chave_acesso,
+                    status="nao_cadastrada",
+                    detalhe=f"Nota nao cadastrada: {detalhe}",
                 )
-                erros += 1
-                itens.append(
-                    schemas.BarcodeBatchItem(
-                        chave_acesso=chave_acesso,
-                        status="erro",
-                        detalhe=detalhe,
-                        id=nota.id,
-                    )
-                )
-                logger.error(
-                    "Nota da remessa registrada com erro | id=%s | chave=%s | detalhe=%s",
-                    nota.id,
-                    mask_access_key(chave_acesso),
-                    detalhe,
-                )
-                registrar_auditoria(
-                    db,
-                    current_user,
-                    "Registrou nota com erro",
-                    "Notas fiscais",
-                    "Registrou falha de consulta da remessa para tratamento.",
-                    "NotaFiscal",
-                    nota.id,
-                    f"Local: {nota.local} | Chave: {mask_access_key(nota.chave_acesso)} | Motivo: {detalhe}",
-                )
-            except IntegrityError:
-                duplicadas += 1
-                itens.append(
-                    schemas.BarcodeBatchItem(
-                        chave_acesso=chave_acesso,
-                        status="duplicada",
-                        detalhe="Nota fiscal ja cadastrada para esta chave de acesso.",
-                    )
-                )
+            )
+            logger.warning(
+                "Nota da remessa nao cadastrada | chave=%s | detalhe=%s",
+                mask_access_key(chave_acesso),
+                detalhe,
+            )
 
     response = schemas.BarcodeBatchResponse(
         total=len(itens),
