@@ -1,7 +1,0 @@
-
-copiar e colar no terminal
-$env:DB_URL = "postgresql://teste:ajKQizzfElQLRlwXhGJz9wBzoh3JDh1F@dpg-d9jjq2urnols738tjcrg-a.oregon-postgres.render.com/nfe_scanner"
-
-
-Depois rode o script:
-.\venv\Scripts\python.exe .\ajuste_bip_corrigido.py
