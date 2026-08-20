@@ -1098,27 +1098,37 @@ def update_nota(nota_id: int, nota_data: schemas.NotaFiscalUpdate, current_user:
     return nota
 
 
-@app.delete(
-    "/notas/{nota_id}/",
+@app.post(
+    "/notas/{nota_id}/excluir/",
     response_model=schemas.NotaFiscalDeleteResponse,
     tags=["Notas fiscais"],
-    summary="Excluir nota fiscal",
+    summary="Excluir nota fiscal com motivo obrigatorio",
     description=(
-        "Exclui uma nota fiscal cadastrada pelo ID. Use este endpoint no Swagger "
-        "para remover uma massa de teste e repetir a importacao da mesma chave."
+        "Exclui uma nota fiscal cadastrada pelo ID. A observacao de exclusao "
+        "e obrigatoria para manter rastreabilidade operacional."
     ),
     responses={
+        400: {"description": "Observacao de exclusao invalida."},
         404: {"description": "Nota fiscal nao encontrada."},
     },
 )
-def delete_nota(nota_id: int, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+def excluir_nota_com_motivo(
+    nota_id: int,
+    delete_data: schemas.NotaFiscalDeleteRequest,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     ensure_admin(current_user)
+    motivo = delete_data.observacao_exclusao.strip()
+    if len(motivo) < 5:
+        raise HTTPException(status_code=400, detail="Informe o motivo da exclusao com pelo menos 5 caracteres.")
+
     nota = crud.delete_nota(db, nota_id)
     if not nota:
         logger.warning("Exclusao recusada: nota nao encontrada | id=%s", nota_id)
         raise HTTPException(status_code=404, detail="Nota fiscal nao encontrada.")
 
-    logger.info("Nota excluida | id=%s | numero=%s", nota.id, nota.numero_nf)
+    logger.info("Nota excluida | id=%s | numero=%s | motivo=%s", nota.id, nota.numero_nf, motivo)
     registrar_auditoria(
         db,
         current_user,
@@ -1127,13 +1137,29 @@ def delete_nota(nota_id: int, current_user: models.User = Depends(get_current_us
         f"Excluiu NF {nota.numero_nf}.",
         "NotaFiscal",
         nota.id,
-        f"Chave: {mask_access_key(nota.chave_acesso)}",
+        f"Chave: {mask_access_key(nota.chave_acesso)} | Motivo da exclusao: {motivo}",
     )
     return schemas.NotaFiscalDeleteResponse(
         id=nota.id,
         numero_nf=nota.numero_nf,
         chave_acesso=nota.chave_acesso,
         mensagem="Nota fiscal excluida com sucesso.",
+    )
+
+
+@app.delete(
+    "/notas/{nota_id}/",
+    response_model=schemas.NotaFiscalDeleteResponse,
+    tags=["Notas fiscais"],
+    summary="Exclusao antiga desativada",
+    description="Endpoint antigo bloqueado. Use POST /notas/{nota_id}/excluir/ informando observacao_exclusao.",
+    deprecated=True,
+)
+def delete_nota(nota_id: int, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    ensure_admin(current_user)
+    raise HTTPException(
+        status_code=405,
+        detail="Exclusao exige motivo obrigatorio. Use POST /notas/{nota_id}/excluir/.",
     )
 
 

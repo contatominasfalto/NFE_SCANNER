@@ -221,6 +221,16 @@
     </section>
   </dialog>
 
+  <dialog id="deleteDialog">
+    <section class="modal compact">
+      <form id="deleteForm">
+        <header><div><p class="eyebrow">EXCLUSÃO DE NOTA</p><h2 id="deleteTitle">Excluir nota fiscal</h2></div></header>
+        <p class="modal-copy">Esta ação removerá a nota permanentemente. Informe o motivo da exclusão para manter a rastreabilidade.</p>
+        <label>Motivo da exclusão<textarea id="deleteReason" rows="4" minlength="5" maxlength="500" required placeholder="Ex.: Nota bipada em duplicidade operacional."></textarea></label>
+        <footer><button class="secondary" type="button" data-close="deleteDialog">Cancelar</button><button class="danger" id="deleteSubmit" type="submit">Confirmar exclusão</button></footer>
+      </form>
+    </section>
+  </dialog>
   <dialog id="confirmDialog">
     <section class="modal compact">
       <header><div><p class="eyebrow">CONFIRMAÇÃO</p><h2 id="confirmTitle">Confirmar ação</h2></div></header>
@@ -252,6 +262,6 @@
   </dialog>
   <div id="toast" role="status"></div>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="/painel-assets/app.js?v=20260811-01"></script>
+  <script src="/painel-assets/app.js?v=20260820-01"></script>
 </body>
 </html>

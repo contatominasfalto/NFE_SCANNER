@@ -183,6 +183,14 @@ class RelatorioRecebimentoResponse(BaseModel):
     dias: list[RelatorioRecebimentoDia]
 
 
+class NotaFiscalDeleteRequest(BaseModel):
+    observacao_exclusao: str = Field(
+        min_length=5,
+        max_length=500,
+        examples=["Nota excluida por duplicidade operacional."],
+    )
+
+
 class NotaFiscalDeleteResponse(BaseModel):
     id: int
     numero_nf: str
