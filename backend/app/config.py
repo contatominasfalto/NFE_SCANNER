@@ -37,3 +37,4 @@ MEUDANFE_ADD_BEFORE_GET = os.getenv("MEUDANFE_ADD_BEFORE_GET", "True")
 MEUDANFE_ADD_WAIT_SECONDS = os.getenv("MEUDANFE_ADD_WAIT_SECONDS", "1")
 MEUDANFE_404_RETRY_DELAYS = os.getenv("MEUDANFE_404_RETRY_DELAYS", "5,15,30")
 SECRET_KEY = os.getenv("SECRET_KEY", "nfe_scanner_default_secret_2026")
+PUBLIC_API_KEYS = [key.strip() for key in os.getenv("PUBLIC_API_KEYS", os.getenv("PUBLIC_API_KEY", "")).split(",") if key.strip()]

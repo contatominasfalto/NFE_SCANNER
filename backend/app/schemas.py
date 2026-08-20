@@ -198,6 +198,40 @@ class NotaFiscalDeleteResponse(BaseModel):
     mensagem: str
 
 
+
+class ApiNotaItem(BaseModel):
+    chave: str
+    numero_nf: Optional[str] = None
+    data_hora_bip: datetime
+    data_emissao: Optional[datetime] = None
+    fornecedor: Optional[str] = None
+    cnpj_fornecedor: Optional[str] = None
+    produto: Optional[str] = None
+    quantidade: Optional[float] = None
+    valor_total: Optional[float] = None
+    transportador: Optional[str] = None
+    usuario: Optional[str] = None
+    local: Optional[str] = None
+
+
+class ApiNotasResponse(BaseModel):
+    page: int
+    page_size: int
+    total: int
+    items: list[ApiNotaItem]
+
+
+class ApiNotaExcluidaItem(BaseModel):
+    chave: str
+    data_exclusao: datetime
+
+
+class ApiNotasExcluidasResponse(BaseModel):
+    page: int
+    page_size: int
+    total: int
+    items: list[ApiNotaExcluidaItem]
+
 class FaturistaBase(BaseModel):
     nome: str = Field(min_length=2, max_length=100, examples=["Maria Silva"])
     ativo: bool = True

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date as date_cls, datetime, time as time_cls
 from calendar import monthrange
 import base64
 import hashlib
@@ -14,7 +14,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
-from fastapi.security import APIKeyCookie
+from fastapi.security import APIKeyCookie, APIKeyHeader
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -78,6 +78,10 @@ tags_metadata = [
         ),
     },
     {
+        "name": "API Publica",
+        "description": "Endpoints externos de leitura para integracao com sistemas autorizados via X-API-Key.",
+    },
+    {
         "name": "XML",
         "description": "Geracao de arquivo XML para uma nota especifica ou para notas filtradas.",
     },
@@ -113,6 +117,7 @@ app.add_middleware(
 
 # Expose cookie-based session in OpenAPI (Swagger) so the panel can authorize via cookie
 api_key_cookie = APIKeyCookie(name="session", auto_error=False)
+public_api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 
 def create_session_token(username: str, expires_in: int = 8 * 3600) -> str:
@@ -135,6 +140,46 @@ def decode_session_token(token: str) -> dict[str, str] | None:
     except Exception:
         return None
 
+def validate_public_api_key(api_key: str | None = Security(public_api_key_header)):
+    if not config.PUBLIC_API_KEYS:
+        raise HTTPException(status_code=503, detail="API publica nao configurada.")
+    if not api_key:
+        raise HTTPException(status_code=401, detail="API key invalida ou ausente.")
+    if not any(hmac.compare_digest(api_key, expected_key) for expected_key in config.PUBLIC_API_KEYS):
+        raise HTTPException(status_code=401, detail="API key invalida ou ausente.")
+    return True
+
+
+def date_range_to_datetimes(data_inicio: date_cls, data_fim: date_cls):
+    if data_inicio > data_fim:
+        raise HTTPException(status_code=400, detail="A data inicial deve ser anterior ou igual a data final.")
+    inicio = datetime.combine(data_inicio, time_cls.min)
+    fim = datetime.combine(data_fim, time_cls.max)
+    return inicio, fim
+
+
+def api_nota_item(nota: models.NotaFiscal) -> schemas.ApiNotaItem:
+    return schemas.ApiNotaItem(
+        chave=nota.chave_acesso,
+        numero_nf=nota.numero_nf,
+        data_hora_bip=nota.data_cadastro,
+        data_emissao=nota.data_emissao,
+        fornecedor=nota.nome_fornecedor,
+        cnpj_fornecedor=nota.cnpj_fornecedor,
+        produto=nota.produto,
+        quantidade=nota.quantidade,
+        valor_total=nota.valor_total,
+        transportador=nota.transportador,
+        usuario=nota.faturista,
+        local=nota.local,
+    )
+
+
+def extract_audit_access_key(detalhes: str | None) -> str | None:
+    if not detalhes:
+        return None
+    match = re.search(r"\b\d{44}\b", detalhes)
+    return match.group(0) if match else None
 
 def get_current_user(request: Request, db: Session = Depends(get_db), session_token: str | None = Security(api_key_cookie)):
     # Prefer explicit Security-injected cookie (so OpenAPI shows the cookie scheme),
@@ -413,6 +458,82 @@ def list_auditoria(
     ensure_admin(current_user)
     return crud.list_audit_logs(db, skip=skip, limit=limit)
 
+@app.get(
+    "/api/v1/notas",
+    response_model=schemas.ApiNotasResponse,
+    tags=["API Publica"],
+    summary="Listar notas por data do bip",
+    description="Endpoint externo autenticado por X-API-Key. Retorna notas validas bipadas no periodo informado.",
+)
+def api_list_notas(
+    bip_inicio: date_cls = Query(..., description="Data inicial do bip no formato AAAA-MM-DD."),
+    bip_fim: date_cls = Query(..., description="Data final do bip no formato AAAA-MM-DD."),
+    page: int = Query(1, ge=1, description="Pagina da consulta."),
+    page_size: int = Query(100, ge=1, le=500, description="Quantidade maxima de registros por pagina."),
+    _: bool = Depends(validate_public_api_key),
+    db: Session = Depends(get_db),
+):
+    inicio, fim = date_range_to_datetimes(bip_inicio, bip_fim)
+    skip = (page - 1) * page_size
+    total, notas = crud.list_api_notas(db, inicio, fim, skip=skip, limit=page_size)
+    return schemas.ApiNotasResponse(
+        page=page,
+        page_size=page_size,
+        total=total,
+        items=[api_nota_item(nota) for nota in notas],
+    )
+
+
+@app.get(
+    "/api/v1/notas/{chave}",
+    response_model=schemas.ApiNotaItem,
+    tags=["API Publica"],
+    summary="Consultar nota pela chave",
+    description="Endpoint externo autenticado por X-API-Key. Retorna uma nota valida pela chave de acesso.",
+)
+def api_get_nota_por_chave(
+    chave: str,
+    _: bool = Depends(validate_public_api_key),
+    db: Session = Depends(get_db),
+):
+    if not re.fullmatch(r"\d{44}", chave):
+        raise HTTPException(status_code=400, detail="Chave NF-e invalida. Informe 44 digitos.")
+    nota = crud.get_nota_by_chave(db, chave)
+    if not nota or nota.erro_salvamento:
+        raise HTTPException(status_code=404, detail="Nota fiscal nao encontrada.")
+    return api_nota_item(nota)
+
+
+@app.get(
+    "/api/v1/notas-excluidas",
+    response_model=schemas.ApiNotasExcluidasResponse,
+    tags=["API Publica"],
+    summary="Listar notas excluidas por data de exclusao",
+    description="Endpoint externo autenticado por X-API-Key. Retorna somente chave e data de exclusao.",
+)
+def api_list_notas_excluidas(
+    exclusao_inicio: date_cls = Query(..., description="Data inicial da exclusao no formato AAAA-MM-DD."),
+    exclusao_fim: date_cls = Query(..., description="Data final da exclusao no formato AAAA-MM-DD."),
+    page: int = Query(1, ge=1, description="Pagina da consulta."),
+    page_size: int = Query(100, ge=1, le=500, description="Quantidade maxima de registros por pagina."),
+    _: bool = Depends(validate_public_api_key),
+    db: Session = Depends(get_db),
+):
+    inicio, fim = date_range_to_datetimes(exclusao_inicio, exclusao_fim)
+    logs = crud.list_api_notas_excluidas(db, inicio, fim)
+    registros = [
+        (chave, log)
+        for log in logs
+        if (chave := extract_audit_access_key(log.detalhes))
+    ]
+    total = len(registros)
+    start = (page - 1) * page_size
+    page_items = registros[start : start + page_size]
+    items = [
+        schemas.ApiNotaExcluidaItem(chave=chave, data_exclusao=log.created_at)
+        for chave, log in page_items
+    ]
+    return schemas.ApiNotasExcluidasResponse(page=page, page_size=page_size, total=total, items=items)
 
 @app.post(
     "/barcode-nf/",
@@ -1137,7 +1258,7 @@ def excluir_nota_com_motivo(
         f"Excluiu NF {nota.numero_nf}.",
         "NotaFiscal",
         nota.id,
-        f"Chave: {mask_access_key(nota.chave_acesso)} | Motivo da exclusao: {motivo}",
+        f"Chave: {nota.chave_acesso} | Motivo da exclusao: {motivo}",
     )
     return schemas.NotaFiscalDeleteResponse(
         id=nota.id,

@@ -98,6 +98,51 @@ def get_nota(db: Session, nota_id: int):
     return db.query(models.NotaFiscal).filter(models.NotaFiscal.id == nota_id).first()
 
 
+
+def get_nota_by_chave(db: Session, chave_acesso: str):
+    return db.query(models.NotaFiscal).filter(models.NotaFiscal.chave_acesso == chave_acesso).first()
+
+
+def list_api_notas(
+    db: Session,
+    data_cadastro_inicio: datetime,
+    data_cadastro_fim: datetime,
+    skip: int = 0,
+    limit: int = 100,
+):
+    query = db.query(models.NotaFiscal).filter(
+        models.NotaFiscal.data_cadastro >= data_cadastro_inicio,
+        models.NotaFiscal.data_cadastro <= data_cadastro_fim,
+        models.NotaFiscal.chave_acesso.isnot(None),
+        _nota_sem_erro(),
+    )
+    total = query.count()
+    items = (
+        query.order_by(models.NotaFiscal.data_cadastro.asc(), models.NotaFiscal.id.asc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+    return total, items
+
+
+def list_api_notas_excluidas(
+    db: Session,
+    exclusao_inicio: datetime,
+    exclusao_fim: datetime,
+):
+    return (
+        db.query(models.AuditLog)
+        .filter(
+            models.AuditLog.created_at >= exclusao_inicio,
+            models.AuditLog.created_at <= exclusao_fim,
+            models.AuditLog.acao == "Excluiu nota",
+            models.AuditLog.entidade == "NotaFiscal",
+            models.AuditLog.detalhes.isnot(None),
+        )
+        .order_by(models.AuditLog.created_at.asc(), models.AuditLog.id.asc())
+        .all()
+    )
 def get_notas_erro(db: Session):
     return (
         db.query(models.NotaFiscal)
