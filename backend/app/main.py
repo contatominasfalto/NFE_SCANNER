@@ -1,4 +1,4 @@
-from datetime import date as date_cls, datetime, time as time_cls
+from datetime import datetime, time as time_cls
 from calendar import monthrange
 import base64
 import hashlib
@@ -150,11 +150,26 @@ def validate_public_api_key(api_key: str | None = Security(public_api_key_header
     return True
 
 
-def date_range_to_datetimes(data_inicio: date_cls, data_fim: date_cls):
-    if data_inicio > data_fim:
+def parse_api_date(value: str, field_name: str):
+    value = (value or "").strip()
+    for date_format in ("%d/%m/%Y", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(value, date_format).date()
+        except ValueError:
+            continue
+    raise HTTPException(
+        status_code=400,
+        detail=f"{field_name} deve estar no formato DD/MM/AAAA. Exemplo: 20/08/2026.",
+    )
+
+
+def date_range_to_datetimes(data_inicio: str, data_fim: str):
+    inicio_date = parse_api_date(data_inicio, "Data inicial")
+    fim_date = parse_api_date(data_fim, "Data final")
+    if inicio_date > fim_date:
         raise HTTPException(status_code=400, detail="A data inicial deve ser anterior ou igual a data final.")
-    inicio = datetime.combine(data_inicio, time_cls.min)
-    fim = datetime.combine(data_fim, time_cls.max)
+    inicio = datetime.combine(inicio_date, time_cls.min)
+    fim = datetime.combine(fim_date, time_cls.max)
     return inicio, fim
 
 
@@ -466,8 +481,8 @@ def list_auditoria(
     description="Endpoint externo autenticado por X-API-Key. Retorna notas validas bipadas no periodo informado.",
 )
 def api_list_notas(
-    bip_inicio: date_cls = Query(..., description="Data inicial do bip no formato AAAA-MM-DD."),
-    bip_fim: date_cls = Query(..., description="Data final do bip no formato AAAA-MM-DD."),
+    bip_inicio: str = Query(..., description="Data inicial do bip no formato DD/MM/AAAA.", example="01/08/2026"),
+    bip_fim: str = Query(..., description="Data final do bip no formato DD/MM/AAAA.", example="20/08/2026"),
     page: int = Query(1, ge=1, description="Pagina da consulta."),
     page_size: int = Query(100, ge=1, le=500, description="Quantidade maxima de registros por pagina."),
     _: bool = Depends(validate_public_api_key),
@@ -512,8 +527,8 @@ def api_get_nota_por_chave(
     description="Endpoint externo autenticado por X-API-Key. Retorna somente chave e data de exclusao.",
 )
 def api_list_notas_excluidas(
-    exclusao_inicio: date_cls = Query(..., description="Data inicial da exclusao no formato AAAA-MM-DD."),
-    exclusao_fim: date_cls = Query(..., description="Data final da exclusao no formato AAAA-MM-DD."),
+    exclusao_inicio: str = Query(..., description="Data inicial da exclusao no formato DD/MM/AAAA.", example="01/08/2026"),
+    exclusao_fim: str = Query(..., description="Data final da exclusao no formato DD/MM/AAAA.", example="20/08/2026"),
     page: int = Query(1, ge=1, description="Pagina da consulta."),
     page_size: int = Query(100, ge=1, le=500, description="Quantidade maxima de registros por pagina."),
     _: bool = Depends(validate_public_api_key),
