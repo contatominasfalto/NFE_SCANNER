@@ -5,7 +5,7 @@ from datetime import datetime
 from unittest.mock import patch
 
 from app.tme_service import build_tme_report, can_access_tme
-from app.report_service import generate_tme_pdf
+from app.report_service import _sample_tme_intervals, generate_tme_pdf
 
 
 @dataclass
@@ -16,6 +16,23 @@ class Note:
 
 
 class TmeReportTests(unittest.TestCase):
+    def test_pdf_chart_sampling_preserves_largest_weekly_intervals(self):
+        intervals = [
+            {"ordem": index, "minutos": 5.0}
+            for index in range(1, 594)
+        ]
+        peaks = [(510, 908.1), (57, 106.0), (233, 38.0), (401, 22.0), (492, 18.2)]
+        for order, minutes in peaks:
+            intervals[order - 1]["minutos"] = minutes
+        largest = sorted(intervals, key=lambda item: item["minutos"], reverse=True)[:5]
+
+        sampled = _sample_tme_intervals(intervals, largest)
+
+        sampled_orders = {item["ordem"] for item in sampled}
+        self.assertTrue({order for order, _minutes in peaks}.issubset(sampled_orders))
+        self.assertEqual(max(item["minutos"] for item in sampled), 908.1)
+        self.assertEqual(sampled, sorted(sampled, key=lambda item: item["ordem"]))
+
     def test_generates_branded_tme_pdf(self):
         inicio = datetime(2026, 8, 1, 7, 0)
         fim = datetime(2026, 8, 1, 8, 0)

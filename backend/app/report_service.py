@@ -380,6 +380,19 @@ def _format_minutes(value):
     return f"{remaining_text} min"
 
 
+def _sample_tme_intervals(intervals, largest, target=120):
+    """Reduz a densidade do grafico sem perder extremos operacionais relevantes."""
+    if len(intervals) <= target:
+        return list(intervals)
+    step = max(1, len(intervals) // target)
+    selected = {item["ordem"]: item for item in intervals[::step]}
+    selected[intervals[0]["ordem"]] = intervals[0]
+    selected[intervals[-1]["ordem"]] = intervals[-1]
+    for item in largest:
+        selected[item["ordem"]] = item
+    return sorted(selected.values(), key=lambda item: item["ordem"])
+
+
 def _tme_chart_drawing(report):
     width, height = 720, 245
     drawing = Drawing(width, height)
@@ -390,29 +403,26 @@ def _tme_chart_drawing(report):
         drawing.add(String(width / 2, 115, "Nenhum intervalo encontrado no periodo", textAnchor="middle", fontSize=10))
         return drawing
 
-    # Limita a densidade visual sem alterar os indicadores ou o ranking do relatorio.
-    step = max(1, len(intervals) // 120)
-    points = intervals[::step]
-    if points[-1] is not intervals[-1]:
-        points.append(intervals[-1])
+    largest = report.get("maiores_intervalos") or []
+    points = _sample_tme_intervals(intervals, largest)
     left, bottom, chart_width, chart_height = 58, 40, 630, 160
-    maximum = max(float(item["minutos"]) for item in points) or 1
-    top_orders = {item["ordem"] for item in report.get("maiores_intervalos") or []}
+    maximum = max(float(item["minutos"]) for item in intervals) or 1
+    top_orders = {item["ordem"] for item in largest}
     for index in range(5):
         y = bottom + chart_height * index / 4
         drawing.add(Line(left, y, left + chart_width, y, strokeColor=colors.HexColor("#D4DFE8"), strokeWidth=0.5))
         drawing.add(String(left - 7, y - 2, _format_minutes(maximum * index / 4), textAnchor="end", fontSize=6, fillColor=BRAND_MUTED))
     coordinates = []
-    denominator = max(len(points) - 1, 1)
-    for index, item in enumerate(points):
-        x = left + chart_width * index / denominator
+    denominator = max(len(intervals) - 1, 1)
+    for item in points:
+        x = left + chart_width * (item["ordem"] - 1) / denominator
         y = bottom + chart_height * float(item["minutos"]) / maximum
         coordinates.extend([x, y])
     if len(coordinates) >= 4:
         drawing.add(PolyLine(coordinates, strokeColor=BRAND_ORANGE, strokeWidth=1.7))
-    for index, item in enumerate(points):
+    for item in points:
         if item["ordem"] in top_orders:
-            x = left + chart_width * index / denominator
+            x = left + chart_width * (item["ordem"] - 1) / denominator
             y = bottom + chart_height * float(item["minutos"]) / maximum
             drawing.add(Circle(x, y, 3.5, fillColor=colors.HexColor("#C73B36"), strokeColor=colors.white, strokeWidth=0.8))
     drawing.add(String(width / 2, 17, f"{len(intervals)} intervalos em ordem cronologica", textAnchor="middle", fontSize=7, fillColor=BRAND_MUTED))
