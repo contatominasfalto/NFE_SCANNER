@@ -24,6 +24,7 @@ from .database import engine, ensure_schema, get_db, SessionLocal
 from .logging_config import configure_logging, mask_access_key
 from .note_author import aplicar_usuario_lancamento, usuario_efetivo_erro, usuario_lancamento
 from .time_utils import local_now
+from .tme_service import can_access_tme
 
 logger = configure_logging()
 models.Base.metadata.create_all(bind=engine)
@@ -216,6 +217,11 @@ def get_current_user(request: Request, db: Session = Depends(get_db), session_to
 def ensure_admin(user: models.User):
     if user.role != "admin":
         raise HTTPException(status_code=403, detail="Acesso restrito ao usuario administrador.")
+
+
+def ensure_adm(user: models.User):
+    if not can_access_tme(user.username):
+        raise HTTPException(status_code=403, detail="Acesso exclusivo do usuario adm.")
 
 
 def ensure_not_viewer(user: models.User):
@@ -1130,6 +1136,27 @@ def relatorio_recebimento_diario(
     if data_fim.second == 0 and data_fim.microsecond == 0:
         data_fim = data_fim.replace(second=59, microsecond=999999)
     return crud.get_relatorio_recebimento(db, data_inicio, data_fim, material)
+
+
+@app.get(
+    "/relatorios/tme/",
+    tags=["Sistema"],
+    summary="Calcular tempo medio entre emissoes",
+    description="Relatorio exclusivo do usuario adm baseado em notas validas ordenadas pela data de emissao.",
+)
+def relatorio_tme(
+    data_inicio: datetime = Query(description="Data e hora inicial inclusiva."),
+    data_fim: datetime = Query(description="Data e hora final inclusiva."),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    ensure_adm(current_user)
+    if data_inicio > data_fim:
+        raise HTTPException(
+            status_code=400,
+            detail="A data inicial deve ser anterior ou igual a data final.",
+        )
+    return crud.get_relatorio_tme(db, data_inicio, data_fim)
 
 
 @app.get(

@@ -7,7 +7,7 @@
   <link rel="icon" type="image/jpeg" href="/painel-assets/logo.jpg?v=20260723-01">
   <link rel="shortcut icon" type="image/jpeg" href="/painel-assets/logo.jpg?v=20260723-01">
   <link rel="apple-touch-icon" href="/painel-assets/logo.jpg?v=20260723-01">
-  <link rel="stylesheet" href="/painel-assets/styles.css?v=20260807-01">
+  <link rel="stylesheet" href="/painel-assets/styles.css?v=20260831-01">
 </head>
 <body>
   <dialog class="modal compact" id="loginDialog">
@@ -45,6 +45,7 @@
       <button class="nav-item active" id="openNotes" data-view="notas"><span>▦</span> Notas fiscais</button>
       <button class="nav-item" id="openFaturistas" hidden><span>◉</span> Usuários</button>
       <button class="nav-item" id="openReports" hidden><span>📊</span> Relatórios</button>
+      <button class="nav-item" id="openTmeReport" hidden><span>◷</span> Relatório TME</button>
       <button class="nav-item" id="openAudit" hidden><span>⏱</span> Rastreabilidade</button>
       <a class="nav-item" id="openSwagger" href="/docs" target="_blank" hidden><span>↗</span> Swagger API</a>
     </nav>    
@@ -231,6 +232,54 @@
       </form>
     </section>
   </dialog>
+
+  <dialog id="tmeDialog">
+    <section class="modal xlarge tme-modal" id="tmeModalSection">
+      <header>
+        <div><p class="eyebrow">EFICIÊNCIA OPERACIONAL</p><h2>Relatório TME</h2><small>Tempo médio entre emissões consecutivas</small></div>
+        <button class="icon-button close" type="button" data-close="tmeDialog">×</button>
+      </header>
+      <div class="tme-scroll">
+        <form id="tmeFilterForm" class="tme-filter">
+          <label>Data inicial<input id="tmeStartDate" type="date" required></label>
+          <label>Data final<input id="tmeEndDate" type="date" required></label>
+          <button class="primary" id="applyTmeFilter" type="submit">Analisar período</button>
+        </form>
+        <div class="tme-context" id="tmeContext">Selecione o período para analisar o ritmo de emissão das NF-es.</div>
+        <section class="tme-kpis" aria-label="Indicadores do relatório TME">
+          <article><span>Tempo médio</span><strong id="tmeAverage">—</strong><small>entre emissões</small></article>
+          <article><span>Mediana</span><strong id="tmeMedian">—</strong><small>intervalo típico</small></article>
+          <article><span>Maior espera</span><strong id="tmeLargest">—</strong><small>período ocioso</small></article>
+          <article><span>Notas analisadas</span><strong id="tmeNotes">0</strong><small id="tmeIntervals">0 intervalos</small></article>
+          <article><span>Amplitude</span><strong id="tmeSpan">—</strong><small>primeira à última</small></article>
+        </section>
+        <section class="tme-card">
+          <div class="tme-card-heading">
+            <div><p class="eyebrow">LINHA DO TEMPO</p><h3>Intervalo entre cada emissão</h3></div>
+            <small>Os pontos destacados representam os cinco maiores intervalos.</small>
+          </div>
+          <div class="tme-chart-wrap">
+            <canvas id="tmeChart"></canvas>
+            <div class="chart-empty" id="tmeChartEmpty">Informe um período para gerar o gráfico.</div>
+          </div>
+        </section>
+        <section class="tme-card">
+          <div class="tme-card-heading">
+            <div><p class="eyebrow">PONTOS DE ATENÇÃO</p><h3>5 maiores períodos ociosos</h3></div>
+            <small>Diferença entre notas consecutivas pela data de emissão.</small>
+          </div>
+          <div class="material-table-wrap">
+            <table class="material-table tme-ranking-table">
+              <thead><tr><th>#</th><th>Início</th><th>Fim</th><th>Nota anterior</th><th>Nota seguinte</th><th>Tempo</th></tr></thead>
+              <tbody id="tmeRankingBody"></tbody>
+            </table>
+            <div class="material-empty" id="tmeRankingEmpty">Nenhum intervalo encontrado no período.</div>
+          </div>
+        </section>
+      </div>
+      <footer><button class="secondary" type="button" data-close="tmeDialog">Fechar</button></footer>
+    </section>
+  </dialog>
   <dialog id="confirmDialog">
     <section class="modal compact">
       <header><div><p class="eyebrow">CONFIRMAÇÃO</p><h2 id="confirmTitle">Confirmar ação</h2></div></header>
@@ -262,6 +311,6 @@
   </dialog>
   <div id="toast" role="status"></div>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="/painel-assets/app.js?v=20260820-01"></script>
+  <script src="/painel-assets/app.js?v=20260831-01"></script>
 </body>
 </html>

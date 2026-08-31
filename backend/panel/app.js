@@ -1,4 +1,4 @@
-const $=id=>document.getElementById(id);let notes=[],faturistas=[],filtered=[],auditLogs=[],refreshing=false,confirmCallback=null,pendingDeleteId=null,currentUser=null,tablePage=1,tablePageSize=100;
+const $=id=>document.getElementById(id);let notes=[],faturistas=[],filtered=[],auditLogs=[],refreshing=false,confirmCallback=null,pendingDeleteId=null,currentUser=null,tablePage=1,tablePageSize=100,tmeChart=null;
 const SHOW_USER_FILTER=false;
 const ROLE_PERMISSIONS={
 	admin:{notes:true,users:true,reports:true,audit:true,swagger:true,batch:true,download:true,refreshErrors:true},
@@ -25,6 +25,7 @@ function applyAccessRules(){
 	setVisible("openNotes",p.notes);
 	setVisible("openFaturistas",p.users);
 	setVisible("openReports",p.reports);
+	setVisible("openTmeReport",currentUser?.username?.trim().toLowerCase()==="adm");
 	setVisible("openAudit",p.audit);
 	setVisible("openSwagger",p.swagger);
 	setVisible("openBatchScan",p.batch);
@@ -456,4 +457,70 @@ $("openReports").addEventListener("click",async event=>{
 	if(!getPermissions().reports){toast("Acesso nao autorizado.",true);return}
 	await openReportsModal();
 });
+
+const tmeMinutes=value=>{
+	const minutes=Math.max(0,Number(value)||0),hours=Math.floor(minutes/60),remaining=minutes-hours*60;
+	const formatted=new Intl.NumberFormat("pt-BR",{minimumFractionDigits:0,maximumFractionDigits:1}).format(remaining);
+	if(hours&&remaining)return`${hours}h ${formatted}min`;
+	if(hours)return`${hours}h`;
+	return`${formatted} min`;
+};
+const tmeDateTime=value=>value?new Date(value).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}):"—";
+function defaultTmeRange(){const now=new Date(),start=new Date(now.getFullYear(),now.getMonth(),1);return{start:localDateKey(start),end:localDateKey(now)}}
+function renderTmeReport(result){
+	$("tmeAverage").textContent=tmeMinutes(result.tme_minutos);
+	$("tmeMedian").textContent=tmeMinutes(result.mediana_minutos);
+	$("tmeLargest").textContent=tmeMinutes(result.maior_intervalo_minutos);
+	$("tmeNotes").textContent=new Intl.NumberFormat("pt-BR").format(result.total_notas);
+	$("tmeIntervals").textContent=`${new Intl.NumberFormat("pt-BR").format(result.total_intervalos)} intervalo(s)`;
+	$("tmeSpan").textContent=tmeMinutes(result.tempo_total_minutos);
+	$("tmeContext").textContent=result.total_notas
+		?`Da primeira emissão em ${tmeDateTime(result.primeira_emissao)} até a última em ${tmeDateTime(result.ultima_emissao)}.`
+		:"Não há notas válidas com data de emissão no período selecionado.";
+
+	const ranking=result.maiores_intervalos||[];
+	$("tmeRankingBody").innerHTML=ranking.map((item,index)=>`<tr><td><span class="tme-rank">${index+1}</span></td><td>${tmeDateTime(item.inicio)}</td><td>${tmeDateTime(item.fim)}</td><td>NF ${esc(item.nota_anterior.numero_nf||"—")}</td><td>NF ${esc(item.nota_atual.numero_nf||"—")}</td><td><strong>${tmeMinutes(item.minutos)}</strong></td></tr>`).join("");
+	$("tmeRankingEmpty").hidden=ranking.length>0;
+
+	const intervals=result.intervalos||[],topKeys=new Set(ranking.map(item=>`${item.ordem}`));
+	$("tmeChartEmpty").hidden=intervals.length>0;
+	$("tmeChart").hidden=intervals.length===0;
+	if(tmeChart){tmeChart.destroy();tmeChart=null}
+	if(!intervals.length)return;
+	const context=$("tmeChart").getContext("2d");
+	const gradient=context.createLinearGradient(0,0,0,340);gradient.addColorStop(0,"rgba(242,145,41,.32)");gradient.addColorStop(1,"rgba(242,145,41,.02)");
+	tmeChart=new Chart(context,{
+		type:"line",
+		data:{
+			labels:intervals.map(item=>tmeDateTime(item.fim)),
+			datasets:[{
+				label:"Espera entre emissões (min)",data:intervals.map(item=>item.minutos),borderColor:"#e68a22",backgroundColor:gradient,fill:true,tension:.2,borderWidth:2,
+				pointRadius:intervals.map(item=>topKeys.has(`${item.ordem}`)?6:2),pointHoverRadius:7,
+				pointBackgroundColor:intervals.map(item=>topKeys.has(`${item.ordem}`)?"#c73b36":"#f29129"),pointBorderColor:"#fff",pointBorderWidth:1,
+			}]
+		},
+		options:{responsive:true,maintainAspectRatio:false,interaction:{mode:"index",intersect:false},plugins:{legend:{display:false},tooltip:{callbacks:{title:items=>items[0]?.label||"",label:item=>` Intervalo: ${tmeMinutes(item.raw)}`}}},scales:{x:{ticks:{maxTicksLimit:12,maxRotation:0},grid:{display:false},title:{display:true,text:"Horário da emissão seguinte"}},y:{beginAtZero:true,title:{display:true,text:"Tempo de espera (minutos)"},ticks:{callback:value=>tmeMinutes(value)}}}}
+	});
+}
+async function loadTmeReport(){
+	const start=$("tmeStartDate").value,end=$("tmeEndDate").value;
+	if(!start||!end){toast("Informe a data inicial e final.",true);return}
+	if(start>end){toast("A data inicial deve ser anterior ou igual à data final.",true);return}
+	const button=$("applyTmeFilter"),original=button.textContent;button.disabled=true;button.textContent="Analisando...";
+	try{
+		const params=new URLSearchParams({data_inicio:`${start}T00:00:00`,data_fim:`${end}T23:59:59`});
+		const result=await api(`/relatorios/tme/?${params}`);
+		renderTmeReport(result);
+	}catch(error){toast(error.message,true)}finally{button.disabled=false;button.textContent=original}
+}
+async function openTmeModal(){
+	if(!currentUser||currentUser.username?.trim().toLowerCase()!=="adm"){toast("Acesso exclusivo do usuário adm.",true);return}
+	const range=defaultTmeRange();
+	if(!$("tmeStartDate").value)$("tmeStartDate").value=range.start;
+	if(!$("tmeEndDate").value)$("tmeEndDate").value=range.end;
+	if(!$("tmeDialog").open)$("tmeDialog").showModal();
+	await loadTmeReport();
+}
+$("tmeFilterForm")?.addEventListener("submit",async event=>{event.preventDefault();await loadTmeReport()});
+$("openTmeReport")?.addEventListener("click",async event=>{event.preventDefault();if(!await ensureAuthenticated())return;await openTmeModal()});
 

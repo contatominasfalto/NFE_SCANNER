@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from . import models, schemas
 from datetime import datetime, timedelta
 from .time_utils import local_now
+from .tme_service import build_tme_report
 
 def _nota_sem_erro():
     return or_(
@@ -532,6 +533,21 @@ def get_relatorio_recebimento(db: Session, inicio: datetime, fim: datetime, mate
         "total_ton": round(sum(item["total_ton"] for item in totais), 3),
         "dias": itens,
     }
+
+
+def get_relatorio_tme(db: Session, inicio: datetime, fim: datetime):
+    notas = (
+        db.query(models.NotaFiscal)
+        .filter(
+            models.NotaFiscal.data_emissao.isnot(None),
+            models.NotaFiscal.data_emissao >= inicio,
+            models.NotaFiscal.data_emissao <= fim,
+            _nota_sem_erro(),
+        )
+        .order_by(models.NotaFiscal.data_emissao.asc(), models.NotaFiscal.id.asc())
+        .all()
+    )
+    return build_tme_report(notas, inicio, fim)
 
 
 def create_faturista(db: Session, faturista: schemas.FaturistaCreate):
