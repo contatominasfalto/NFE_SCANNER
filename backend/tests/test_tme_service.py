@@ -2,6 +2,7 @@ import unittest
 from io import BytesIO
 from dataclasses import dataclass
 from datetime import datetime
+from unittest.mock import patch
 
 from app.tme_service import build_tme_report, can_access_tme
 from app.report_service import generate_tme_pdf
@@ -22,9 +23,12 @@ class TmeReportTests(unittest.TestCase):
             [Note(1, "100", inicio), Note(2, "101", fim)], inicio, fim
         )
         output = BytesIO()
-        generate_tme_pdf(report, output)
+        generated_at = datetime(2026, 8, 31, 12, 34)
+        with patch("app.report_service.local_now", return_value=generated_at) as now:
+            generate_tme_pdf(report, output)
         self.assertTrue(output.getvalue().startswith(b"%PDF"))
         self.assertGreater(len(output.getvalue()), 2000)
+        self.assertGreaterEqual(now.call_count, 1)
 
     def setUp(self):
         self.start = datetime(2026, 8, 31, 0, 0)

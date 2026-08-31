@@ -16,6 +16,8 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
+from .time_utils import local_now
+
 
 BRAND_ORANGE = colors.HexColor("#F29129")
 BRAND_DARK = colors.HexColor("#29292E")
@@ -47,7 +49,7 @@ def generate_xml(notas, filtros, output):
 
     metadata = SubElement(root, "metadata")
     SubElement(metadata, "sistema").text = "NFE Scanner"
-    SubElement(metadata, "data_geracao").text = datetime.now().isoformat()
+    SubElement(metadata, "data_geracao").text = local_now().isoformat()
     SubElement(metadata, "filtros").text = safe_text(filtros)
     SubElement(metadata, "total_notas").text = str(len(notas))
     SubElement(metadata, "valor_total").text = str(sum(n.valor_total or 0 for n in notas))
@@ -191,7 +193,7 @@ def _draw_pdf_branding(canvas, doc):
     canvas.line(15 * mm, 18 * mm, page_width - 15 * mm, 18 * mm)
     canvas.setFillColor(BRAND_MUTED)
     canvas.setFont("Helvetica", 7)
-    canvas.drawString(15 * mm, 13 * mm, f"Gerado em {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+    canvas.drawString(15 * mm, 13 * mm, f"Gerado em {local_now().strftime('%d/%m/%Y %H:%M')}")
     canvas.drawRightString(page_width - 15 * mm, 13 * mm, f"Pagina {doc.page}")
     canvas.restoreState()
 
@@ -491,7 +493,7 @@ def generate_operational_excel(_operacional, material, setor, recebimento, outpu
     summary = workbook.active
     summary.title = "Resumo"
     summary.append(["Relatorio Operacional NF-e"])
-    summary.append([f"Gerado em {datetime.now().strftime('%d/%m/%Y %H:%M')}"])
+    summary.append([f"Gerado em {local_now().strftime('%d/%m/%Y %H:%M')}"])
     summary.append([])
     periodo_filtrado = _period_from_material(material, _operacional)
     summary.append(["Periodo", "Inicio", "Fim", "Total TON", "Quantidade NF-es"])
