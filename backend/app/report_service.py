@@ -9,7 +9,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from reportlab.graphics.charts.barcharts import VerticalBarChart
 from reportlab.graphics.charts.piecharts import Pie
-from reportlab.graphics.shapes import Drawing, Rect, String
+from reportlab.graphics.shapes import Circle, Drawing, Line, PolyLine, Rect, String
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import getSampleStyleSheet
@@ -184,7 +184,8 @@ def _draw_pdf_branding(canvas, doc):
     canvas.drawString(37 * mm, page_height - 21 * mm, "SCAN-NFE MINASFALTO")
     canvas.setFillColor(BRAND_MUTED)
     canvas.setFont("Helvetica", 8)
-    canvas.drawString(37 * mm, page_height - 26 * mm, "Relatorio operacional de notas fiscais")
+    subtitle = "Relatorio de Tempo Medio de Espera" if "TME" in (doc.title or "") else "Relatorio operacional de notas fiscais"
+    canvas.drawString(37 * mm, page_height - 26 * mm, subtitle)
     canvas.setStrokeColor(BRAND_LINE)
     canvas.line(15 * mm, page_height - 34 * mm, page_width - 15 * mm, page_height - 34 * mm)
     canvas.line(15 * mm, 18 * mm, page_width - 15 * mm, 18 * mm)
@@ -361,6 +362,106 @@ def generate_operational_pdf(_operacional, material, setor, recebimento, output)
         _section_heading("Participacao total por material", f"Material: {recebimento['material'] or 'Todos os materiais'}"),
         Spacer(1, 10),
         _chart_card(_receipt_share_drawing(recebimento)),
+    ]
+    doc.build(story, onFirstPage=_draw_pdf_branding, onLaterPages=_draw_pdf_branding)
+
+
+def _format_minutes(value):
+    minutes = max(0.0, float(value or 0))
+    hours = int(minutes // 60)
+    remaining = minutes - hours * 60
+    remaining_text = f"{remaining:.1f}".replace(".", ",")
+    if hours and remaining:
+        return f"{hours}h {remaining_text}min"
+    if hours:
+        return f"{hours}h"
+    return f"{remaining_text} min"
+
+
+def _tme_chart_drawing(report):
+    width, height = 720, 245
+    drawing = Drawing(width, height)
+    _add_chart_gradient(drawing, width, height)
+    drawing.add(String(width / 2, 228, "Intervalo entre cada emissao", textAnchor="middle", fontName="Helvetica-Bold", fontSize=13))
+    intervals = report.get("intervalos") or []
+    if not intervals:
+        drawing.add(String(width / 2, 115, "Nenhum intervalo encontrado no periodo", textAnchor="middle", fontSize=10))
+        return drawing
+
+    # Limita a densidade visual sem alterar os indicadores ou o ranking do relatorio.
+    step = max(1, len(intervals) // 120)
+    points = intervals[::step]
+    if points[-1] is not intervals[-1]:
+        points.append(intervals[-1])
+    left, bottom, chart_width, chart_height = 58, 40, 630, 160
+    maximum = max(float(item["minutos"]) for item in points) or 1
+    top_orders = {item["ordem"] for item in report.get("maiores_intervalos") or []}
+    for index in range(5):
+        y = bottom + chart_height * index / 4
+        drawing.add(Line(left, y, left + chart_width, y, strokeColor=colors.HexColor("#D4DFE8"), strokeWidth=0.5))
+        drawing.add(String(left - 7, y - 2, _format_minutes(maximum * index / 4), textAnchor="end", fontSize=6, fillColor=BRAND_MUTED))
+    coordinates = []
+    denominator = max(len(points) - 1, 1)
+    for index, item in enumerate(points):
+        x = left + chart_width * index / denominator
+        y = bottom + chart_height * float(item["minutos"]) / maximum
+        coordinates.extend([x, y])
+    if len(coordinates) >= 4:
+        drawing.add(PolyLine(coordinates, strokeColor=BRAND_ORANGE, strokeWidth=1.7))
+    for index, item in enumerate(points):
+        if item["ordem"] in top_orders:
+            x = left + chart_width * index / denominator
+            y = bottom + chart_height * float(item["minutos"]) / maximum
+            drawing.add(Circle(x, y, 3.5, fillColor=colors.HexColor("#C73B36"), strokeColor=colors.white, strokeWidth=0.8))
+    drawing.add(String(width / 2, 17, f"{len(intervals)} intervalos em ordem cronologica", textAnchor="middle", fontSize=7, fillColor=BRAND_MUTED))
+    return drawing
+
+
+def generate_tme_pdf(report, output):
+    doc = SimpleDocTemplate(
+        output,
+        pagesize=landscape(A4),
+        leftMargin=14 * mm,
+        rightMargin=14 * mm,
+        topMargin=36 * mm,
+        bottomMargin=24 * mm,
+        title="SCAN-NFE MINASFALTO - Relatorio TME",
+        author="SCAN-NFE MINASFALTO",
+    )
+    first = report.get("primeira_emissao")
+    last = report.get("ultima_emissao")
+    analyzed = format_period(first, last) if first and last else "Nenhuma emissao valida no periodo"
+    kpis = [["Tempo medio", "Mediana", "Maior espera", "Notas analisadas", "Amplitude"], [
+        _format_minutes(report.get("tme_minutos")),
+        _format_minutes(report.get("mediana_minutos")),
+        _format_minutes(report.get("maior_intervalo_minutos")),
+        str(report.get("total_notas", 0)),
+        _format_minutes(report.get("tempo_total_minutos")),
+    ]]
+    ranking = [["#", "Inicio", "Fim", "Nota anterior", "Nota seguinte", "Tempo"]]
+    ranking.extend([
+        [
+            index,
+            item["inicio"].strftime("%d/%m/%Y %H:%M"),
+            item["fim"].strftime("%d/%m/%Y %H:%M"),
+            f"NF {item['nota_anterior'].get('numero_nf') or '-'}",
+            f"NF {item['nota_atual'].get('numero_nf') or '-'}",
+            _format_minutes(item["minutos"]),
+        ]
+        for index, item in enumerate(report.get("maiores_intervalos") or [], start=1)
+    ])
+    if len(ranking) == 1:
+        ranking.append(["-", "-", "-", "-", "-", "Nenhum intervalo"])
+    story = [
+        _section_heading("Relatorio TME", f"Analise das emissoes consecutivas: {analyzed}."),
+        Spacer(1, 10),
+        _pdf_table(kpis, [50 * mm] * 5),
+        Spacer(1, 15),
+        _chart_card(_tme_chart_drawing(report)),
+        PageBreak(),
+        _section_heading("5 maiores periodos ociosos", "Diferenca entre notas consecutivas pela data de emissao."),
+        Spacer(1, 10),
+        _pdf_table(ranking, [12 * mm, 48 * mm, 48 * mm, 47 * mm, 47 * mm, 48 * mm]),
     ]
     doc.build(story, onFirstPage=_draw_pdf_branding, onLaterPages=_draw_pdf_branding)
 

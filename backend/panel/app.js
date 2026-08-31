@@ -514,6 +514,20 @@ async function loadTmeReport(){
 		renderTmeReport(result);
 	}catch(error){toast(error.message,true)}finally{button.disabled=false;button.textContent=original}
 }
+async function exportTmePdf(){
+	const start=$("tmeStartDate").value,end=$("tmeEndDate").value;
+	if(!start||!end){toast("Informe a data inicial e final.",true);return}
+	if(start>end){toast("A data inicial deve ser anterior ou igual à data final.",true);return}
+	const button=$("exportTmePdf"),original=button.textContent;button.disabled=true;button.textContent="Gerando...";
+	try{
+		const params=new URLSearchParams({data_inicio:`${start}T00:00:00`,data_fim:`${end}T23:59:59`});
+		const response=await fetch(`/relatorios/tme/exportar/?${params}`,{credentials:"include"});
+		if(!response.ok){let message=`Erro ${response.status}`;try{message=(await response.json()).detail||message}catch{}throw new Error(message)}
+		const blob=await response.blob(),url=URL.createObjectURL(blob),link=document.createElement("a");
+		link.href=url;link.download=`relatorio_tme_${start}_${end}.pdf`;document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);
+		toast("Relatório TME em PDF baixado");
+	}catch(error){toast(error.message,true)}finally{button.disabled=false;button.textContent=original}
+}
 async function openTmeModal(){
 	if(!currentUser||currentUser.username?.trim().toLowerCase()!=="adm"){toast("Acesso exclusivo do usuário adm.",true);return}
 	const range=defaultTmeRange();
@@ -524,5 +538,6 @@ async function openTmeModal(){
 	await loadTmeReport();
 }
 $("tmeFilterForm")?.addEventListener("submit",async event=>{event.preventDefault();await loadTmeReport()});
+$("exportTmePdf")?.addEventListener("click",exportTmePdf);
 $("openTmeReport")?.addEventListener("click",async event=>{event.preventDefault();if(!await ensureAuthenticated())return;await openTmeModal()});
 

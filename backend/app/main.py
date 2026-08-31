@@ -1160,6 +1160,34 @@ def relatorio_tme(
 
 
 @app.get(
+    "/relatorios/tme/exportar/",
+    response_class=StreamingResponse,
+    tags=["Sistema"],
+    summary="Exportar relatorio TME em PDF",
+    description="Gera o relatorio TME em PDF. Acesso exclusivo do usuario adm.",
+)
+def exportar_relatorio_tme(
+    data_inicio: datetime = Query(description="Data e hora inicial inclusiva."),
+    data_fim: datetime = Query(description="Data e hora final inclusiva."),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    ensure_adm(current_user)
+    if data_inicio > data_fim:
+        raise HTTPException(status_code=400, detail="A data inicial deve ser anterior ou igual a data final.")
+    report = crud.get_relatorio_tme(db, data_inicio, data_fim)
+    output = BytesIO()
+    report_service.generate_tme_pdf(report, output)
+    output.seek(0)
+    filename = f"relatorio_tme_{local_now().strftime('%Y%m%d_%H%M%S')}.pdf"
+    return StreamingResponse(
+        output,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@app.get(
     "/relatorios/exportar/",
     response_class=StreamingResponse,
     tags=["Notas fiscais"],
