@@ -7,7 +7,7 @@
   <link rel="icon" type="image/jpeg" href="/painel-assets/logo.jpg?v=20260723-01">
   <link rel="shortcut icon" type="image/jpeg" href="/painel-assets/logo.jpg?v=20260723-01">
   <link rel="apple-touch-icon" href="/painel-assets/logo.jpg?v=20260723-01">
-  <link rel="stylesheet" href="/painel-assets/styles.css?v=20260831-01">
+  <link rel="stylesheet" href="/painel-assets/styles.css?v=20260831-02">
 </head>
 <body>
   <dialog class="modal compact" id="loginDialog">
@@ -237,7 +237,10 @@
     <section class="modal xlarge tme-modal" id="tmeModalSection">
       <header>
         <div><p class="eyebrow">EFICIÊNCIA OPERACIONAL</p><h2>Relatório TME</h2><small>Tempo médio entre emissões consecutivas</small></div>
-        <button class="icon-button close" type="button" data-close="tmeDialog">×</button>
+        <div class="tme-header-actions">
+          <button class="icon-button tme-maximize" type="button" data-maximize="tmeModalSection" title="Maximizar relatório" aria-label="Maximizar relatório" aria-pressed="false">□</button>
+          <button class="icon-button close" type="button" data-close="tmeDialog" title="Fechar relatório" aria-label="Fechar relatório">×</button>
+        </div>
       </header>
       <div class="tme-scroll">
         <form id="tmeFilterForm" class="tme-filter">
@@ -311,6 +314,6 @@
   </dialog>
   <div id="toast" role="status"></div>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="/painel-assets/app.js?v=20260831-01"></script>
+  <script src="/painel-assets/app.js?v=20260831-02"></script>
 </body>
 </html>
