@@ -224,6 +224,11 @@ def ensure_tme_access(user: models.User):
         raise HTTPException(status_code=403, detail="Acesso nao autorizado ao Relatorio TME.")
 
 
+def ensure_time_report_access(user: models.User):
+    if not can_access_tme(user.username):
+        raise HTTPException(status_code=403, detail="Acesso nao autorizado ao relatorio solicitado.")
+
+
 def ensure_not_viewer(user: models.User):
     if user.role == VIEWER_ROLE:
         raise HTTPException(status_code=403, detail="Usuario de visualizacao nao possui acesso a esta operacao.")
@@ -1185,6 +1190,37 @@ def exportar_relatorio_tme(
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@app.get("/relatorios/tmac-recebimento/", tags=["Sistema"], summary="Calcular TMAC de recebimento")
+def relatorio_tmac_recebimento(
+    data_inicio: datetime = Query(description="Data e hora inicial do bipe inclusiva."),
+    data_fim: datetime = Query(description="Data e hora final do bipe inclusiva."),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    ensure_time_report_access(current_user)
+    if data_inicio > data_fim:
+        raise HTTPException(status_code=400, detail="A data inicial deve ser anterior ou igual a data final.")
+    return crud.get_relatorio_tmac(db, data_inicio, data_fim)
+
+
+@app.get("/relatorios/tmac-recebimento/exportar/", response_class=StreamingResponse, tags=["Sistema"], summary="Exportar TMAC de recebimento em PDF")
+def exportar_relatorio_tmac_recebimento(
+    data_inicio: datetime = Query(description="Data e hora inicial do bipe inclusiva."),
+    data_fim: datetime = Query(description="Data e hora final do bipe inclusiva."),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    ensure_time_report_access(current_user)
+    if data_inicio > data_fim:
+        raise HTTPException(status_code=400, detail="A data inicial deve ser anterior ou igual a data final.")
+    report = crud.get_relatorio_tmac(db, data_inicio, data_fim)
+    output = BytesIO()
+    report_service.generate_tmac_pdf(report, output)
+    output.seek(0)
+    filename = f"relatorio_tmac_recebimento_{local_now().strftime('%Y%m%d_%H%M%S')}.pdf"
+    return StreamingResponse(output, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="{filename}"'})
 
 
 @app.get(

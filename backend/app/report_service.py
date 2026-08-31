@@ -186,7 +186,12 @@ def _draw_pdf_branding(canvas, doc):
     canvas.drawString(37 * mm, page_height - 21 * mm, "SCAN-NFE MINASFALTO")
     canvas.setFillColor(BRAND_MUTED)
     canvas.setFont("Helvetica", 8)
-    subtitle = "Relatorio de Tempo Medio de Espera" if "TME" in (doc.title or "") else "Relatorio operacional de notas fiscais"
+    if "TMAC" in (doc.title or ""):
+        subtitle = "Relatorio TMAC Recebimento"
+    elif "TME" in (doc.title or ""):
+        subtitle = "Relatorio de Tempo Medio de Espera"
+    else:
+        subtitle = "Relatorio operacional de notas fiscais"
     canvas.drawString(37 * mm, page_height - 26 * mm, subtitle)
     canvas.setStrokeColor(BRAND_LINE)
     canvas.line(15 * mm, page_height - 34 * mm, page_width - 15 * mm, page_height - 34 * mm)
@@ -475,6 +480,63 @@ def generate_tme_pdf(report, output):
         Spacer(1, 10),
         _pdf_table(ranking, [12 * mm, 48 * mm, 48 * mm, 47 * mm, 47 * mm, 48 * mm]),
     ]
+    doc.build(story, onFirstPage=_draw_pdf_branding, onLaterPages=_draw_pdf_branding)
+
+
+def _tmac_chart_drawing(report):
+    width, height = 720, 255
+    drawing = Drawing(width, height)
+    _add_chart_gradient(drawing, width, height)
+    drawing.add(String(width / 2, 238, "Evolucao diaria do tempo ate o recebimento", textAnchor="middle", fontName="Helvetica-Bold", fontSize=13))
+    days = report.get("dias") or []
+    if not days:
+        drawing.add(String(width / 2, 120, "Nenhuma nota valida no periodo", textAnchor="middle", fontSize=10))
+        return drawing
+    left, bottom, chart_width, chart_height = 58, 48, 630, 155
+    max_minutes = max(max(item["media_minutos"], item["mediana_minutos"], item["p90_minutos"]) for item in days) or 1
+    max_volume = max(item["quantidade_notas"] for item in days) or 1
+    slot = chart_width / max(len(days), 1)
+    for index in range(5):
+        y = bottom + chart_height * index / 4
+        drawing.add(Line(left, y, left + chart_width, y, strokeColor=colors.HexColor("#D4DFE8"), strokeWidth=0.5))
+        drawing.add(String(left - 7, y - 2, _format_minutes(max_minutes * index / 4), textAnchor="end", fontSize=6, fillColor=BRAND_MUTED))
+    series = [("media_minutos", BRAND_ORANGE), ("mediana_minutos", BRAND_DARK), ("p90_minutos", colors.HexColor("#C73B36"))]
+    for index, item in enumerate(days):
+        x = left + slot * index + slot / 2
+        bar_height = chart_height * item["quantidade_notas"] / max_volume
+        drawing.add(Rect(x - min(slot * .28, 9), bottom, min(slot * .56, 18), bar_height, strokeColor=None, fillColor=colors.Color(.73, .83, .9, alpha=.55)))
+        if len(days) <= 18 or index % max(1, len(days) // 12) == 0 or index == len(days) - 1:
+            drawing.add(String(x, 34, item["data"][8:10] + "/" + item["data"][5:7], textAnchor="middle", fontSize=6, fillColor=BRAND_MUTED))
+    for key, color in series:
+        coordinates = []
+        for index, item in enumerate(days):
+            x = left + slot * index + slot / 2
+            y = bottom + chart_height * item[key] / max_minutes
+            coordinates.extend([x, y])
+        if len(coordinates) >= 4:
+            drawing.add(PolyLine(coordinates, strokeColor=color, strokeWidth=1.8))
+        elif coordinates:
+            drawing.add(Circle(coordinates[0], coordinates[1], 2.5, fillColor=color, strokeColor=None))
+    legends = [("Volume de notas", colors.HexColor("#9FBBD0")), ("Media", BRAND_ORANGE), ("Mediana", BRAND_DARK), ("P90", colors.HexColor("#C73B36"))]
+    for index, (label, color) in enumerate(legends):
+        x = 205 + index * 90
+        drawing.add(Rect(x, 15, 10, 5, strokeColor=None, fillColor=color))
+        drawing.add(String(x + 14, 15, label, fontSize=7, fillColor=BRAND_MUTED))
+    return drawing
+
+
+def generate_tmac_pdf(report, output):
+    doc = SimpleDocTemplate(output, pagesize=landscape(A4), leftMargin=14 * mm, rightMargin=14 * mm, topMargin=36 * mm, bottomMargin=24 * mm, title="SCAN-NFE MINASFALTO - Relatorio TMAC", author="SCAN-NFE MINASFALTO")
+    kpis = [["Tempo medio", "Mediana", "Percentil 90", "Maior tempo", "Notas analisadas"], [
+        _format_minutes(report.get("media_minutos")), _format_minutes(report.get("mediana_minutos")),
+        _format_minutes(report.get("p90_minutos")), _format_minutes(report.get("maior_tempo_minutos")), str(report.get("total_notas", 0)),
+    ]]
+    ranking = [["#", "NF", "Chave", "Emissao", "Bipe", "Tempo"]]
+    ranking.extend([[index, item.get("numero_nf") or "-", item.get("chave_acesso") or "-", item["emissao"].strftime("%d/%m/%Y %H:%M"), item["bipe"].strftime("%d/%m/%Y %H:%M"), _format_minutes(item["minutos"])] for index, item in enumerate(report.get("maiores_tempos") or [], start=1)])
+    if len(ranking) == 1:
+        ranking.append(["-", "-", "-", "-", "-", "Nenhuma nota"])
+    subtitle = f"Bipes de {format_period(report['inicio'], report['fim'])}. Inconsistencias desconsideradas: {report.get('total_inconsistencias', 0)}."
+    story = [_section_heading("Relatorio TMAC Recebimento", subtitle), Spacer(1, 10), _pdf_table(kpis, [50 * mm] * 5), Spacer(1, 15), _chart_card(_tmac_chart_drawing(report)), PageBreak(), _section_heading("5 maiores tempos ate o recebimento", "Tempo entre a emissao e o bipe de cada nota."), Spacer(1, 10), _pdf_table(ranking, [10 * mm, 23 * mm, 82 * mm, 42 * mm, 42 * mm, 38 * mm])]
     doc.build(story, onFirstPage=_draw_pdf_branding, onLaterPages=_draw_pdf_branding)
 
 

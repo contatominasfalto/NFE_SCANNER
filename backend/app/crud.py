@@ -9,6 +9,7 @@ from . import models, schemas
 from datetime import datetime, timedelta
 from .time_utils import local_now
 from .tme_service import build_tme_report
+from .tmac_service import build_tmac_report
 
 def _nota_sem_erro():
     return or_(
@@ -548,6 +549,22 @@ def get_relatorio_tme(db: Session, inicio: datetime, fim: datetime):
         .all()
     )
     return build_tme_report(notas, inicio, fim)
+
+
+def get_relatorio_tmac(db: Session, inicio: datetime, fim: datetime):
+    notas = (
+        db.query(models.NotaFiscal)
+        .filter(
+            models.NotaFiscal.data_cadastro.isnot(None),
+            models.NotaFiscal.data_emissao.isnot(None),
+            models.NotaFiscal.data_cadastro >= inicio,
+            models.NotaFiscal.data_cadastro <= fim,
+            _nota_sem_erro(),
+        )
+        .order_by(models.NotaFiscal.data_cadastro.asc(), models.NotaFiscal.id.asc())
+        .all()
+    )
+    return build_tmac_report(notas, inicio, fim)
 
 
 def create_faturista(db: Session, faturista: schemas.FaturistaCreate):

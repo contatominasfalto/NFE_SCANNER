@@ -46,6 +46,7 @@
       <button class="nav-item" id="openFaturistas" hidden><span>◉</span> Usuários</button>
       <button class="nav-item" id="openReports" hidden><span>📊</span> Relatórios</button>
       <button class="nav-item" id="openTmeReport" hidden><span>◷</span> Relatório TME</button>
+      <button class="nav-item" id="openTmacReport" hidden><span>◴</span> Relatório TMAC Recebimento</button>
       <button class="nav-item" id="openAudit" hidden><span>⏱</span> Rastreabilidade</button>
       <a class="nav-item" id="openSwagger" href="/docs" target="_blank" hidden><span>↗</span> Swagger API</a>
     </nav>    
@@ -284,6 +285,45 @@
       <footer><button class="secondary" type="button" data-close="tmeDialog">Fechar</button></footer>
     </section>
   </dialog>
+  <dialog id="tmacDialog">
+    <section class="modal xlarge tme-modal" id="tmacModalSection">
+      <header>
+        <div><p class="eyebrow">EFICIÊNCIA DE RECEBIMENTO</p><h2>Relatório TMAC Recebimento</h2><small>Tempo entre a emissão e o bipe da mesma nota</small></div>
+        <div class="tme-header-actions">
+          <button class="secondary export-pdf" id="exportTmacPdf" type="button">↓ Baixar PDF</button>
+          <button class="icon-button tme-maximize" type="button" data-maximize="tmacModalSection" title="Maximizar relatório" aria-label="Maximizar relatório" aria-pressed="false">□</button>
+          <button class="icon-button close" type="button" data-close="tmacDialog" title="Fechar relatório" aria-label="Fechar relatório">×</button>
+        </div>
+      </header>
+      <div class="tme-scroll">
+        <form id="tmacFilterForm" class="tme-filter">
+          <label>Data inicial do bipe<input id="tmacStartDate" type="date" required></label>
+          <label>Data final do bipe<input id="tmacEndDate" type="date" required></label>
+          <button class="primary" id="applyTmacFilter" type="submit">Analisar período</button>
+        </form>
+        <div class="tme-context" id="tmacContext">Selecione o período de recebimento para analisar as notas.</div>
+        <section class="tme-kpis" aria-label="Indicadores do relatório TMAC">
+          <article><span>Tempo médio</span><strong id="tmacAverage">—</strong><small>emissão até o bipe</small></article>
+          <article><span>Mediana</span><strong id="tmacMedian">—</strong><small>tempo típico</small></article>
+          <article><span>Percentil 90</span><strong id="tmacP90">—</strong><small>90% até este tempo</small></article>
+          <article><span>Maior tempo</span><strong id="tmacLargest">—</strong><small>ponto de atenção</small></article>
+          <article><span>Notas analisadas</span><strong id="tmacNotes">0</strong><small id="tmacIssues">0 inconsistências</small></article>
+        </section>
+        <section class="tme-card">
+          <div class="tme-card-heading"><div><p class="eyebrow">EVOLUÇÃO DIÁRIA</p><h3>Tempo até o recebimento</h3></div><small>Barras representam volume; linhas mostram média, mediana e percentil 90.</small></div>
+          <div class="tme-chart-wrap"><canvas id="tmacChart"></canvas><div class="chart-empty" id="tmacChartEmpty">Informe um período para gerar o gráfico.</div></div>
+        </section>
+        <section class="tme-card">
+          <div class="tme-card-heading"><div><p class="eyebrow">PONTOS DE ATENÇÃO</p><h3>5 maiores tempos até o recebimento</h3></div><small>Identificação pelo número e chave da nota fiscal.</small></div>
+          <div class="material-table-wrap">
+            <table class="material-table tme-ranking-table"><thead><tr><th>#</th><th>NF</th><th>Chave</th><th>Emissão</th><th>Bipe</th><th>Tempo</th></tr></thead><tbody id="tmacRankingBody"></tbody></table>
+            <div class="material-empty" id="tmacRankingEmpty">Nenhuma nota válida encontrada no período.</div>
+          </div>
+        </section>
+      </div>
+      <footer><button class="secondary" type="button" data-close="tmacDialog">Fechar</button></footer>
+    </section>
+  </dialog>
   <dialog id="confirmDialog">
     <section class="modal compact">
       <header><div><p class="eyebrow">CONFIRMAÇÃO</p><h2 id="confirmTitle">Confirmar ação</h2></div></header>
@@ -315,6 +355,6 @@
   </dialog>
   <div id="toast" role="status"></div>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="/painel-assets/app.js?v=20260831-05"></script>
+  <script src="/painel-assets/app.js?v=20260831-06"></script>
 </body>
 </html>
