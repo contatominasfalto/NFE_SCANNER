@@ -49,18 +49,19 @@ class TmePanelTests(unittest.TestCase):
         self.assertLess(reports_position, tme_position)
         self.assertLess(tme_position, audit_position)
 
-    def test_frontend_restricts_visibility_to_adm(self):
+    def test_frontend_restricts_visibility_to_authorized_users(self):
         self.assertIn(
-            'setVisible("openTmeReport",currentUser?.username?.trim().toLowerCase()==="adm")',
+            'setVisible("openTmeReport",canAccessTme())',
             self.javascript,
         )
+        self.assertIn('["adm","mauro"].includes', self.javascript)
         self.assertIn("/relatorios/tme/", self.javascript)
 
     def test_tme_styles_and_cache_versions_are_present(self):
         self.assertIn(".tme-kpis", self.styles)
         self.assertIn(".tme-chart-wrap", self.styles)
         self.assertRegex(self.html, re.compile(r"styles\.css\?v=20260831-02"))
-        self.assertRegex(self.html, re.compile(r"app\.js\?v=20260831-04"))
+        self.assertRegex(self.html, re.compile(r"app\.js\?v=20260831-05"))
 
     def test_tme_modal_can_be_maximized_and_resets_when_closed(self):
         self.assertIn('data-maximize="tmeModalSection"', self.html)

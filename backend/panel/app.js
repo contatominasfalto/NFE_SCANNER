@@ -25,7 +25,7 @@ function applyAccessRules(){
 	setVisible("openNotes",p.notes);
 	setVisible("openFaturistas",p.users);
 	setVisible("openReports",p.reports);
-	setVisible("openTmeReport",currentUser?.username?.trim().toLowerCase()==="adm");
+	setVisible("openTmeReport",canAccessTme());
 	setVisible("openAudit",p.audit);
 	setVisible("openSwagger",p.swagger);
 	setVisible("openBatchScan",p.batch);
@@ -466,6 +466,7 @@ const tmeMinutes=value=>{
 	if(hours)return`${hours}h`;
 	return`${formatted} min`;
 };
+const canAccessTme=()=>["adm","mauro"].includes(currentUser?.username?.trim().toLowerCase());
 const tmeDateTime=value=>value?new Date(value).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}):"—";
 function defaultTmeRange(){const now=new Date(),start=new Date(now.getFullYear(),now.getMonth(),1);return{start:localDateKey(start),end:localDateKey(now)}}
 function renderTmeReport(result){
@@ -529,7 +530,7 @@ async function exportTmePdf(){
 	}catch(error){toast(error.message,true)}finally{button.disabled=false;button.textContent=original}
 }
 async function openTmeModal(){
-	if(!currentUser||currentUser.username?.trim().toLowerCase()!=="adm"){toast("Acesso exclusivo do usuário adm.",true);return}
+	if(!canAccessTme()){toast("Acesso não autorizado ao Relatório TME.",true);return}
 	const range=defaultTmeRange();
 	if(!$("tmeStartDate").value)$("tmeStartDate").value=range.start;
 	if(!$("tmeEndDate").value)$("tmeEndDate").value=range.end;

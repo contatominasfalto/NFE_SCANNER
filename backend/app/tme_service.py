@@ -10,7 +10,7 @@ def _round_minutes(value: float) -> float:
 
 
 def can_access_tme(username: str | None) -> bool:
-    return (username or "").strip().casefold() == "adm"
+    return (username or "").strip().casefold() in {"adm", "mauro"}
 
 
 def build_tme_report(notas: Iterable[object], inicio: datetime, fim: datetime) -> dict:

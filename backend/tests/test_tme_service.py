@@ -80,9 +80,11 @@ class TmeReportTests(unittest.TestCase):
         self.assertEqual(result["intervalos"][0]["nota_anterior"]["id"], 1)
         self.assertEqual(result["intervalos"][0]["nota_atual"]["id"], 2)
 
-    def test_access_is_exclusive_to_adm_username(self):
+    def test_access_is_limited_to_authorized_usernames(self):
         self.assertTrue(can_access_tme("adm"))
         self.assertTrue(can_access_tme(" ADM "))
+        self.assertTrue(can_access_tme("Mauro"))
+        self.assertTrue(can_access_tme(" MAURO "))
         self.assertFalse(can_access_tme("admin"))
         self.assertFalse(can_access_tme("viewer_user"))
         self.assertFalse(can_access_tme(None))

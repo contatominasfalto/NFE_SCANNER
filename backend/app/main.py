@@ -219,9 +219,9 @@ def ensure_admin(user: models.User):
         raise HTTPException(status_code=403, detail="Acesso restrito ao usuario administrador.")
 
 
-def ensure_adm(user: models.User):
+def ensure_tme_access(user: models.User):
     if not can_access_tme(user.username):
-        raise HTTPException(status_code=403, detail="Acesso exclusivo do usuario adm.")
+        raise HTTPException(status_code=403, detail="Acesso nao autorizado ao Relatorio TME.")
 
 
 def ensure_not_viewer(user: models.User):
@@ -1142,7 +1142,7 @@ def relatorio_recebimento_diario(
     "/relatorios/tme/",
     tags=["Sistema"],
     summary="Calcular tempo medio entre emissoes",
-    description="Relatorio exclusivo do usuario adm baseado em notas validas ordenadas pela data de emissao.",
+    description="Relatorio para usuarios autorizados baseado em notas validas ordenadas pela data de emissao.",
 )
 def relatorio_tme(
     data_inicio: datetime = Query(description="Data e hora inicial inclusiva."),
@@ -1150,7 +1150,7 @@ def relatorio_tme(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    ensure_adm(current_user)
+    ensure_tme_access(current_user)
     if data_inicio > data_fim:
         raise HTTPException(
             status_code=400,
@@ -1164,7 +1164,7 @@ def relatorio_tme(
     response_class=StreamingResponse,
     tags=["Sistema"],
     summary="Exportar relatorio TME em PDF",
-    description="Gera o relatorio TME em PDF. Acesso exclusivo do usuario adm.",
+    description="Gera o relatorio TME em PDF para usuarios autorizados.",
 )
 def exportar_relatorio_tme(
     data_inicio: datetime = Query(description="Data e hora inicial inclusiva."),
@@ -1172,7 +1172,7 @@ def exportar_relatorio_tme(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    ensure_adm(current_user)
+    ensure_tme_access(current_user)
     if data_inicio > data_fim:
         raise HTTPException(status_code=400, detail="A data inicial deve ser anterior ou igual a data final.")
     report = crud.get_relatorio_tme(db, data_inicio, data_fim)
