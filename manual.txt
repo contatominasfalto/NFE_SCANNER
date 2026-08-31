@@ -42,3 +42,25 @@ http://127.0.0.1:8000/painel
 
 O painel apresenta a tabela completa de notas com atualizacao automatica, filtros,
 leitura por chave, conferencia, edicao, exclusao, geracao de XML e cadastro de faturistas.
+
+
+
+
+API
+
+$apiKey = "nfe_scanner_api_2026_9XqP7mL4vR2sK8dW6zN3bY5t"
+
+Invoke-RestMethod `
+  -Uri "https://nfe-scanner-api.onrender.com/api/v1/notas?bip_inicio=2026-08-01&bip_fim=2026-08-31&page=1&page_size=5" `
+  -Headers @{ "X-API-Key" = $apiKey }
+
+
+
+  Invoke-RestMethod `
+  -Uri "https://nfe-scanner-api.onrender.com/api/v1/notas/31260833592510044798550020002889051384488548" `
+  -Headers @{ "X-API-Key" = $apiKey }
+
+
+  Invoke-RestMethod `
+  -Uri "https://nfe-scanner-api.onrender.com/api/v1/notas-excluidas?exclusao_inicio=2026-08-01&exclusao_fim=2026-08-31&page=1&page_size=5" `
+  -Headers @{ "X-API-Key" = $apiKey }

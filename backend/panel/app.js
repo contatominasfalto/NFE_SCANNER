@@ -519,6 +519,7 @@ async function openTmeModal(){
 	const range=defaultTmeRange();
 	if(!$("tmeStartDate").value)$("tmeStartDate").value=range.start;
 	if(!$("tmeEndDate").value)$("tmeEndDate").value=range.end;
+	setModalMaximized("tmeModalSection",true);
 	if(!$("tmeDialog").open)$("tmeDialog").showModal();
 	await loadTmeReport();
 }

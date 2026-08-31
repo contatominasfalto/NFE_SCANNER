@@ -59,11 +59,12 @@ class TmePanelTests(unittest.TestCase):
         self.assertIn(".tme-kpis", self.styles)
         self.assertIn(".tme-chart-wrap", self.styles)
         self.assertRegex(self.html, re.compile(r"styles\.css\?v=20260831-02"))
-        self.assertRegex(self.html, re.compile(r"app\.js\?v=20260831-02"))
+        self.assertRegex(self.html, re.compile(r"app\.js\?v=20260831-03"))
 
     def test_tme_modal_can_be_maximized_and_resets_when_closed(self):
         self.assertIn('data-maximize="tmeModalSection"', self.html)
         self.assertIn('aria-label="Maximizar relatório"', self.html)
+        self.assertIn('setModalMaximized("tmeModalSection",true)', self.javascript)
         self.assertIn('if(id==="tmeDialog")setModalMaximized("tmeModalSection",false)', self.javascript)
         self.assertIn(".tme-header-actions", self.styles)
 
