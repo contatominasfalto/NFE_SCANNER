@@ -58,6 +58,7 @@ def build_tmac_report(notas: Iterable[object], inicio: datetime, fim: datetime) 
             "p90_minutos": _round_minutes(percentile(day_values, 0.9)),
         })
 
+    ordered_by_time = sorted(valid, key=lambda item: (item["minutos"], item["bipe"]), reverse=True)
     return {
         "inicio": inicio,
         "fim": fim,
@@ -68,6 +69,7 @@ def build_tmac_report(notas: Iterable[object], inicio: datetime, fim: datetime) 
         "p90_minutos": _round_minutes(percentile(values, 0.9)),
         "maior_tempo_minutos": max(values, default=0.0),
         "dias": daily,
-        "maiores_tempos": sorted(valid, key=lambda item: (item["minutos"], item["bipe"]), reverse=True)[:5],
+        "maiores_tempos": ordered_by_time[:5],
+        "notas": ordered_by_time,
         "inconsistencias": inconsistent,
     }

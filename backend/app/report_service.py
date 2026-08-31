@@ -525,6 +525,40 @@ def _tmac_chart_drawing(report):
     return drawing
 
 
+def _tmac_detail_chart_drawing(report):
+    width, height = 720, 255
+    drawing = Drawing(width, height)
+    _add_chart_gradient(drawing, width, height)
+    notes = sorted(report.get("notas") or [], key=lambda item: (item["bipe"], item.get("id") or 0))
+    drawing.add(String(width / 2, 238, f"Tempo individual de {len(notes)} notas", textAnchor="middle", fontName="Helvetica-Bold", fontSize=13))
+    if not notes:
+        drawing.add(String(width / 2, 120, "Nenhuma nota valida no periodo", textAnchor="middle", fontSize=10))
+        return drawing
+    left, bottom, chart_width, chart_height = 58, 43, 630, 165
+    maximum = max(item["minutos"] for item in notes) or 1
+    p90 = report.get("p90_minutos", 0)
+    for index in range(5):
+        y = bottom + chart_height * index / 4
+        drawing.add(Line(left, y, left + chart_width, y, strokeColor=colors.HexColor("#D4DFE8"), strokeWidth=0.5))
+        drawing.add(String(left - 7, y - 2, _format_minutes(maximum * index / 4), textAnchor="end", fontSize=6, fillColor=BRAND_MUTED))
+    coordinates = []
+    denominator = max(len(notes) - 1, 1)
+    for index, item in enumerate(notes):
+        x = left + chart_width * index / denominator
+        y = bottom + chart_height * item["minutos"] / maximum
+        coordinates.extend([x, y])
+    if len(coordinates) >= 4:
+        drawing.add(PolyLine(coordinates, strokeColor=colors.Color(.95, .57, .16, alpha=.45), strokeWidth=.65))
+    radius = 1.1 if len(notes) > 500 else 1.6
+    for index, item in enumerate(notes):
+        x = left + chart_width * index / denominator
+        y = bottom + chart_height * item["minutos"] / maximum
+        color = colors.HexColor("#C73B36") if item["minutos"] >= p90 else BRAND_ORANGE
+        drawing.add(Circle(x, y, radius, fillColor=color, strokeColor=None))
+    drawing.add(String(width / 2, 18, "Cada ponto representa uma nota em ordem cronologica de recebimento", textAnchor="middle", fontSize=7, fillColor=BRAND_MUTED))
+    return drawing
+
+
 def generate_tmac_pdf(report, output):
     doc = SimpleDocTemplate(output, pagesize=landscape(A4), leftMargin=14 * mm, rightMargin=14 * mm, topMargin=36 * mm, bottomMargin=24 * mm, title="SCAN-NFE MINASFALTO - Relatorio TMAC", author="SCAN-NFE MINASFALTO")
     kpis = [["Tempo medio", "Mediana", "Percentil 90", "Maior tempo", "Notas analisadas"], [
@@ -535,8 +569,13 @@ def generate_tmac_pdf(report, output):
     ranking.extend([[index, item.get("numero_nf") or "-", item.get("chave_acesso") or "-", item["emissao"].strftime("%d/%m/%Y %H:%M"), item["bipe"].strftime("%d/%m/%Y %H:%M"), _format_minutes(item["minutos"])] for index, item in enumerate(report.get("maiores_tempos") or [], start=1)])
     if len(ranking) == 1:
         ranking.append(["-", "-", "-", "-", "-", "Nenhuma nota"])
+    full_rows = [["#", "NF", "Chave", "Emissao", "Bipe", "Tempo"]]
+    full_rows.extend([[index, item.get("numero_nf") or "-", item.get("chave_acesso") or "-", item["emissao"].strftime("%d/%m/%Y %H:%M"), item["bipe"].strftime("%d/%m/%Y %H:%M"), _format_minutes(item["minutos"])] for index, item in enumerate(report.get("notas") or [], start=1)])
+    if len(full_rows) == 1:
+        full_rows.append(["-", "-", "-", "-", "-", "Nenhuma nota"])
     subtitle = f"Bipes de {format_period(report['inicio'], report['fim'])}. Inconsistencias desconsideradas: {report.get('total_inconsistencias', 0)}."
-    story = [_section_heading("Relatorio TMAC Recebimento", subtitle), Spacer(1, 10), _pdf_table(kpis, [50 * mm] * 5), Spacer(1, 15), _chart_card(_tmac_chart_drawing(report)), PageBreak(), _section_heading("5 maiores tempos ate o recebimento", "Tempo entre a emissao e o bipe de cada nota."), Spacer(1, 10), _pdf_table(ranking, [10 * mm, 23 * mm, 82 * mm, 42 * mm, 42 * mm, 38 * mm])]
+    widths = [10 * mm, 23 * mm, 82 * mm, 42 * mm, 42 * mm, 38 * mm]
+    story = [_section_heading("Relatorio TMAC Recebimento", subtitle), Spacer(1, 10), _pdf_table(kpis, [50 * mm] * 5), Spacer(1, 15), _chart_card(_tmac_chart_drawing(report)), PageBreak(), _section_heading("Visao individual das notas", f"Todos os {report.get('total_notas', 0)} registros validos do periodo."), Spacer(1, 10), _chart_card(_tmac_detail_chart_drawing(report)), PageBreak(), _section_heading("5 maiores tempos ate o recebimento", "Tempo entre a emissao e o bipe de cada nota."), Spacer(1, 10), _pdf_table(ranking, widths), PageBreak(), _section_heading("Detalhamento completo", "Notas ordenadas do maior para o menor tempo ate o recebimento."), Spacer(1, 10), _pdf_table(full_rows, widths)]
     doc.build(story, onFirstPage=_draw_pdf_branding, onLaterPages=_draw_pdf_branding)
 
 

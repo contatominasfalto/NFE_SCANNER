@@ -314,10 +314,21 @@
           <div class="tme-chart-wrap"><canvas id="tmacChart"></canvas><div class="chart-empty" id="tmacChartEmpty">Informe um período para gerar o gráfico.</div></div>
         </section>
         <section class="tme-card">
+          <div class="tme-card-heading"><div><p class="eyebrow">VISÃO INDIVIDUAL</p><h3>Tempo de cada nota até o recebimento</h3></div><small id="tmacDetailCaption">Cada ponto representa uma nota fiscal do período.</small></div>
+          <div class="tme-chart-wrap tmac-detail-chart-wrap"><canvas id="tmacDetailChart"></canvas><div class="chart-empty" id="tmacDetailChartEmpty">Informe um período para visualizar as notas.</div></div>
+        </section>
+        <section class="tme-card">
           <div class="tme-card-heading"><div><p class="eyebrow">PONTOS DE ATENÇÃO</p><h3>5 maiores tempos até o recebimento</h3></div><small>Identificação pelo número e chave da nota fiscal.</small></div>
           <div class="material-table-wrap">
             <table class="material-table tme-ranking-table"><thead><tr><th>#</th><th>NF</th><th>Chave</th><th>Emissão</th><th>Bipe</th><th>Tempo</th></tr></thead><tbody id="tmacRankingBody"></tbody></table>
             <div class="material-empty" id="tmacRankingEmpty">Nenhuma nota válida encontrada no período.</div>
+          </div>
+        </section>
+        <section class="tme-card">
+          <div class="tme-card-heading"><div><p class="eyebrow">DETALHAMENTO COMPLETO</p><h3>Todos os tempos do período</h3></div><small id="tmacAllCount">0 notas, ordenadas do maior para o menor tempo.</small></div>
+          <div class="material-table-wrap tmac-all-table-wrap">
+            <table class="material-table tme-ranking-table"><thead><tr><th>#</th><th>NF</th><th>Chave</th><th>Emissão</th><th>Bipe</th><th>Tempo</th></tr></thead><tbody id="tmacAllBody"></tbody></table>
+            <div class="material-empty" id="tmacAllEmpty">Nenhuma nota válida encontrada no período.</div>
           </div>
         </section>
       </div>
@@ -355,6 +366,6 @@
   </dialog>
   <div id="toast" role="status"></div>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="/painel-assets/app.js?v=20260831-06"></script>
+  <script src="/painel-assets/app.js?v=20260831-07"></script>
 </body>
 </html>
