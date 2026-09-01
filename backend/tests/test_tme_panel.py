@@ -70,8 +70,8 @@ class TmePanelTests(unittest.TestCase):
     def test_tme_styles_and_cache_versions_are_present(self):
         self.assertIn(".tme-kpis", self.styles)
         self.assertIn(".tme-chart-wrap", self.styles)
-        self.assertRegex(self.html, re.compile(r"styles\.css\?v=20260831-02"))
-        self.assertRegex(self.html, re.compile(r"app\.js\?v=20260901-01"))
+        self.assertRegex(self.html, re.compile(r"styles\.css\?v=20260901-02"))
+        self.assertRegex(self.html, re.compile(r"app\.js\?v=20260901-02"))
 
     def test_tme_modal_can_be_maximized_and_resets_when_closed(self):
         self.assertIn('data-maximize="tmeModalSection"', self.html)
@@ -98,6 +98,13 @@ class TmePanelTests(unittest.TestCase):
         self.assertIn('name="billingModule"', self.html)
         self.assertNotIn("ROLE_PERMISSIONS", self.javascript)
         self.assertIn("PROFILE_DEFAULT_MODULES", self.javascript)
+
+    def test_user_modal_uses_maximized_organized_layout(self):
+        self.assertIn('id="usersModalSection"', self.html)
+        self.assertIn('data-maximize="usersModalSection"', self.html)
+        self.assertIn('class="users-form"', self.html)
+        self.assertIn('class="users-list-heading"', self.html)
+        self.assertIn('setModalMaximized("usersModalSection",true)', self.javascript)
 
 
 if __name__ == "__main__":

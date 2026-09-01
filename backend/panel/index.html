@@ -7,7 +7,7 @@
   <link rel="icon" type="image/jpeg" href="/painel-assets/logo.jpg?v=20260723-01">
   <link rel="shortcut icon" type="image/jpeg" href="/painel-assets/logo.jpg?v=20260723-01">
   <link rel="apple-touch-icon" href="/painel-assets/logo.jpg?v=20260723-01">
-  <link rel="stylesheet" href="/painel-assets/styles.css?v=20260831-02">
+  <link rel="stylesheet" href="/painel-assets/styles.css?v=20260901-02">
 </head>
 <body>
   <dialog class="modal compact" id="loginDialog">
@@ -162,19 +162,24 @@
   </dialog>
 
   <dialog id="faturistasDialog">
-    <section class="modal medium">
-      <header><div><p class="eyebrow">CADASTRO AUXILIAR</p><h2>Usuários</h2></div><button class="icon-button close" type="button" data-close="faturistasDialog">×</button></header>
-      <form id="billingForm" class="inline-form">
+    <section class="modal xlarge users-modal" id="usersModalSection">
+      <header><div><p class="eyebrow">CADASTRO AUXILIAR</p><h2>Gestão de usuários</h2><small>Defina o perfil e os módulos disponíveis para cada usuário.</small></div><div class="users-header-actions"><button class="icon-button users-maximize" type="button" data-maximize="usersModalSection" aria-label="Maximizar usuários" title="Maximizar usuários">□</button><button class="icon-button close" type="button" data-close="faturistasDialog" aria-label="Fechar">×</button></div></header>
+      <div class="users-scroll">
+      <form id="billingForm" class="users-form">
         <input type="hidden" id="billingId">
-        <label>Nome do usuário<input id="billingName" placeholder="Nome do usuário" required minlength="2"></label>
-        <label>Senha<input id="billingPassword" type="password" placeholder="Senha de acesso" minlength="6" required></label>
+        <div class="users-form-heading"><div><h3 id="billingFormTitle">Novo usuário</h3><p id="billingFormHint">Informe as credenciais, escolha um perfil e confirme os módulos permitidos.</p></div><span>Campos obrigatórios</span></div>
+        <div class="users-form-fields">
+        <label>Nome do usuário<input id="billingName" placeholder="Ex.: nome.sobrenome" required minlength="2"></label>
+        <label>Senha<input id="billingPassword" type="password" placeholder="Mínimo de 6 caracteres" minlength="6" required></label>
         <label>Perfil<select id="billingRole"><option value="user">Standard</option><option value="viewer">Viewer</option><option value="admin">Admin</option></select></label>
+        <button type="submit" class="primary" id="billingSubmit">＋ Cadastrar usuário</button>
+        </div>
         <fieldset class="billing-modules"><legend>Módulos permitidos</legend>
-          <label><input type="checkbox" name="billingModule" value="notes"> Notas Fiscais</label><label><input type="checkbox" name="billingModule" value="reports"> Relatórios</label><label><input type="checkbox" name="billingModule" value="tme"> Relatório TME</label><label><input type="checkbox" name="billingModule" value="tmac"> Relatório TMAC</label><label><input type="checkbox" name="billingModule" value="users"> Usuários</label><label><input type="checkbox" name="billingModule" value="audit"> Rastreabilidade</label><label><input type="checkbox" name="billingModule" value="swagger"> Swagger API</label>
+          <label class="module-option"><input type="checkbox" name="billingModule" value="notes"><span><strong>Notas Fiscais</strong><small>Consulta e operação de notas</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="reports"><span><strong>Relatórios</strong><small>Indicadores operacionais</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="tme"><span><strong>Relatório TME</strong><small>Intervalo entre emissões</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="tmac"><span><strong>Relatório TMAC</strong><small>Tempo até o recebimento</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="users"><span><strong>Usuários</strong><small>Gestão de acessos</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="audit"><span><strong>Rastreabilidade</strong><small>Histórico de alterações</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="swagger"><span><strong>Swagger API</strong><small>Documentação dos endpoints</small></span></label>
         </fieldset>
-        <button type="submit" class="primary" id="billingSubmit">＋ Cadastrar</button>
       </form>
-      <div class="billing-list" id="billingList"></div>
+      <section class="users-list-panel"><div class="users-list-title"><div><h3>Usuários cadastrados</h3><p>Consulte perfil, situação e permissões de acesso.</p></div></div><div class="users-list-heading"><span>Usuário</span><span>Perfil</span><span>Situação</span><span>Módulos permitidos</span><span>Ações</span></div><div class="billing-list" id="billingList"></div></section>
+      </div>
     </section>
   </dialog>
 
@@ -370,6 +375,6 @@
   </dialog>
   <div id="toast" role="status"></div>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="/painel-assets/app.js?v=20260901-01"></script>
+  <script src="/painel-assets/app.js?v=20260901-02"></script>
 </body>
 </html>
