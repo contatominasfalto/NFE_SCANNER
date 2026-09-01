@@ -61,17 +61,17 @@ class TmePanelTests(unittest.TestCase):
 
     def test_frontend_restricts_visibility_to_authorized_users(self):
         self.assertIn(
-            'setVisible("openTmeReport",canAccessTme())',
+            'setVisible("openTmeReport",p.tme)',
             self.javascript,
         )
-        self.assertIn('["adm","mauro"].includes', self.javascript)
+        self.assertIn("currentUser?.permissions?.modules", self.javascript)
         self.assertIn("/relatorios/tme/", self.javascript)
 
     def test_tme_styles_and_cache_versions_are_present(self):
         self.assertIn(".tme-kpis", self.styles)
         self.assertIn(".tme-chart-wrap", self.styles)
         self.assertRegex(self.html, re.compile(r"styles\.css\?v=20260831-02"))
-        self.assertRegex(self.html, re.compile(r"app\.js\?v=20260831-07"))
+        self.assertRegex(self.html, re.compile(r"app\.js\?v=20260901-01"))
 
     def test_tme_modal_can_be_maximized_and_resets_when_closed(self):
         self.assertIn('data-maximize="tmeModalSection"', self.html)
@@ -86,12 +86,18 @@ class TmePanelTests(unittest.TestCase):
         self.assertIn('credentials:"include"', self.javascript)
 
     def test_tmac_module_uses_authorized_users_and_combined_chart(self):
-        self.assertIn('setVisible("openTmacReport",canAccessTme())', self.javascript)
+        self.assertIn('setVisible("openTmacReport",p.tmac)', self.javascript)
         self.assertIn("/relatorios/tmac-recebimento/", self.javascript)
         self.assertIn('type:"bar",label:"Notas recebidas"', self.javascript)
         self.assertIn('label:"P90"', self.javascript)
         self.assertIn("tmacDetailChart=new Chart", self.javascript)
         self.assertIn('result.notas||[]', self.javascript)
+
+    def test_user_form_supports_profiles_and_modules(self):
+        self.assertIn('id="billingRole"', self.html)
+        self.assertIn('name="billingModule"', self.html)
+        self.assertNotIn("ROLE_PERMISSIONS", self.javascript)
+        self.assertIn("PROFILE_DEFAULT_MODULES", self.javascript)
 
 
 if __name__ == "__main__":

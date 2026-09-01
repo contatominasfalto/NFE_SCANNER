@@ -34,6 +34,7 @@ class User(Base):
     password_hash = Column(String(128), nullable=False)
     salt = Column(String(64), nullable=False)
     role = Column(String(30), default="user", nullable=False)
+    module_access = Column(Text, nullable=True)
     active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=local_now)
 

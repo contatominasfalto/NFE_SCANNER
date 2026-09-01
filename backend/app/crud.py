@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 from .time_utils import local_now
 from .tme_service import build_tme_report
 from .tmac_service import build_tmac_report
+from .access_control import DEFAULT_MODULES, serialize_modules
 
 def _nota_sem_erro():
     return or_(
@@ -569,26 +570,25 @@ def get_relatorio_tmac(db: Session, inicio: datetime, fim: datetime):
 
 def create_faturista(db: Session, faturista: schemas.FaturistaCreate):
     username = faturista.nome.strip()
-    return create_user(db, username, faturista.senha, role="user", active=True)
+    modules = faturista.modulos if faturista.modulos is not None else DEFAULT_MODULES[faturista.role]
+    return create_user(db, username, faturista.senha, role=faturista.role, active=faturista.ativo, module_access=serialize_modules(modules))
 
 
 def get_faturistas(db: Session, incluir_inativos: bool = False):
-    query = db.query(models.User).filter(models.User.role.in_(("user", "viewer")))
+    query = db.query(models.User)
     if not incluir_inativos:
         query = query.filter(models.User.active.is_(True))
     fixed_user_order = case(
-        (models.User.username == "BIPE", 0),
-        (models.User.username == "viewer_user", 1),
-        else_=2,
+        (models.User.username == "adm", 0),
+        (models.User.username == "BIPE", 1),
+        (models.User.username == "viewer_user", 2),
+        else_=3,
     )
     return query.order_by(fixed_user_order, models.User.username).all()
 
 
 def get_faturista(db: Session, faturista_id: int):
-    return db.query(models.User).filter(
-        models.User.id == faturista_id,
-        models.User.role.in_(("user", "viewer")),
-    ).first()
+    return db.query(models.User).filter(models.User.id == faturista_id).first()
 
 
 def hash_password(password: str, salt: bytes | None = None) -> tuple[str, str]:
@@ -603,7 +603,7 @@ def verify_password(password: str, password_hash: str, salt: str) -> bool:
     return hmac.compare_digest(password_hash, computed_hash)
 
 
-def create_user(db: Session, username: str, password: str, role: str = "user", active: bool = True):
+def create_user(db: Session, username: str, password: str, role: str = "user", active: bool = True, module_access: str | None = None):
     username = username.strip()
     password_hash, salt = hash_password(password)
     db_user = models.User(
@@ -612,6 +612,7 @@ def create_user(db: Session, username: str, password: str, role: str = "user", a
         salt=salt,
         role=role,
         active=active,
+        module_access=module_access,
     )
     db.add(db_user)
     try:
@@ -642,6 +643,10 @@ def update_faturista(db: Session, faturista_id: int, faturista_data: schemas.Fat
         return None
     faturista.username = faturista_data.nome.strip()
     faturista.active = faturista_data.ativo
+    if faturista_data.role is not None:
+        faturista.role = faturista_data.role
+    if faturista_data.modulos is not None:
+        faturista.module_access = serialize_modules(faturista_data.modulos)
     if faturista_data.senha:
         password_hash, salt = hash_password(faturista_data.senha)
         faturista.password_hash = password_hash

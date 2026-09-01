@@ -168,6 +168,10 @@
         <input type="hidden" id="billingId">
         <label>Nome do usuário<input id="billingName" placeholder="Nome do usuário" required minlength="2"></label>
         <label>Senha<input id="billingPassword" type="password" placeholder="Senha de acesso" minlength="6" required></label>
+        <label>Perfil<select id="billingRole"><option value="user">Standard</option><option value="viewer">Viewer</option><option value="admin">Admin</option></select></label>
+        <fieldset class="billing-modules"><legend>Módulos permitidos</legend>
+          <label><input type="checkbox" name="billingModule" value="notes"> Notas Fiscais</label><label><input type="checkbox" name="billingModule" value="reports"> Relatórios</label><label><input type="checkbox" name="billingModule" value="tme"> Relatório TME</label><label><input type="checkbox" name="billingModule" value="tmac"> Relatório TMAC</label><label><input type="checkbox" name="billingModule" value="users"> Usuários</label><label><input type="checkbox" name="billingModule" value="audit"> Rastreabilidade</label><label><input type="checkbox" name="billingModule" value="swagger"> Swagger API</label>
+        </fieldset>
         <button type="submit" class="primary" id="billingSubmit">＋ Cadastrar</button>
       </form>
       <div class="billing-list" id="billingList"></div>
@@ -366,6 +370,6 @@
   </dialog>
   <div id="toast" role="status"></div>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="/painel-assets/app.js?v=20260831-07"></script>
+  <script src="/painel-assets/app.js?v=20260901-01"></script>
 </body>
 </html>

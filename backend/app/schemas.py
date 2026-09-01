@@ -2,7 +2,9 @@ from enum import Enum
 
 from pydantic import BaseModel, Field
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
+
+ModuleCode = Literal["notes", "reports", "tme", "tmac", "users", "audit", "swagger"]
 
 class Local(str, Enum):
     CDMA = "CDMA"
@@ -235,6 +237,8 @@ class ApiNotasExcluidasResponse(BaseModel):
 class FaturistaBase(BaseModel):
     nome: str = Field(min_length=2, max_length=100, examples=["Maria Silva"])
     ativo: bool = True
+    role: str = Field("user", pattern="^(admin|user|viewer)$")
+    modulos: Optional[list[ModuleCode]] = None
 
 
 class FaturistaCreate(FaturistaBase):
@@ -243,11 +247,15 @@ class FaturistaCreate(FaturistaBase):
 
 class FaturistaUpdate(FaturistaBase):
     senha: Optional[str] = Field(None, min_length=6, max_length=100)
+    role: Optional[str] = Field(None, pattern="^(admin|user|viewer)$")
+    modulos: Optional[list[ModuleCode]] = None
 
 
 class FaturistaResponse(FaturistaBase):
     id: int
     data_cadastro: datetime
+    protegido: bool = False
+    modulos: list[ModuleCode] = Field(default_factory=list)
 
     class Config:
         from_attributes = True
@@ -274,6 +282,8 @@ class UserResponse(BaseModel):
     role: str
     active: bool
     created_at: datetime
+    profile_name: str
+    permissions: dict
 
     class Config:
         from_attributes = True

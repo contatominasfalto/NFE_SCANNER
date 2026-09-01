@@ -89,6 +89,11 @@ def ensure_schema():
         if "role" not in user_columns:
             with engine.begin() as connection:
                 connection.execute(text(f"ALTER TABLE users ADD COLUMN role {string_type} DEFAULT 'user'"))
+        if "module_access" not in user_columns:
+            with engine.begin() as connection:
+                connection.execute(text("ALTER TABLE users ADD COLUMN module_access TEXT"))
+        with engine.begin() as connection:
+            connection.execute(text("UPDATE users SET module_access = :modules WHERE LOWER(username) = 'mauro' AND module_access IS NULL"), {"modules": '["notes", "reports", "tme", "tmac"]'})
 
 def get_db():
     db = SessionLocal()

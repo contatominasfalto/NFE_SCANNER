@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from unittest.mock import patch
 
-from app.tme_service import build_tme_report, can_access_tme
+from app.tme_service import build_tme_report
 from app.report_service import _sample_tme_intervals, generate_tme_pdf
 
 
@@ -100,15 +100,6 @@ class TmeReportTests(unittest.TestCase):
         self.assertEqual(result["intervalos"][0]["minutos"], 0.0)
         self.assertEqual(result["intervalos"][0]["nota_anterior"]["id"], 1)
         self.assertEqual(result["intervalos"][0]["nota_atual"]["id"], 2)
-
-    def test_access_is_limited_to_authorized_usernames(self):
-        self.assertTrue(can_access_tme("adm"))
-        self.assertTrue(can_access_tme(" ADM "))
-        self.assertTrue(can_access_tme("Mauro"))
-        self.assertTrue(can_access_tme(" MAURO "))
-        self.assertFalse(can_access_tme("admin"))
-        self.assertFalse(can_access_tme("viewer_user"))
-        self.assertFalse(can_access_tme(None))
 
 
 if __name__ == "__main__":

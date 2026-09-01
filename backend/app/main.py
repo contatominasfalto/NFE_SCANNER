@@ -24,7 +24,7 @@ from .database import engine, ensure_schema, get_db, SessionLocal
 from .logging_config import configure_logging, mask_access_key
 from .note_author import aplicar_usuario_lancamento, usuario_efetivo_erro, usuario_lancamento
 from .time_utils import local_now
-from .tme_service import can_access_tme
+from .access_control import PROFILE_LABELS, effective_modules, has_access, is_protected_user, normalize_profile, permission_payload, profile_allows, request_scope
 
 logger = configure_logging()
 models.Base.metadata.create_all(bind=engine)
@@ -211,27 +211,47 @@ def get_current_user(request: Request, db: Session = Depends(get_db), session_to
     user = crud.get_user_by_username(db, session_data["username"])
     if not user or not user.active:
         raise HTTPException(status_code=401, detail="Usuario invalido.")
+    scope = request_scope(request.url.path, request.method)
+    if scope and not has_access(user, *scope):
+        raise HTTPException(status_code=403, detail="Usuario sem permissao para este modulo ou operacao.")
     return user
 
 
 def ensure_admin(user: models.User):
-    if user.role != "admin":
+    if not profile_allows(user, "manage"):
         raise HTTPException(status_code=403, detail="Acesso restrito ao usuario administrador.")
 
 
 def ensure_tme_access(user: models.User):
-    if not can_access_tme(user.username):
+    if not has_access(user, "tme", "view"):
         raise HTTPException(status_code=403, detail="Acesso nao autorizado ao Relatorio TME.")
 
 
 def ensure_time_report_access(user: models.User):
-    if not can_access_tme(user.username):
+    if not has_access(user, "tmac", "view"):
         raise HTTPException(status_code=403, detail="Acesso nao autorizado ao relatorio solicitado.")
 
 
 def ensure_not_viewer(user: models.User):
-    if user.role == VIEWER_ROLE:
+    if not profile_allows(user, "operate"):
         raise HTTPException(status_code=403, detail="Usuario de visualizacao nao possui acesso a esta operacao.")
+
+
+def user_response(user: models.User) -> dict:
+    return {
+        "id": user.id, "username": user.username, "role": normalize_profile(user.role),
+        "active": user.active, "created_at": user.created_at,
+        "profile_name": PROFILE_LABELS[normalize_profile(user.role)],
+        "permissions": permission_payload(user),
+    }
+
+
+def faturista_response(user: models.User) -> dict:
+    return {
+        "id": user.id, "nome": user.username, "ativo": user.active,
+        "role": normalize_profile(user.role), "modulos": sorted(effective_modules(user)),
+        "data_cadastro": user.created_at, "protegido": is_protected_user(user.username),
+    }
 
 
 def registrar_auditoria(
@@ -304,7 +324,7 @@ async def log_requests(request: Request, call_next):
             return JSONResponse(status_code=401, content={"detail": "Sessao invalida ou expirada."})
         with SessionLocal() as db:
             user = crud.get_user_by_username(db, session_data["username"])
-            if not user or not user.active or user.role != "admin":
+            if not user or not user.active or not has_access(user, "swagger", "view"):
                 return JSONResponse(status_code=403, content={"detail": "Acesso restrito ao usuario administrador."})
     started_at = perf_counter()
     try:
@@ -466,7 +486,7 @@ def auth_logout(response: Response):
     summary="Informacoes do usuario autenticado",
 )
 def auth_me(current_user: models.User = Depends(get_current_user)):
-    return current_user
+    return user_response(current_user)
 
 
 @app.get(
@@ -481,7 +501,6 @@ def list_auditoria(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    ensure_admin(current_user)
     return crud.list_audit_logs(db, skip=skip, limit=limit)
 
 @app.get(
@@ -1455,9 +1474,9 @@ def create_faturista(faturista_data: schemas.FaturistaCreate, current_user: mode
         f"Cadastrou usuario {faturista.nome}.",
         "Usuario",
         faturista.id,
-        f"Perfil: {faturista.role}",
+        f"Perfil: {faturista.role} | Modulos: {', '.join(sorted(effective_modules(faturista)))}",
     )
-    return faturista
+    return faturista_response(faturista)
 
 
 @app.get(
@@ -1471,8 +1490,7 @@ def list_faturistas(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    ensure_admin(current_user)
-    return crud.get_faturistas(db, incluir_inativos)
+    return [faturista_response(user) for user in crud.get_faturistas(db, incluir_inativos)]
 
 
 @app.put(
@@ -1492,10 +1510,16 @@ def update_faturista(
     atual = crud.get_faturista(db, faturista_id)
     if not atual:
         raise HTTPException(status_code=404, detail="Faturista nao encontrado.")
+    if atual.nome.casefold() == "adm":
+        raise HTTPException(status_code=409, detail="O usuario adm e protegido e nao pode ser modificado.")
     if atual.nome == "BIPE" and (faturista_data.nome != "BIPE" or not faturista_data.ativo):
         raise HTTPException(status_code=409, detail="O faturista padrao BIPE nao pode ser renomeado ou desativado.")
+    if atual.nome == "BIPE" and (faturista_data.role not in (None, "user") or faturista_data.modulos not in (None, ["notes"])):
+        raise HTTPException(status_code=409, detail="O perfil e os modulos do usuario BIPE sao protegidos.")
     if atual.nome == VIEWER_USERNAME and faturista_data.nome != VIEWER_USERNAME:
         raise HTTPException(status_code=409, detail="O usuario de visualizacao nao pode ser renomeado.")
+    if atual.nome == VIEWER_USERNAME and faturista_data.role not in (None, VIEWER_ROLE):
+        raise HTTPException(status_code=409, detail="O perfil do viewer_user deve permanecer Viewer.")
     try:
         faturista = crud.update_faturista(db, faturista_id, faturista_data)
     except IntegrityError as error:
@@ -1509,9 +1533,9 @@ def update_faturista(
         f"Editou usuario {faturista.nome}.",
         "Usuario",
         faturista.id,
-        f"Ativo: {faturista.ativo}",
+        f"Ativo: {faturista.ativo} | Perfil: {faturista.role} | Modulos: {', '.join(sorted(effective_modules(faturista)))}",
     )
-    return faturista
+    return faturista_response(faturista)
 
 
 @app.delete(
@@ -1526,10 +1550,8 @@ def delete_faturista(faturista_id: int, current_user: models.User = Depends(get_
     atual = crud.get_faturista(db, faturista_id)
     if not atual:
         raise HTTPException(status_code=404, detail="Faturista nao encontrado.")
-    if atual.nome == "BIPE":
-        raise HTTPException(status_code=409, detail="O faturista padrao BIPE nao pode ser excluido.")
-    if atual.nome == VIEWER_USERNAME:
-        raise HTTPException(status_code=409, detail="O usuario de visualizacao nao pode ser excluido.")
+    if is_protected_user(atual.nome):
+        raise HTTPException(status_code=409, detail="Este usuario do sistema nao pode ser excluido.")
     faturista = crud.delete_faturista(db, faturista_id)
     logger.info("Faturista excluido | id=%s | nome=%s | admin=%s", faturista.id, faturista.nome, current_user.username)
     registrar_auditoria(

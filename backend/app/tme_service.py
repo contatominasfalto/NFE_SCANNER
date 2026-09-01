@@ -9,10 +9,6 @@ def _round_minutes(value: float) -> float:
     return round(max(0.0, value), 2)
 
 
-def can_access_tme(username: str | None) -> bool:
-    return (username or "").strip().casefold() in {"adm", "mauro"}
-
-
 def build_tme_report(notas: Iterable[object], inicio: datetime, fim: datetime) -> dict:
     """Calcula intervalos consecutivos usando exclusivamente a data de emissao."""
     ordered = sorted(
