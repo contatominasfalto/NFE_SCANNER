@@ -71,7 +71,7 @@ class TmePanelTests(unittest.TestCase):
         self.assertIn(".tme-kpis", self.styles)
         self.assertIn(".tme-chart-wrap", self.styles)
         self.assertRegex(self.html, re.compile(r"styles\.css\?v=20260901-02"))
-        self.assertRegex(self.html, re.compile(r"app\.js\?v=20260911-01"))
+        self.assertRegex(self.html, re.compile(r"app\.js\?v=20260911-02"))
 
     def test_tme_modal_can_be_maximized_and_resets_when_closed(self):
         self.assertIn('data-maximize="tmeModalSection"', self.html)
@@ -99,9 +99,10 @@ class TmePanelTests(unittest.TestCase):
         self.assertNotIn("ROLE_PERMISSIONS", self.javascript)
         self.assertIn("PROFILE_DEFAULT_MODULES", self.javascript)
 
-    def test_viewer_uses_report_download_permission_without_note_download(self):
+    def test_viewer_uses_report_and_note_download_permissions(self):
         self.assertIn("canDownload:!!actions.report_download", self.javascript)
         self.assertIn("download:!!modules.notes&&!!actions.download", self.javascript)
+        self.assertIn("canDownloadXml=getPermissions().download", self.javascript)
         self.assertIn('viewer:["notes","reports","tme","tmac"]', self.javascript)
 
     def test_user_modal_uses_maximized_organized_layout(self):

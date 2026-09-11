@@ -37,12 +37,12 @@ class AccessControlTests(unittest.TestCase):
         self.assertTrue(has_access(current, "reports", "view"))
         self.assertTrue(has_access(current, "audit", "view"))
         self.assertFalse(has_access(current, "notes", "operate"))
-        self.assertFalse(has_access(current, "notes", "download"))
+        self.assertTrue(has_access(current, "notes", "download"))
         self.assertTrue(has_access(current, "reports", "download"))
         self.assertTrue(has_access(current, "tme", "download"))
         self.assertTrue(has_access(current, "tmac", "download"))
         permissions = permission_payload(current)
-        self.assertFalse(permissions["actions"]["download"])
+        self.assertTrue(permissions["actions"]["download"])
         self.assertTrue(permissions["actions"]["report_download"])
 
     def test_admin_always_has_every_module(self):
