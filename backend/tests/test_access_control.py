@@ -22,7 +22,7 @@ class AccessControlTests(unittest.TestCase):
 
     def test_existing_profiles_keep_their_defaults(self):
         self.assertEqual(effective_modules(user("user")), {"notes", "reports"})
-        self.assertEqual(effective_modules(user("viewer")), {"notes"})
+        self.assertEqual(effective_modules(user("viewer")), {"notes", "reports", "tme", "tmac"})
         self.assertIn("users", effective_modules(user("admin")))
 
     def test_standard_can_operate_only_enabled_modules(self):
@@ -32,12 +32,18 @@ class AccessControlTests(unittest.TestCase):
         self.assertFalse(has_access(current, "tmac", "view"))
         self.assertFalse(has_access(current, "users", "manage"))
 
-    def test_viewer_can_view_extra_modules_but_cannot_change_or_download(self):
-        current = user("viewer", '["notes", "reports", "tme", "audit"]')
+    def test_viewer_can_view_and_download_reports_but_cannot_operate_notes(self):
+        current = user("viewer", '["notes", "reports", "tme", "tmac", "audit"]')
         self.assertTrue(has_access(current, "reports", "view"))
         self.assertTrue(has_access(current, "audit", "view"))
         self.assertFalse(has_access(current, "notes", "operate"))
-        self.assertFalse(has_access(current, "tme", "download"))
+        self.assertFalse(has_access(current, "notes", "download"))
+        self.assertTrue(has_access(current, "reports", "download"))
+        self.assertTrue(has_access(current, "tme", "download"))
+        self.assertTrue(has_access(current, "tmac", "download"))
+        permissions = permission_payload(current)
+        self.assertFalse(permissions["actions"]["download"])
+        self.assertTrue(permissions["actions"]["report_download"])
 
     def test_admin_always_has_every_module(self):
         permissions = permission_payload(user("admin", "[]"))
@@ -62,6 +68,7 @@ class AccessControlTests(unittest.TestCase):
         main_source = (app_dir / "main.py").read_text(encoding="utf-8")
         self.assertIn("ALTER TABLE users ADD COLUMN module_access TEXT", database_source)
         self.assertNotIn("DROP COLUMN module_access", database_source)
+        self.assertIn("LOWER(username) = 'viewer_user'", database_source)
         self.assertIn("O usuario adm e protegido e nao pode ser modificado", main_source)
         self.assertIn("is_protected_user(atual.nome)", main_source)
 

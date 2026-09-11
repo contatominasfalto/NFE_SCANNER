@@ -8,11 +8,12 @@ PROFILE_STANDARD = "user"
 PROFILE_VIEWER = "viewer"
 VALID_PROFILES = {PROFILE_ADMIN, PROFILE_STANDARD, PROFILE_VIEWER}
 MODULES = ("notes", "reports", "tme", "tmac", "users", "audit", "swagger")
+REPORT_MODULES = {"reports", "tme", "tmac"}
 PROFILE_LABELS = {PROFILE_ADMIN: "Admin", PROFILE_STANDARD: "Standard", PROFILE_VIEWER: "Viewer"}
 DEFAULT_MODULES = {
     PROFILE_ADMIN: set(MODULES),
     PROFILE_STANDARD: {"notes", "reports"},
-    PROFILE_VIEWER: {"notes"},
+    PROFILE_VIEWER: {"notes", "reports", "tme", "tmac"},
 }
 PROTECTED_USERS = {"adm", "bipe", "viewer_user"}
 
@@ -57,7 +58,11 @@ def profile_allows(user, action: str) -> bool:
 
 
 def has_access(user, module: str, action: str = "view") -> bool:
-    return module in effective_modules(user) and profile_allows(user, action)
+    if module not in effective_modules(user):
+        return False
+    if normalize_profile(getattr(user, "role", None)) == PROFILE_VIEWER and action == "download":
+        return module in REPORT_MODULES
+    return profile_allows(user, action)
 
 
 def request_scope(path: str, method: str) -> tuple[str, str] | None:
@@ -88,6 +93,7 @@ def permission_payload(user) -> dict:
             "view": True,
             "operate": role in {PROFILE_ADMIN, PROFILE_STANDARD},
             "download": role in {PROFILE_ADMIN, PROFILE_STANDARD},
+            "report_download": role in {PROFILE_ADMIN, PROFILE_STANDARD, PROFILE_VIEWER},
             "manage": role == PROFILE_ADMIN,
         },
     }

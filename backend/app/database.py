@@ -94,6 +94,14 @@ def ensure_schema():
                 connection.execute(text("ALTER TABLE users ADD COLUMN module_access TEXT"))
         with engine.begin() as connection:
             connection.execute(text("UPDATE users SET module_access = :modules WHERE LOWER(username) = 'mauro' AND module_access IS NULL"), {"modules": '["notes", "reports", "tme", "tmac"]'})
+            connection.execute(
+                text(
+                    "UPDATE users SET module_access = :modules "
+                    "WHERE LOWER(username) = 'viewer_user' "
+                    "AND (module_access IS NULL OR TRIM(module_access) IN ('', '[\"notes\"]'))"
+                ),
+                {"modules": '["notes", "reports", "tme", "tmac"]'},
+            )
 
 def get_db():
     db = SessionLocal()

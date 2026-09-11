@@ -1,6 +1,6 @@
 const $=id=>document.getElementById(id);let notes=[],faturistas=[],filtered=[],auditLogs=[],refreshing=false,confirmCallback=null,pendingDeleteId=null,currentUser=null,tablePage=1,tablePageSize=100,tmeChart=null,tmacChart=null,tmacDetailChart=null;
 const SHOW_USER_FILTER=false;
-const PROFILE_DEFAULT_MODULES={admin:["notes","reports","tme","tmac","users","audit","swagger"],user:["notes","reports"],viewer:["notes"]};
+const PROFILE_DEFAULT_MODULES={admin:["notes","reports","tme","tmac","users","audit","swagger"],user:["notes","reports"],viewer:["notes","reports","tme","tmac"]};
 const PROFILE_NAMES={admin:"Admin",user:"Standard",viewer:"Viewer"};
 const fields=["numero_nf","serie","data_emissao","cnpj_fornecedor","nome_fornecedor","valor_total","chave_acesso","local","produto","quantidade","transportador","faturista","lider_operacional","observacao"];
 const money=v=>new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(v||0);
@@ -10,7 +10,7 @@ async function api(path,options={}){options.credentials="include";const r=await 
 function toast(message,error=false){const el=$("toast");el.textContent=message;el.className=error?"show error":"show";setTimeout(()=>el.className="",3200)}
 function showLogin(message){$("loginError").textContent=message||"";document.body.classList.remove("authenticated");const dialog=$("loginDialog");if(!dialog.open){dialog.showModal();}}
 function hideLogin(){document.body.classList.add("authenticated");const dialog=$("loginDialog");if(dialog.open){dialog.close();}$("loginError").textContent="";}
-function getPermissions(){const modules=currentUser?.permissions?.modules||{},actions=currentUser?.permissions?.actions||{};return{...modules,batch:!!modules.notes&&!!actions.operate,download:!!modules.notes&&!!actions.download,canDownload:!!actions.download,refreshErrors:!!modules.notes&&!!actions.operate,notesManage:!!modules.notes&&!!actions.manage,users:!!modules.users,usersManage:!!modules.users&&!!actions.manage,audit:!!modules.audit,swagger:!!modules.swagger}}
+function getPermissions(){const modules=currentUser?.permissions?.modules||{},actions=currentUser?.permissions?.actions||{};return{...modules,batch:!!modules.notes&&!!actions.operate,download:!!modules.notes&&!!actions.download,canDownload:!!actions.report_download,refreshErrors:!!modules.notes&&!!actions.operate,notesManage:!!modules.notes&&!!actions.manage,users:!!modules.users,usersManage:!!modules.users&&!!actions.manage,audit:!!modules.audit,swagger:!!modules.swagger}}
 function setVisible(id,visible){const el=$(id);if(!el)return;el.hidden=!visible;el.style.display=visible?"":"none"}
 function setSidebarCollapsed(collapsed){document.body.classList.toggle("sidebar-collapsed",collapsed);localStorage.setItem("sidebarCollapsed",collapsed?"1":"0");const button=$("sidebarToggle"),icon=$("sidebarToggleIcon");if(button){button.setAttribute("aria-expanded",collapsed?"false":"true");button.title=collapsed?"Expandir menu":"Recolher menu";button.setAttribute("aria-label",collapsed?"Expandir menu":"Recolher menu")}if(icon)icon.textContent=collapsed?">":"<"}
 function initSidebarToggle(){const saved=localStorage.getItem("sidebarCollapsed")==="1";setSidebarCollapsed(saved);$("sidebarToggle")?.addEventListener("click",()=>setSidebarCollapsed(!document.body.classList.contains("sidebar-collapsed")))}
