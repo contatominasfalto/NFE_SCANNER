@@ -1,5 +1,19 @@
 # NFE Scanner
 
+## Fluxo de desenvolvimento
+
+O painel/backend e desenvolvido na branch `dev_testes` e promovido para `main`
+somente depois da homologacao. O aplicativo Android permanece no fluxo direto
+da `main` para producao.
+
+Em cada novo clone, ative as protecoes locais:
+
+```powershell
+.\scripts\configurar_git.ps1
+```
+
+Consulte [FLUXO_BRANCHES.md](FLUXO_BRANCHES.md) para o procedimento completo.
+
 Sistema operacional para bipagem, consulta, cadastro, auditoria e relatorios de NF-e da Minasfalto.
 
 O projeto centraliza o recebimento de notas fiscais por chave de acesso de 44 digitos. A chave e lida pelo aplicativo Android ou informada no painel web, o backend consulta a API fiscal MeuDanfe, grava os dados no banco PostgreSQL e disponibiliza acompanhamento operacional em tempo real.

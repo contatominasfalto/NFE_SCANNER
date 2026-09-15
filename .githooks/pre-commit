@@ -1,0 +1,4 @@
+#!/bin/sh
+
+python scripts/check_branch_scope.py
+exit $?
