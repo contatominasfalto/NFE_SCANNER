@@ -1,10 +1,24 @@
 # NFE Scanner
 
-## Fluxo de desenvolvimento
+## Leitura obrigatoria antes de alterar o projeto
 
-O painel/backend e desenvolvido na branch `dev_testes` e promovido para `main`
-somente depois da homologacao. O aplicativo Android permanece no fluxo direto
-da `main` para producao.
+Agentes Codex e colaboradores devem ler primeiro [AGENTS.md](AGENTS.md). Esse documento define ambientes, branches, protecao do banco, testes, deploy e criterios de conclusao.
+
+## Fluxo de desenvolvimento e ambientes
+
+O projeto possui somente duas branches permanentes e dois ambientes Render isolados:
+
+| Uso | Branch | Servico Render | Banco | URL |
+| --- | --- | --- | --- | --- |
+| Homologacao do painel/backend | `dev_testes` | `nfe-scanner-dev` | `nfe-scanner-dev-db` | `https://nfe-scanner-dev.onrender.com` |
+| Producao | `main` | `nfe-scanner-api` | `nfe-scanner-db` | `https://nfe-scanner-api.onrender.com` |
+
+```text
+Painel/backend: dev_testes -> homologacao -> validacao -> main -> producao
+Aplicativo Android: main -> producao
+```
+
+Git promove somente codigo. Usuarios, notas, auditoria e demais registros nao sao copiados entre os bancos. A separacao depende da `DATABASE_URL` exclusiva de cada Web Service; nunca troque ou reutilize a URL do banco produtivo na homologacao.
 
 Em cada novo clone, ative as protecoes locais:
 
@@ -12,22 +26,24 @@ Em cada novo clone, ative as protecoes locais:
 .\scripts\configurar_git.ps1
 ```
 
-Consulte [FLUXO_BRANCHES.md](FLUXO_BRANCHES.md) para o procedimento completo.
+Consulte [FLUXO_BRANCHES.md](FLUXO_BRANCHES.md) para os comandos diarios e [AGENTS.md](AGENTS.md) para todas as regras de seguranca.
 
 Sistema operacional para bipagem, consulta, cadastro, auditoria e relatorios de NF-e da Minasfalto.
 
 O projeto centraliza o recebimento de notas fiscais por chave de acesso de 44 digitos. A chave e lida pelo aplicativo Android ou informada no painel web, o backend consulta a API fiscal MeuDanfe, grava os dados no banco PostgreSQL e disponibiliza acompanhamento operacional em tempo real.
 
-## Ambiente atual
+## Ambientes atuais
 
-| Item | Ambiente oficial |
-| --- | --- |
-| Codigo fonte | GitHub |
-| Aplicacao web/API | Render Web Service |
-| Banco de dados | PostgreSQL Render |
-| Painel | `https://nfe-scanner-api.onrender.com/painel` |
-| APK Android | Distribuido conforme necessidade interna |
-| Backend antigo no servidor | Desativado |
+| Item | Producao | Homologacao |
+| --- | --- | --- |
+| Branch | `main` | `dev_testes` |
+| Aplicacao web/API | `nfe-scanner-api` | `nfe-scanner-dev` |
+| Banco PostgreSQL | `nfe-scanner-db` | `nfe-scanner-dev-db` |
+| Painel | `https://nfe-scanner-api.onrender.com/painel` | `https://nfe-scanner-dev.onrender.com/painel` |
+| Dados | Operacao real | Independentes; podem estar vazios |
+| Integracao MeuDanfe | Real | Real |
+
+O APK Android continua distribuido conforme a necessidade interna e aponta para producao. O backend antigo no servidor Windows permanece desativado.
 
 O servidor Windows antigo nao e mais necessario para operar o NFE Scanner. Ele foi substituido pelo Render e pelo PostgreSQL gerenciado.
 
@@ -154,7 +170,7 @@ Nunca versione credenciais reais no GitHub.
 | --- | --- |
 | `admin` | Acesso completo ao painel, usuarios, relatorios, rastreabilidade e operacoes |
 | `user` | Operacao de notas, remessas, relatorios e downloads permitidos |
-| `viewer` | Visualizacao e relatorios, sem operacoes de escrita/download restrito |
+| `viewer` | Visualizacao dos modulos permitidos e downloads autorizados, sem operacoes de escrita |
 | `BIPE` | Usuario padrao utilizado pelo aplicativo Android |
 
 As abas laterais do painel sao exibidas conforme a permissao do usuario logado.
@@ -252,7 +268,9 @@ SECRET_KEY=...
 LOG_LEVEL=INFO
 ```
 
-A cada `git push` na branch `main`, o Render faz novo deploy.
+A cada `git push` em `dev_testes`, o Render implanta a homologacao. A cada `git push` em `main`, o Render implanta a producao.
+
+Antes de qualquer deploy, confirme que cada servico continua ligado ao banco correto. O backend executa criacao/adequacao de esquema durante a inicializacao; por isso, mudancas em modelos, `database.py`, `ensure_schema()` ou SQL exigem homologacao, backup de producao e plano de rollback.
 
 ## Gerar APK Android
 
@@ -409,10 +427,10 @@ nfe_scanner/
 
 ## Manutencao
 
-Fluxo recomendado:
+Fluxo obrigatorio para painel/backend:
 
 ```text
-alterar codigo local -> testar -> commit -> git push -> Render deploy
+dev_testes -> alterar -> testar -> push -> homologar -> merge em main -> testar -> push -> validar producao
 ```
 
 Depois do deploy, validar:
