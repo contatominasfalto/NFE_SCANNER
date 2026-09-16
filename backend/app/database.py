@@ -76,6 +76,63 @@ def ensure_schema():
         indexes = {index["name"] for index in inspector.get_indexes("notas_fiscais")}
         if "ix_notas_fiscais_local" not in indexes:
             connection.execute(text("CREATE INDEX ix_notas_fiscais_local ON notas_fiscais (local)"))
+        if not IS_MYSQL and not IS_SQLITE:
+            # Permite chaves repetidas apenas na carga historica, identificada
+            # pela data real do bip. Fora da janela, o PostgreSQL ainda protege
+            # contra duas gravacoes simultaneas da mesma chave.
+            historical_start = "2025-12-01 00:00:00"
+            historical_end = "2026-07-01 00:00:00"
+            duplicates_outside_window = connection.execute(
+                text(
+                    "SELECT COUNT(*) FROM ("
+                    "SELECT chave_acesso FROM notas_fiscais "
+                    "WHERE chave_acesso IS NOT NULL AND ("
+                    "data_cadastro IS NULL OR data_cadastro < :inicio OR data_cadastro >= :fim"
+                    ") GROUP BY chave_acesso HAVING COUNT(*) > 1"
+                    ") duplicadas"
+                ),
+                {"inicio": historical_start, "fim": historical_end},
+            ).scalar_one()
+            if duplicates_outside_window:
+                raise RuntimeError(
+                    "Existem chaves duplicadas fora da janela historica; "
+                    "migracao de unicidade cancelada."
+                )
+
+            inspector = inspect(connection)
+            quote = connection.dialect.identifier_preparer.quote
+            for constraint in inspector.get_unique_constraints("notas_fiscais"):
+                if constraint.get("column_names") == ["chave_acesso"] and constraint.get("name"):
+                    connection.execute(
+                        text(f"ALTER TABLE notas_fiscais DROP CONSTRAINT {quote(constraint['name'])}")
+                    )
+
+            inspector = inspect(connection)
+            for index in inspector.get_indexes("notas_fiscais"):
+                if (
+                    index.get("unique")
+                    and index.get("column_names") == ["chave_acesso"]
+                    and index.get("name")
+                    and index.get("name") != "uq_notas_chave_fora_carga_historica"
+                ):
+                    connection.execute(text(f"DROP INDEX IF EXISTS {quote(index['name'])}"))
+
+            connection.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_notas_fiscais_chave_acesso "
+                    "ON notas_fiscais (chave_acesso)"
+                )
+            )
+            connection.execute(
+                text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS uq_notas_chave_fora_carga_historica "
+                    "ON notas_fiscais (chave_acesso) WHERE chave_acesso IS NOT NULL AND ("
+                    "data_cadastro IS NULL "
+                    "OR data_cadastro < TIMESTAMP '2025-12-01 00:00:00' "
+                    "OR data_cadastro >= TIMESTAMP '2026-07-01 00:00:00'"
+                    ")"
+                )
+            )
         if "faturistas" in inspector.get_table_names():
             connection.execute(
                 text(

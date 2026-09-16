@@ -658,7 +658,7 @@ def importar_barcode(
 
     try:
         nota = crud.create_nota(db, nota_data)
-    except IntegrityError as error:
+    except (IntegrityError, crud.DuplicateNoteError) as error:
         logger.warning("Importacao duplicada | chave=%s", mask_access_key(nota_data.chave_acesso))
         raise HTTPException(status_code=409, detail="Nota fiscal ja cadastrada para esta chave de acesso.") from error
     logger.info("Nota importada | id=%s | numero=%s | local=%s", nota.id, nota.numero_nf, nota.local)
@@ -740,7 +740,7 @@ def importar_remessa(
                 nota.id,
                 f"Local: {nota.local} | Chave: {mask_access_key(nota.chave_acesso)}",
             )
-        except IntegrityError:
+        except (IntegrityError, crud.DuplicateNoteError):
             duplicadas += 1
             itens.append(
                 schemas.BarcodeBatchItem(
@@ -812,7 +812,7 @@ def create_nota(
     nota_data = aplicar_usuario_lancamento(nota_data, current_user.username)
     try:
         nota = crud.create_nota(db, nota_data, nota_data.caminho_arquivo_imagem)
-    except IntegrityError as error:
+    except (IntegrityError, crud.DuplicateNoteError) as error:
         logger.warning("Cadastro duplicado | chave=%s", mask_access_key(nota_data.chave_acesso))
         raise HTTPException(status_code=409, detail="Nota fiscal ja cadastrada para esta chave de acesso.") from error
     logger.info("Nota cadastrada | id=%s | numero=%s | local=%s", nota.id, nota.numero_nf, nota.local)
@@ -850,7 +850,7 @@ def create_nota_erro(
     erro_data = erro_data.model_copy(update={"faturista": usuario_lancamento(current_user.username)})
     try:
         nota = crud.create_nota_erro(db, erro_data)
-    except IntegrityError as error:
+    except (IntegrityError, crud.DuplicateNoteError) as error:
         logger.warning("Registro de erro duplicado | chave=%s", mask_access_key(erro_data.chave_acesso))
         raise HTTPException(status_code=409, detail="Nota fiscal ja cadastrada para esta chave de acesso.") from error
     logger.error(
@@ -1324,7 +1324,7 @@ def update_nota(nota_id: int, nota_data: schemas.NotaFiscalUpdate, current_user:
     ensure_admin(current_user)
     try:
         nota = crud.update_nota(db, nota_id, nota_data)
-    except IntegrityError as error:
+    except (IntegrityError, crud.DuplicateNoteError) as error:
         raise HTTPException(status_code=409, detail="Ja existe uma nota fiscal cadastrada para esta chave de acesso.") from error
 
     if not nota:

@@ -12,6 +12,10 @@ from .tme_service import build_tme_report
 from .tmac_service import build_tmac_report
 from .access_control import DEFAULT_MODULES, serialize_modules
 
+
+class DuplicateNoteError(ValueError):
+    """Chave ja existente no fluxo operacional normal."""
+
 def _nota_sem_erro():
     return or_(
         models.NotaFiscal.erro_salvamento.is_(False),
@@ -32,6 +36,8 @@ def _data_referencia_periodo(nota: models.NotaFiscal, inicio: datetime, fim: dat
     return nota.data_emissao or nota.data_cadastro
 
 def create_nota(db: Session, nota: schemas.NotaFiscalCreate, imagem_path: str | None = None):
+    if nota.chave_acesso and get_nota_by_chave(db, nota.chave_acesso):
+        raise DuplicateNoteError("Nota fiscal ja cadastrada para esta chave de acesso.")
     data = nota.model_dump()
     data.pop("caminho_arquivo_imagem", None)
     db_nota = models.NotaFiscal(
@@ -50,6 +56,8 @@ def create_nota(db: Session, nota: schemas.NotaFiscalCreate, imagem_path: str | 
 
 
 def create_nota_erro(db: Session, erro: schemas.NotaFiscalErrorCreate):
+    if erro.chave_acesso and get_nota_by_chave(db, erro.chave_acesso.strip()):
+        raise DuplicateNoteError("Nota fiscal ja cadastrada para esta chave de acesso.")
     db_nota = models.NotaFiscal(
         numero_nf="ERRO",
         serie="ERRO",
@@ -103,7 +111,12 @@ def get_nota(db: Session, nota_id: int):
 
 
 def get_nota_by_chave(db: Session, chave_acesso: str):
-    return db.query(models.NotaFiscal).filter(models.NotaFiscal.chave_acesso == chave_acesso).first()
+    return (
+        db.query(models.NotaFiscal)
+        .filter(models.NotaFiscal.chave_acesso == chave_acesso)
+        .order_by(models.NotaFiscal.data_cadastro.desc(), models.NotaFiscal.id.desc())
+        .first()
+    )
 
 
 def list_api_notas(
@@ -273,6 +286,17 @@ def update_nota(db: Session, nota_id: int, nota_data: schemas.NotaFiscalUpdate):
     nota = get_nota(db, nota_id)
     if not nota:
         return None
+
+    duplicate = (
+        db.query(models.NotaFiscal.id)
+        .filter(
+            models.NotaFiscal.chave_acesso == nota_data.chave_acesso,
+            models.NotaFiscal.id != nota_id,
+        )
+        .first()
+    )
+    if duplicate:
+        raise DuplicateNoteError("Nota fiscal ja cadastrada para esta chave de acesso.")
 
     for field, value in nota_data.model_dump().items():
         setattr(nota, field, value)
