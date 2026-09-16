@@ -61,13 +61,20 @@ class DirectImportTests(unittest.TestCase):
         self.assertEqual(prepared.rows[0]["chave_acesso"], short_key)
         self.assertEqual(prepared.rows[0]["serie"], "002")
 
+    def test_accepts_and_preserves_letters_in_direct_import_key(self):
+        alphanumeric_key = VALID_ROW["CHAVE NF"][:-1] + "d"
+        valid = {**VALID_ROW, "CHAVE NF": alphanumeric_key}
+        prepared = prepare_file(self.write_json([valid]))
+        self.assertEqual(prepared.rows[0]["chave_acesso"], alphanumeric_key.upper())
+        self.assertEqual(len(prepared.rows[0]["chave_acesso"]), 44)
+
     def test_rejects_key_longer_than_database_column(self):
         invalid = {**VALID_ROW, "CHAVE NF": VALID_ROW["CHAVE NF"] + "1"}
         with self.assertRaises(ImportValidationError):
             prepare_file(self.write_json([invalid]))
 
-    def test_rejects_key_without_digits(self):
-        invalid = {**VALID_ROW, "CHAVE NF": "SEM-CHAVE"}
+    def test_rejects_key_without_alphanumeric_characters(self):
+        invalid = {**VALID_ROW, "CHAVE NF": "---"}
         with self.assertRaises(ImportValidationError):
             prepare_file(self.write_json([invalid]))
 

@@ -132,11 +132,17 @@ def map_row(raw: Any, position: int) -> dict[str, Any]:
         raise ImportValidationError(f"item {position} nao e um objeto JSON")
     item = {normalize_key(key): value for key, value in raw.items()}
 
-    chave = re.sub(r"\D", "", clean_text(item.get("CHAVE_NF"), field="CHAVE NF"))
+    chave = re.sub(
+        r"[^A-Z0-9]",
+        "",
+        clean_text(item.get("CHAVE_NF"), field="CHAVE NF").upper(),
+    )
     if not chave:
-        raise ImportValidationError("CHAVE NF deve possuir ao menos um digito")
+        raise ImportValidationError("CHAVE NF deve possuir ao menos uma letra ou digito")
     if len(chave) > 44:
-        raise ImportValidationError(f"CHAVE NF deve possuir no maximo 44 digitos; recebido {len(chave)}")
+        raise ImportValidationError(
+            f"CHAVE NF deve possuir no maximo 44 caracteres alfanumericos; recebido {len(chave)}"
+        )
 
     local = clean_text(item.get("LOCAL"), field="LOCAL", maximum=20).upper()
     if local not in {"CDMA", "PRU"}:
