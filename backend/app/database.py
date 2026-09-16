@@ -84,6 +84,38 @@ def ensure_schema():
                     "WHERE NOT EXISTS (SELECT 1 FROM faturistas WHERE nome = 'BIPE')"
                 )
             )
+
+        # Recompõe no PostgreSQL o bloqueio global por chave de acesso. Essa
+        # etapa também desfaz o índice parcial usado temporariamente para
+        # cargas históricas, sem remover ou alterar notas existentes.
+        if connection.dialect.name == "postgresql":
+            duplicate_key = connection.execute(
+                text(
+                    "SELECT chave_acesso FROM notas_fiscais "
+                    "WHERE chave_acesso IS NOT NULL "
+                    "GROUP BY chave_acesso HAVING COUNT(*) > 1 LIMIT 1"
+                )
+            ).scalar()
+            if duplicate_key:
+                raise RuntimeError(
+                    "Nao foi possivel restaurar o bloqueio UNIQUE: "
+                    f"a chave {duplicate_key} possui registros duplicados."
+                )
+
+            current_indexes = inspect(connection).get_indexes("notas_fiscais")
+            global_unique_exists = any(
+                index.get("name") == "ix_notas_fiscais_chave_acesso" and index.get("unique")
+                for index in current_indexes
+            )
+            connection.execute(text("DROP INDEX IF EXISTS uq_notas_chave_fora_carga_historica"))
+            if not global_unique_exists:
+                connection.execute(text("DROP INDEX IF EXISTS ix_notas_fiscais_chave_acesso"))
+                connection.execute(
+                    text(
+                        "CREATE UNIQUE INDEX ix_notas_fiscais_chave_acesso "
+                        "ON notas_fiscais (chave_acesso)"
+                    )
+                )
     if "users" in inspector.get_table_names():
         user_columns = {column["name"] for column in inspector.get_columns("users")}
         if "role" not in user_columns:
