@@ -38,9 +38,6 @@ ENVIRONMENTS = {
     },
 }
 PRODUCTION_CONFIRMATION = "INSERIR_EM_PRODUCAO"
-HISTORICAL_START = datetime(2025, 12, 1)
-HISTORICAL_END = datetime(2026, 7, 1)
-HISTORICAL_INDEX = "uq_notas_chave_fora_carga_historica"
 REQUIRED_COLUMNS = {
     "numero_nf",
     "serie",
@@ -147,11 +144,6 @@ def map_row(raw: Any, position: int) -> dict[str, Any]:
     data_cadastro = parse_datetime(item.get("DATA_HORA_DO_BIP"), "DATA/HORA DO BIP")
     if data_emissao > data_cadastro:
         raise ImportValidationError("DATA EMISSAO nao pode ser posterior a DATA/HORA DO BIP")
-    if not HISTORICAL_START <= data_cadastro < HISTORICAL_END:
-        raise ImportValidationError(
-            "DATA/HORA DO BIP fora da carga historica permitida "
-            "(01/12/2025 a 30/06/2026)"
-        )
     quantidade = parse_number(item.get("QUANTIDADE"), "QUANTIDADE")
     valor_total = parse_number(item.get("VALOR_TOTAL"), "VALOR TOTAL")
     if quantidade < 0:
@@ -204,6 +196,7 @@ def prepare_file(path: Path) -> PreparedImport:
             row = map_row(raw, position)
             if row["chave_acesso"] in seen:
                 repeated.append(row["chave_acesso"])
+                continue
             seen.add(row["chave_acesso"])
             rows.append(row)
         except ImportValidationError as exc:
@@ -251,11 +244,6 @@ def reflect_tables(connection) -> tuple[Table, Table | None]:
     missing = REQUIRED_COLUMNS - set(notes.c.keys())
     if missing:
         raise ImportValidationError(f"colunas ausentes em notas_fiscais: {', '.join(sorted(missing))}")
-    indexes = {index.get("name") for index in inspector.get_indexes("notas_fiscais")}
-    if HISTORICAL_INDEX not in indexes:
-        raise ImportValidationError(
-            "indice historico ainda nao foi aplicado; aguarde o deploy/migracao do ambiente"
-        )
     audit = (
         Table("audit_logs", metadata, autoload_with=connection)
         if "audit_logs" in inspector.get_table_names()
@@ -272,22 +260,6 @@ def find_existing(connection, notes: Table, keys: list[str]) -> dict[str, str | 
         )
         existing.update({str(row.chave_acesso): row.serie for row in result})
     return existing
-
-
-def file_was_imported(connection, audit: Table | None, source_hash: str) -> bool:
-    if audit is None:
-        return False
-    result = connection.execute(
-        select(audit.c.id)
-        .where(
-            audit.c.acao.in_(
-                ["Importou carga historica direta", "Importou carga direta"]
-            )
-        )
-        .where(audit.c.detalhes.contains(f"SHA256: {source_hash}"))
-        .limit(1)
-    ).first()
-    return result is not None
 
 
 def write_manifest(
@@ -319,8 +291,8 @@ def run_import(args: argparse.Namespace) -> int:
     source = Path(args.arquivo).resolve()
     prepared = prepare_file(source)
     print(f"Arquivo validado: {source}")
-    print(f"Registros validos no arquivo: {len(prepared.rows)}")
-    print(f"Ocorrencias com chave repetida mantidas para insercao: {len(prepared.repeated_in_file)}")
+    print(f"Registros validos e unicos no arquivo: {len(prepared.rows)}")
+    print(f"Duplicidades dentro do arquivo ignoradas: {len(prepared.repeated_in_file)}")
 
     if args.validar_apenas:
         print("Validacao concluida sem acessar o banco.")
@@ -340,20 +312,15 @@ def run_import(args: argparse.Namespace) -> int:
     try:
         with engine.begin() as connection:
             notes, audit = reflect_tables(connection)
-            already_imported = file_was_imported(connection, audit, prepared.source_hash)
-            if already_imported:
-                raise ImportValidationError(
-                    "este arquivo ja foi importado integralmente; operacao bloqueada para evitar repeticao acidental"
-                )
             existing = find_existing(connection, notes, [row["chave_acesso"] for row in prepared.rows])
-            new_rows = prepared.rows
+            new_rows = [row for row in prepared.rows if row["chave_acesso"] not in existing]
             series_repairs = [
                 {"_chave": key, "_serie": key[22:25]}
                 for key, current_series in existing.items()
                 if not str(current_series or "").strip()
             ]
-            print(f"Chaves distintas do arquivo que ja existem no banco: {len(existing)}")
-            print(f"Registros historicos prontos para insercao: {len(new_rows)}")
+            print(f"Chaves que ja existem no banco e serao ignoradas: {len(existing)}")
+            print(f"Chaves novas prontas para insercao: {len(new_rows)}")
             print(f"Registros existentes sem serie encontrados: {len(series_repairs)}")
 
             if not args.executar:
@@ -386,7 +353,7 @@ def run_import(args: argparse.Namespace) -> int:
                     audit.insert().values(
                         created_at=datetime.now(),
                         usuario="insert_bd_direto",
-                        acao="Importou carga historica direta",
+                        acao="Importou carga direta",
                         area="Notas fiscais",
                         entidade="NotaFiscal",
                         entidade_id=None,
@@ -396,8 +363,8 @@ def run_import(args: argparse.Namespace) -> int:
                         ),
                         detalhes=(
                             f"Arquivo: {source.name} | SHA256: {prepared.source_hash} | "
-                            f"Chaves ja existentes no banco: {len(existing)} | "
-                            f"Ocorrencias repetidas mantidas: {len(prepared.repeated_in_file)}"
+                            f"Duplicadas no banco: {len(existing)} | "
+                            f"Duplicadas no arquivo: {len(prepared.repeated_in_file)}"
                         ),
                     )
                 )

@@ -12,10 +12,7 @@ class NotaFiscal(Base):
     cnpj_fornecedor = Column(String(20), index=True)
     nome_fornecedor = Column(String(255), index=True)
     valor_total = Column(Float)
-    # A unicidade e condicional no PostgreSQL: cargas historicas com bip entre
-    # 01/12/2025 e 30/06/2026 podem repetir a chave. O fluxo operacional
-    # continua protegido pelo backend e pelo indice parcial criado em database.py.
-    chave_acesso = Column(String(44), index=True)
+    chave_acesso = Column(String(44), unique=True, index=True)
     local = Column(String(20), index=True, nullable=True)
     produto = Column(Text)
     quantidade = Column(Float)

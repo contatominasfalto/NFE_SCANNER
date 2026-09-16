@@ -113,14 +113,6 @@ Nunca testar uma migracao apontando o computador local para producao. Nao apagar
 - guardar o manifesto gerado em `logs_importacao/` ate a validacao final;
 - nao editar a tabela manualmente para contornar uma validacao do importador.
 
-A politica de duplicidade e condicional: o importador mantem todas as
-ocorrencias com `data_cadastro` entre 01/12/2025 (inclusive) e 01/07/2026
-(exclusive). Fora dessa janela, um indice unico parcial protege a chave. O
-painel, APK e endpoints normais verificam a chave em toda a tabela e continuam
-bloqueando duplicidades, inclusive contra registros historicos. A consulta
-publica por chave retorna a ocorrencia mais recente. Nao remover essa protecao
-para simplificar cargas.
-
 Para limpar a homologacao, usar somente `zerar_bd_testes.py`. Ele deve preservar
 as contas padrao e recusar qualquer banco diferente de `nfe_scanner_dev`.
 Executar sempre a simulacao antes de confirmar o reset.

@@ -49,15 +49,10 @@ class DirectImportTests(unittest.TestCase):
         self.assertEqual(row["data_cadastro"].hour, 17)
         self.assertFalse(row["erro_salvamento"])
 
-    def test_keeps_repeated_key_inside_same_file(self):
+    def test_ignores_repeated_key_inside_same_file(self):
         prepared = prepare_file(self.write_json([VALID_ROW, VALID_ROW]))
-        self.assertEqual(len(prepared.rows), 2)
+        self.assertEqual(len(prepared.rows), 1)
         self.assertEqual(prepared.repeated_in_file, [VALID_ROW["CHAVE NF"]])
-
-    def test_rejects_bip_outside_historical_window(self):
-        invalid = {**VALID_ROW, "DATA/HORA DO BIP": "2026-07-01 00:00:00"}
-        with self.assertRaises(ImportValidationError):
-            prepare_file(self.write_json([invalid]))
 
     def test_rejects_invalid_key_without_database_access(self):
         invalid = {**VALID_ROW, "CHAVE NF": "123"}

@@ -360,12 +360,10 @@ revisar os totais, configure `NFE_SCANNER_PROD_DATABASE_URL` para
 ```
 
 O importador valida todos os itens antes de abrir a transacao, confere o nome
-do banco, aceita todas as ocorrencias historicas entre 01/12/2025 e 30/06/2026,
-inclusive chaves repetidas, e grava o lote em uma unica transacao,
+do banco, ignora chaves ja existentes, grava o lote em uma unica transacao,
 registra auditoria resumida e gera em `logs_importacao/` um manifesto com as
 chaves efetivamente inseridas. Se houver falha de integridade ou banco, toda a
-transacao e revertida. O hash registrado na auditoria impede a importacao
-acidental do mesmo arquivo uma segunda vez.
+transacao e revertida.
 
 A serie e extraida das posicoes oficiais da chave NF-e. Para reparar somente
 registros do arquivo atual que tenham sido importados anteriormente com serie
