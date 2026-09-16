@@ -329,6 +329,42 @@ with engine.connect() as conn:
 '@ | .\venv\Scripts\python.exe
 ```
 
+## Importacao direta de cargas historicas
+
+O arquivo `insert_bd_direto.py` importa `base_json.json` diretamente em
+`notas_fiscais`, sem consultar a API MeuDanfe. O JSON e ignorado pelo Git e
+credenciais nunca devem ser colocadas no codigo.
+
+Primeiro valide somente o arquivo, sem acessar banco algum:
+
+```powershell
+.\venv\Scripts\python.exe .\insert_bd_direto.py --validar-apenas --arquivo .\base_json.json
+```
+
+Para homologacao, defina `NFE_SCANNER_TEST_DATABASE_URL` com a External
+Database URL de `nfe-scanner-dev-db`. A primeira execucao e obrigatoriamente
+uma simulacao:
+
+```powershell
+.\venv\Scripts\python.exe .\insert_bd_direto.py --ambiente testes --arquivo .\base_json.json
+.\venv\Scripts\python.exe .\insert_bd_direto.py --ambiente testes --arquivo .\base_json.json --executar
+```
+
+Somente depois de validar a carga em homologacao, fazer backup produtivo e
+revisar os totais, configure `NFE_SCANNER_PROD_DATABASE_URL` para
+`nfe_scanner-db` e execute:
+
+```powershell
+.\venv\Scripts\python.exe .\insert_bd_direto.py --ambiente producao --arquivo .\base_json.json
+.\venv\Scripts\python.exe .\insert_bd_direto.py --ambiente producao --arquivo .\base_json.json --executar --confirmar-producao INSERIR_EM_PRODUCAO
+```
+
+O importador valida todos os itens antes de abrir a transacao, confere o nome
+do banco, ignora chaves ja existentes, grava o lote em uma unica transacao,
+registra auditoria resumida e gera em `logs_importacao/` um manifesto com as
+chaves efetivamente inseridas. Se houver falha de integridade ou banco, toda a
+transacao e revertida.
+
 ## Integracao Power BI
 
 O projeto possui uma camada pronta de views para consumo no Power BI.
