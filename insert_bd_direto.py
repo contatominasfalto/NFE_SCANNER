@@ -20,7 +20,7 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Iterable
 
-from sqlalchemy import MetaData, Table, create_engine, inspect, select
+from sqlalchemy import MetaData, Table, bindparam, create_engine, inspect, select
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
@@ -40,6 +40,7 @@ ENVIRONMENTS = {
 PRODUCTION_CONFIRMATION = "INSERIR_EM_PRODUCAO"
 REQUIRED_COLUMNS = {
     "numero_nf",
+    "serie",
     "data_emissao",
     "cnpj_fornecedor",
     "nome_fornecedor",
@@ -152,7 +153,9 @@ def map_row(raw: Any, position: int) -> dict[str, Any]:
 
     return {
         "numero_nf": clean_text(item.get("NF"), field="NF", maximum=30),
-        "serie": None,
+        # Estrutura oficial da chave NF-e: cUF(2) + AAMM(4) + CNPJ(14) +
+        # modelo(2) + serie(3) + numero(9) + demais campos.
+        "serie": chave[22:25],
         "data_emissao": data_emissao,
         "cnpj_fornecedor": clean_text(item.get("CNPJ"), field="CNPJ", maximum=20),
         "nome_fornecedor": clean_text(item.get("FORNECEDOR"), field="FORNECEDOR", maximum=255),
@@ -249,17 +252,23 @@ def reflect_tables(connection) -> tuple[Table, Table | None]:
     return notes, audit
 
 
-def find_existing(connection, notes: Table, keys: list[str]) -> set[str]:
-    existing: set[str] = set()
+def find_existing(connection, notes: Table, keys: list[str]) -> dict[str, str | None]:
+    existing: dict[str, str | None] = {}
     for group in chunks(keys):
         result = connection.execute(
-            select(notes.c.chave_acesso).where(notes.c.chave_acesso.in_(group))
+            select(notes.c.chave_acesso, notes.c.serie).where(notes.c.chave_acesso.in_(group))
         )
-        existing.update(str(value) for value in result.scalars())
+        existing.update({str(row.chave_acesso): row.serie for row in result})
     return existing
 
 
-def write_manifest(environment: str, database: str, prepared: PreparedImport, inserted: list[str]) -> Path:
+def write_manifest(
+    environment: str,
+    database: str,
+    prepared: PreparedImport,
+    inserted: list[str],
+    repaired_series: list[str],
+) -> Path:
     directory = Path("logs_importacao")
     directory.mkdir(exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -271,6 +280,8 @@ def write_manifest(environment: str, database: str, prepared: PreparedImport, in
         "sha256_arquivo_origem": prepared.source_hash,
         "quantidade_inserida": len(inserted),
         "chaves_inseridas": inserted,
+        "quantidade_series_corrigidas": len(repaired_series),
+        "chaves_com_serie_corrigida": repaired_series,
     }
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     return path
@@ -303,15 +314,24 @@ def run_import(args: argparse.Namespace) -> int:
             notes, audit = reflect_tables(connection)
             existing = find_existing(connection, notes, [row["chave_acesso"] for row in prepared.rows])
             new_rows = [row for row in prepared.rows if row["chave_acesso"] not in existing]
+            series_repairs = [
+                {"_chave": key, "_serie": key[22:25]}
+                for key, current_series in existing.items()
+                if not str(current_series or "").strip()
+            ]
             print(f"Chaves que ja existem no banco e serao ignoradas: {len(existing)}")
             print(f"Chaves novas prontas para insercao: {len(new_rows)}")
+            print(f"Registros existentes sem serie encontrados: {len(series_repairs)}")
 
             if not args.executar:
                 print("SIMULACAO concluida: nenhuma alteracao foi gravada.")
                 print("Revise os totais e execute novamente com --executar para confirmar.")
                 return 0
-            if not new_rows:
-                print("Nenhuma nota nova para inserir. Banco nao alterado.")
+            if series_repairs and not args.corrigir_series_existentes:
+                print("Series existentes nao serao alteradas sem --corrigir-series-existentes.")
+            repairs_to_apply = series_repairs if args.corrigir_series_existentes else []
+            if not new_rows and not repairs_to_apply:
+                print("Nenhuma nota nova ou correcao autorizada. Banco nao alterado.")
                 return 0
 
             database_columns = set(notes.c.keys())
@@ -319,7 +339,15 @@ def run_import(args: argparse.Namespace) -> int:
                 {key: value for key, value in row.items() if key in database_columns}
                 for row in new_rows
             ]
-            connection.execute(notes.insert(), rows_for_database)
+            if rows_for_database:
+                connection.execute(notes.insert(), rows_for_database)
+            if repairs_to_apply:
+                correction = (
+                    notes.update()
+                    .where(notes.c.chave_acesso == bindparam("_chave"))
+                    .values(serie=bindparam("_serie"))
+                )
+                connection.execute(correction, repairs_to_apply)
             if audit is not None:
                 connection.execute(
                     audit.insert().values(
@@ -329,7 +357,10 @@ def run_import(args: argparse.Namespace) -> int:
                         area="Notas fiscais",
                         entidade="NotaFiscal",
                         entidade_id=None,
-                        descricao=f"Carga direta inseriu {len(new_rows)} nota(s) em {config['label']}.",
+                        descricao=(
+                            f"Carga direta inseriu {len(new_rows)} nota(s) e corrigiu "
+                            f"{len(repairs_to_apply)} serie(s) em {config['label']}."
+                        ),
                         detalhes=(
                             f"Arquivo: {source.name} | SHA256: {prepared.source_hash} | "
                             f"Duplicadas no banco: {len(existing)} | "
@@ -338,8 +369,10 @@ def run_import(args: argparse.Namespace) -> int:
                     )
                 )
         inserted = [row["chave_acesso"] for row in new_rows]
-        manifest = write_manifest(args.ambiente, config["database"], prepared, inserted)
+        repaired = [item["_chave"] for item in repairs_to_apply]
+        manifest = write_manifest(args.ambiente, config["database"], prepared, inserted, repaired)
         print(f"SUCESSO: {len(inserted)} nota(s) inserida(s) em uma unica transacao.")
+        print(f"SUCESSO: {len(repaired)} serie(s) existente(s) corrigida(s) na mesma transacao.")
         print(f"Manifesto local para conferencia/rollback: {manifest.resolve()}")
         return 0
     except IntegrityError as exc:
@@ -371,6 +404,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="grava a transacao; sem esta opcao o banco e apenas consultado",
     )
     parser.add_argument("--confirmar-producao", default="")
+    parser.add_argument(
+        "--corrigir-series-existentes",
+        action="store_true",
+        help="preenche serie vazia apenas nas chaves presentes no JSON",
+    )
     return parser
 
 

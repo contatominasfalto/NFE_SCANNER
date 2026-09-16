@@ -44,6 +44,7 @@ class DirectImportTests(unittest.TestCase):
         row = prepared.rows[0]
         self.assertEqual(row["chave_acesso"], VALID_ROW["CHAVE NF"])
         self.assertEqual(row["numero_nf"], "247603")
+        self.assertEqual(row["serie"], "002")
         self.assertEqual(row["faturista"], "adm")
         self.assertEqual(row["data_cadastro"].hour, 17)
         self.assertFalse(row["erro_salvamento"])

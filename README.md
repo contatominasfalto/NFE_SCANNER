@@ -365,6 +365,15 @@ registra auditoria resumida e gera em `logs_importacao/` um manifesto com as
 chaves efetivamente inseridas. Se houver falha de integridade ou banco, toda a
 transacao e revertida.
 
+A serie e extraida das posicoes oficiais da chave NF-e. Para reparar somente
+registros do arquivo atual que tenham sido importados anteriormente com serie
+vazia, primeiro simule e depois confirme:
+
+```powershell
+.\venv\Scripts\python.exe .\insert_bd_direto.py --ambiente testes --arquivo .\base_json.json --corrigir-series-existentes
+.\venv\Scripts\python.exe .\insert_bd_direto.py --ambiente testes --arquivo .\base_json.json --corrigir-series-existentes --executar
+```
+
 ## Integracao Power BI
 
 O projeto possui uma camada pronta de views para consumo no Power BI.
