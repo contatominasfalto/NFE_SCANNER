@@ -133,8 +133,10 @@ def map_row(raw: Any, position: int) -> dict[str, Any]:
     item = {normalize_key(key): value for key, value in raw.items()}
 
     chave = re.sub(r"\D", "", clean_text(item.get("CHAVE_NF"), field="CHAVE NF"))
-    if len(chave) != 44:
-        raise ImportValidationError(f"CHAVE NF deve possuir 44 digitos; recebido {len(chave)}")
+    if not chave:
+        raise ImportValidationError("CHAVE NF deve possuir ao menos um digito")
+    if len(chave) > 44:
+        raise ImportValidationError(f"CHAVE NF deve possuir no maximo 44 digitos; recebido {len(chave)}")
 
     local = clean_text(item.get("LOCAL"), field="LOCAL", maximum=20).upper()
     if local not in {"CDMA", "PRU"}:
@@ -155,7 +157,7 @@ def map_row(raw: Any, position: int) -> dict[str, Any]:
         "numero_nf": clean_text(item.get("NF"), field="NF", maximum=30),
         # Estrutura oficial da chave NF-e: cUF(2) + AAMM(4) + CNPJ(14) +
         # modelo(2) + serie(3) + numero(9) + demais campos.
-        "serie": chave[22:25],
+        "serie": chave[22:25] if len(chave) >= 25 else None,
         "data_emissao": data_emissao,
         "cnpj_fornecedor": clean_text(item.get("CNPJ"), field="CNPJ", maximum=20),
         "nome_fornecedor": clean_text(item.get("FORNECEDOR"), field="FORNECEDOR", maximum=255),

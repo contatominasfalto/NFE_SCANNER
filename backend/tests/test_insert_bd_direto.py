@@ -54,8 +54,20 @@ class DirectImportTests(unittest.TestCase):
         self.assertEqual(len(prepared.rows), 1)
         self.assertEqual(prepared.repeated_in_file, [VALID_ROW["CHAVE NF"]])
 
-    def test_rejects_invalid_key_without_database_access(self):
-        invalid = {**VALID_ROW, "CHAVE NF": "123"}
+    def test_accepts_key_with_fewer_than_44_digits_for_direct_import(self):
+        short_key = VALID_ROW["CHAVE NF"][:-1]
+        valid = {**VALID_ROW, "CHAVE NF": short_key}
+        prepared = prepare_file(self.write_json([valid]))
+        self.assertEqual(prepared.rows[0]["chave_acesso"], short_key)
+        self.assertEqual(prepared.rows[0]["serie"], "002")
+
+    def test_rejects_key_longer_than_database_column(self):
+        invalid = {**VALID_ROW, "CHAVE NF": VALID_ROW["CHAVE NF"] + "1"}
+        with self.assertRaises(ImportValidationError):
+            prepare_file(self.write_json([invalid]))
+
+    def test_rejects_key_without_digits(self):
+        invalid = {**VALID_ROW, "CHAVE NF": "SEM-CHAVE"}
         with self.assertRaises(ImportValidationError):
             prepare_file(self.write_json([invalid]))
 
