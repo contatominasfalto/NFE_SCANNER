@@ -374,6 +374,26 @@ vazia, primeiro simule e depois confirme:
 .\venv\Scripts\python.exe .\insert_bd_direto.py --ambiente testes --arquivo .\base_json.json --corrigir-series-existentes --executar
 ```
 
+### Zerar os dados da homologacao
+
+`zerar_bd_testes.py` aceita exclusivamente o banco `nfe_scanner_dev`. Ele
+remove notas, auditoria e usuarios personalizados, preservando esquema,
+tabelas e as contas padrao. Primeiro simule:
+
+```powershell
+.\venv\Scripts\python.exe .\zerar_bd_testes.py
+```
+
+Depois de revisar as contagens, execute com confirmacao literal:
+
+```powershell
+.\venv\Scripts\python.exe .\zerar_bd_testes.py --executar --confirmar ZERAR_BANCO_DE_TESTES
+```
+
+O reset ocorre em uma unica transacao e gera um manifesto local em
+`logs_importacao/`. O script bloqueia qualquer banco cujo nome nao seja
+exatamente `nfe_scanner_dev`.
+
 ## Integracao Power BI
 
 O projeto possui uma camada pronta de views para consumo no Power BI.

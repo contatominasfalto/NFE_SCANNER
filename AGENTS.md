@@ -113,6 +113,10 @@ Nunca testar uma migracao apontando o computador local para producao. Nao apagar
 - guardar o manifesto gerado em `logs_importacao/` ate a validacao final;
 - nao editar a tabela manualmente para contornar uma validacao do importador.
 
+Para limpar a homologacao, usar somente `zerar_bd_testes.py`. Ele deve preservar
+as contas padrao e recusar qualquer banco diferente de `nfe_scanner_dev`.
+Executar sempre a simulacao antes de confirmar o reset.
+
 ## 5. Procedimento inicial obrigatorio
 
 Antes de modificar qualquer arquivo:
