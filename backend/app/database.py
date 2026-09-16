@@ -99,16 +99,16 @@ def ensure_schema():
                     "migracao de unicidade cancelada."
                 )
 
-            pg_inspector = inspect(connection)
+            inspector = inspect(connection)
             quote = connection.dialect.identifier_preparer.quote
-            for constraint in pg_inspector.get_unique_constraints("notas_fiscais"):
+            for constraint in inspector.get_unique_constraints("notas_fiscais"):
                 if constraint.get("column_names") == ["chave_acesso"] and constraint.get("name"):
                     connection.execute(
                         text(f"ALTER TABLE notas_fiscais DROP CONSTRAINT {quote(constraint['name'])}")
                     )
 
-            pg_inspector = inspect(connection)
-            for index in pg_inspector.get_indexes("notas_fiscais"):
+            inspector = inspect(connection)
+            for index in inspector.get_indexes("notas_fiscais"):
                 if (
                     index.get("unique")
                     and index.get("column_names") == ["chave_acesso"]
