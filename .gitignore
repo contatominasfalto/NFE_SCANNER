@@ -15,6 +15,8 @@ venv_*/
 *.db
 *.sqlite
 *.sqlite3
+/base_json.json
+/logs_importacao/
 
 # Backend runtime output
 backend/logs/

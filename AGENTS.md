@@ -99,6 +99,24 @@ Mudancas de tabela, coluna, indice, constraint, tipo, migracao, `ALTER`, `DROP`,
 
 Nunca testar uma migracao apontando o computador local para producao. Nao apagar ou recriar banco, tabela ou volume para corrigir deploy.
 
+### Cargas historicas diretas
+
+`insert_bd_direto.py` e a unica rotina autorizada no repositorio para importar
+`base_json.json` sem passar pela MeuDanfe. Essa operacao e de alto risco:
+
+- executar primeiro com `--validar-apenas`;
+- simular e depois gravar primeiro em `--ambiente testes`;
+- conferir contagens, amostras, TME, TMAC e duplicidades na homologacao;
+- fazer backup de `nfe-scanner-db` antes da producao;
+- nunca colocar URLs ou credenciais no arquivo Python ou no JSON;
+- producao exige `--executar --confirmar-producao INSERIR_EM_PRODUCAO`;
+- guardar o manifesto gerado em `logs_importacao/` ate a validacao final;
+- nao editar a tabela manualmente para contornar uma validacao do importador.
+
+Para limpar a homologacao, usar somente `zerar_bd_testes.py`. Ele deve preservar
+as contas padrao e recusar qualquer banco diferente de `nfe_scanner_dev`.
+Executar sempre a simulacao antes de confirmar o reset.
+
 ## 5. Procedimento inicial obrigatorio
 
 Antes de modificar qualquer arquivo:
