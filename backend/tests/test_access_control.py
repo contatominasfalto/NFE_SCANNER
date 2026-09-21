@@ -21,8 +21,8 @@ class AccessControlTests(unittest.TestCase):
         self.assertIsNone(legacy_update.modulos)
 
     def test_existing_profiles_keep_their_defaults(self):
-        self.assertEqual(effective_modules(user("user")), {"notes", "reports"})
-        self.assertEqual(effective_modules(user("viewer")), {"notes", "reports", "tme", "tmac"})
+        self.assertEqual(effective_modules(user("user")), {"notes", "reports", "tphb", "tphe"})
+        self.assertEqual(effective_modules(user("viewer")), {"notes", "reports", "tme", "tmac", "tphb", "tphe"})
         self.assertIn("users", effective_modules(user("admin")))
 
     def test_standard_can_operate_only_enabled_modules(self):
@@ -53,8 +53,8 @@ class AccessControlTests(unittest.TestCase):
     def test_route_scope_distinguishes_view_download_and_manage(self):
         self.assertEqual(request_scope("/relatorios/tme/", "GET"), ("tme", "view"))
         self.assertEqual(request_scope("/relatorios/tme/exportar/", "GET"), ("tme", "download"))
-        self.assertEqual(request_scope("/relatorios/tphb/", "GET"), ("reports", "view"))
-        self.assertEqual(request_scope("/relatorios/tphe/exportar/", "GET"), ("reports", "download"))
+        self.assertEqual(request_scope("/relatorios/tphb/", "GET"), ("tphb", "view"))
+        self.assertEqual(request_scope("/relatorios/tphe/exportar/", "GET"), ("tphe", "download"))
         self.assertEqual(request_scope("/faturistas/", "POST"), ("users", "manage"))
         self.assertEqual(request_scope("/faturistas/", "GET"), ("users", "view"))
 
@@ -71,6 +71,7 @@ class AccessControlTests(unittest.TestCase):
         self.assertIn("ALTER TABLE users ADD COLUMN module_access TEXT", database_source)
         self.assertNotIn("DROP COLUMN module_access", database_source)
         self.assertIn("LOWER(username) = 'viewer_user'", database_source)
+        self.assertIn('modules.update({"tphb", "tphe"})', database_source)
         self.assertIn("O usuario adm e protegido e nao pode ser modificado", main_source)
         self.assertIn("is_protected_user(atual.nome)", main_source)
 

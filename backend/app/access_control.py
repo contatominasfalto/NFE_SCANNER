@@ -7,13 +7,13 @@ PROFILE_ADMIN = "admin"
 PROFILE_STANDARD = "user"
 PROFILE_VIEWER = "viewer"
 VALID_PROFILES = {PROFILE_ADMIN, PROFILE_STANDARD, PROFILE_VIEWER}
-MODULES = ("notes", "reports", "tme", "tmac", "users", "audit", "swagger")
-DOWNLOAD_MODULES = {"notes", "reports", "tme", "tmac"}
+MODULES = ("notes", "reports", "tme", "tmac", "tphb", "tphe", "users", "audit", "swagger")
+DOWNLOAD_MODULES = {"notes", "reports", "tme", "tmac", "tphb", "tphe"}
 PROFILE_LABELS = {PROFILE_ADMIN: "Admin", PROFILE_STANDARD: "Standard", PROFILE_VIEWER: "Viewer"}
 DEFAULT_MODULES = {
     PROFILE_ADMIN: set(MODULES),
-    PROFILE_STANDARD: {"notes", "reports"},
-    PROFILE_VIEWER: {"notes", "reports", "tme", "tmac"},
+    PROFILE_STANDARD: {"notes", "reports", "tphb", "tphe"},
+    PROFILE_VIEWER: {"notes", "reports", "tme", "tmac", "tphb", "tphe"},
 }
 PROTECTED_USERS = {"adm", "bipe", "viewer_user"}
 
@@ -69,6 +69,10 @@ def request_scope(path: str, method: str) -> tuple[str, str] | None:
     action = "view" if method.upper() == "GET" else "operate"
     if path.startswith("/relatorios/tmac-recebimento"):
         return "tmac", "download" if "/exportar/" in path else action
+    if path.startswith("/relatorios/tphb"):
+        return "tphb", "download" if "/exportar/" in path else action
+    if path.startswith("/relatorios/tphe"):
+        return "tphe", "download" if "/exportar/" in path else action
     if path.startswith("/relatorios/tme"):
         return "tme", "download" if "/exportar/" in path else action
     if path.startswith("/relatorios/"):

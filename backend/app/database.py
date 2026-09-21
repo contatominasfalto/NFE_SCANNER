@@ -1,3 +1,5 @@
+import json
+
 from sqlalchemy import create_engine, event, inspect, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 from .config import DATABASE_URL
@@ -102,6 +104,35 @@ def ensure_schema():
                 ),
                 {"modules": '["notes", "reports", "tme", "tmac"]'},
             )
+            users = connection.execute(
+                text("SELECT id, username, role, module_access FROM users")
+            ).mappings().all()
+            viewer = next(
+                (row for row in users if (row["username"] or "").strip().casefold() == "viewer_user"),
+                None,
+            )
+            try:
+                viewer_modules = set(json.loads(viewer["module_access"] or "[]")) if viewer else set()
+            except (TypeError, ValueError):
+                viewer_modules = set()
+            if viewer and not {"tphb", "tphe"}.issubset(viewer_modules):
+                defaults = {
+                    "admin": {"notes", "reports", "tme", "tmac", "tphb", "tphe", "users", "audit", "swagger"},
+                    "user": {"notes", "reports", "tphb", "tphe"},
+                    "viewer": {"notes", "reports", "tme", "tmac", "tphb", "tphe"},
+                }
+                for row in users:
+                    try:
+                        modules = set(json.loads(row["module_access"] or "[]"))
+                    except (TypeError, ValueError):
+                        modules = set()
+                    if not modules:
+                        modules = set(defaults.get((row["role"] or "user").strip().casefold(), defaults["user"]))
+                    modules.update({"tphb", "tphe"})
+                    connection.execute(
+                        text("UPDATE users SET module_access = :modules WHERE id = :user_id"),
+                        {"modules": json.dumps(sorted(modules), ensure_ascii=False), "user_id": row["id"]},
+                    )
 
 def get_db():
     db = SessionLocal()

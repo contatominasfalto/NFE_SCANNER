@@ -232,8 +232,8 @@ def ensure_time_report_access(user: models.User):
         raise HTTPException(status_code=403, detail="Acesso nao autorizado ao relatorio solicitado.")
 
 
-def ensure_operational_report_access(user: models.User, action: str = "view"):
-    if not has_access(user, "reports", action):
+def ensure_operational_report_access(user: models.User, module: str, action: str = "view"):
+    if not has_access(user, module, action):
         raise HTTPException(status_code=403, detail="Acesso nao autorizado ao relatorio solicitado.")
 
 
@@ -1269,7 +1269,7 @@ def relatorio_tphb(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    ensure_operational_report_access(current_user)
+    ensure_operational_report_access(current_user, "tphb")
     return _throughput_report(db, data, "tphb")
 
 
@@ -1279,7 +1279,7 @@ def relatorio_tphe(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    ensure_operational_report_access(current_user)
+    ensure_operational_report_access(current_user, "tphe")
     return _throughput_report(db, data, "tphe")
 
 
@@ -1289,7 +1289,7 @@ def exportar_relatorio_tphb(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    ensure_operational_report_access(current_user, "download")
+    ensure_operational_report_access(current_user, "tphb", "download")
     report = _throughput_report(db, data, "tphb")
     output = BytesIO()
     report_service.generate_throughput_pdf(report, output)
@@ -1304,7 +1304,7 @@ def exportar_relatorio_tphe(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    ensure_operational_report_access(current_user, "download")
+    ensure_operational_report_access(current_user, "tphe", "download")
     report = _throughput_report(db, data, "tphe")
     output = BytesIO()
     report_service.generate_throughput_pdf(report, output)

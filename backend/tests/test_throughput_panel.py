@@ -43,8 +43,11 @@ class ThroughputPanelTests(unittest.TestCase):
             self.assertIn(f'`/relatorios/${{prefix}}/exportar/?data=', self.javascript)
 
     def test_three_chart_views_and_report_permission(self):
-        self.assertIn('setVisible("openTphbReport",p.reports)', self.javascript)
-        self.assertIn('setVisible("openTpheReport",p.reports)', self.javascript)
+        self.assertIn('setVisible("openTphbReport",p.tphb)', self.javascript)
+        self.assertIn('setVisible("openTpheReport",p.tphe)', self.javascript)
+        self.assertIn('name="billingModule" value="tphb"', self.html)
+        self.assertIn('name="billingModule" value="tphe"', self.html)
+        self.assertIn('user:["notes","reports","tphb","tphe"]', self.javascript)
         self.assertIn('result.horas||[]', self.javascript)
         self.assertIn('result.dias_mes||[]', self.javascript)
         self.assertIn('result.meses_ano||[]', self.javascript)
