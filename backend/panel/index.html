@@ -7,7 +7,7 @@
   <link rel="icon" type="image/jpeg" href="/painel-assets/logo.jpg?v=20260723-01">
   <link rel="shortcut icon" type="image/jpeg" href="/painel-assets/logo.jpg?v=20260723-01">
   <link rel="apple-touch-icon" href="/painel-assets/logo.jpg?v=20260723-01">
-  <link rel="stylesheet" href="/painel-assets/styles.css?v=20260901-02">
+  <link rel="stylesheet" href="/painel-assets/styles.css?v=20260921-01">
 </head>
 <body>
   <dialog class="modal compact" id="loginDialog">
@@ -373,8 +373,17 @@
       <footer><button class="secondary" id="reloadAudit" type="button">Atualizar</button><button class="primary" type="button" data-close="auditDialog">Fechar</button></footer>
     </section>
   </dialog>
+  <div class="filter-processing-overlay" id="filterProcessingOverlay" role="status" aria-live="assertive" aria-hidden="true" hidden>
+    <section class="filter-processing-card" aria-labelledby="filterProcessingTitle" aria-describedby="filterProcessingMessage">
+      <div class="filter-processing-spinner" aria-hidden="true"><span></span></div>
+      <p class="eyebrow">CONSULTA EM ANDAMENTO</p>
+      <h2 id="filterProcessingTitle">Processando filtro</h2>
+      <p id="filterProcessingMessage">Aguarde enquanto os dados do período selecionado são preparados.</p>
+      <small>Para evitar comandos duplicados, o painel ficará temporariamente bloqueado.</small>
+    </section>
+  </div>
   <div id="toast" role="status"></div>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="/painel-assets/app.js?v=20260911-02"></script>
+  <script src="/painel-assets/app.js?v=20260921-04"></script>
 </body>
 </html>
