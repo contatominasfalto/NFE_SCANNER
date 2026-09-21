@@ -35,6 +35,18 @@ class ThroughputPanelTests(unittest.TestCase):
             for suffix in ("Dialog", "Date", "HourlyChart", "MonthChart", "YearChart"):
                 self.assertIn(prefix + suffix, self.ids)
 
+    def test_reports_are_grouped_in_permission_aware_submenu(self):
+        self.assertIn('id="reportsMenu"', self.html)
+        self.assertIn('id="reportsMenuToggle"', self.html)
+        self.assertIn('id="reportsSubmenu"', self.html)
+        self.assertIn('Relatório Standard', self.html)
+        self.assertLess(self.html.index('id="openReports"'), self.html.index('id="openTmacReport"'))
+        self.assertLess(self.html.index('id="openTmacReport"'), self.html.index('id="openTphbReport"'))
+        self.assertLess(self.html.index('id="openTphbReport"'), self.html.index('id="openTpheReport"'))
+        self.assertIn('const hasGroupedReport=p.reports||p.tmac||p.tphb||p.tphe', self.javascript)
+        self.assertIn('setVisible("reportsMenu",hasGroupedReport)', self.javascript)
+        self.assertIn('initReportsMenu()', self.javascript)
+
     def test_reports_use_distinct_endpoints_and_pdf_exports(self):
         for prefix in ("tphb", "tphe"):
             self.assertIn(f'@app.get("/relatorios/{prefix}/"', self.main)

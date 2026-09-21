@@ -17,6 +17,8 @@ function showLogin(message){$("loginError").textContent=message||"";document.bod
 function hideLogin(){document.body.classList.add("authenticated");const dialog=$("loginDialog");if(dialog.open){dialog.close();}$("loginError").textContent="";}
 function getPermissions(){const modules=currentUser?.permissions?.modules||{},actions=currentUser?.permissions?.actions||{};return{...modules,batch:!!modules.notes&&!!actions.operate,download:!!modules.notes&&!!actions.download,canDownload:!!actions.report_download,refreshErrors:!!modules.notes&&!!actions.operate,notesManage:!!modules.notes&&!!actions.manage,users:!!modules.users,usersManage:!!modules.users&&!!actions.manage,audit:!!modules.audit,swagger:!!modules.swagger}}
 function setVisible(id,visible){const el=$(id);if(!el)return;el.hidden=!visible;el.style.display=visible?"":"none"}
+function setReportsMenuOpen(open){const menu=$("reportsMenu"),submenu=$("reportsSubmenu"),toggle=$("reportsMenuToggle");if(!menu||!submenu||!toggle)return;const expanded=Boolean(open&&!menu.hidden);submenu.hidden=!expanded;toggle.setAttribute("aria-expanded",String(expanded));menu.classList.toggle("open",expanded)}
+function initReportsMenu(){const toggle=$("reportsMenuToggle");toggle?.addEventListener("click",()=>{if(document.body.classList.contains("sidebar-collapsed"))setSidebarCollapsed(false);setReportsMenuOpen(toggle.getAttribute("aria-expanded")!=="true")})}
 function setSidebarCollapsed(collapsed){document.body.classList.toggle("sidebar-collapsed",collapsed);localStorage.setItem("sidebarCollapsed",collapsed?"1":"0");const button=$("sidebarToggle"),icon=$("sidebarToggleIcon");if(button){button.setAttribute("aria-expanded",collapsed?"false":"true");button.title=collapsed?"Expandir menu":"Recolher menu";button.setAttribute("aria-label",collapsed?"Expandir menu":"Recolher menu")}if(icon)icon.textContent=collapsed?">":"<"}
 function initSidebarToggle(){const saved=localStorage.getItem("sidebarCollapsed")==="1";setSidebarCollapsed(saved);$("sidebarToggle")?.addEventListener("click",()=>setSidebarCollapsed(!document.body.classList.contains("sidebar-collapsed")))}
 function applyAccessRules(){
@@ -26,11 +28,14 @@ function applyAccessRules(){
 	$("mainPanel").hidden=false;
 	setVisible("openNotes",p.notes);
 	setVisible("openFaturistas",p.users);
+	const hasGroupedReport=p.reports||p.tmac||p.tphb||p.tphe;
+	setVisible("reportsMenu",hasGroupedReport);
 	setVisible("openReports",p.reports);
 	setVisible("openTmeReport",p.tme);
 	setVisible("openTmacReport",p.tmac);
 	setVisible("openTphbReport",p.tphb);
 	setVisible("openTpheReport",p.tphe);
+	if(!hasGroupedReport)setReportsMenuOpen(false);
 	setVisible("openAudit",p.audit);
 	setVisible("openSwagger",p.swagger);
 	setVisible("openBatchScan",p.batch);
@@ -135,7 +140,7 @@ $("openBatchScan").onclick=()=>{if(!getPermissions().batch){toast("Acesso nao au
 $("tablePageSize").onchange=()=>{tablePageSize=Number($("tablePageSize").value)||100;tablePage=1;render()};$("prevTablePage").onclick=()=>{tablePage-=1;render()};$("nextTablePage").onclick=()=>{tablePage+=1;render()};
 $("downloadAll").onclick=()=>{if(!getPermissions().download){toast("Acesso nao autorizado.",true);return}downloadReport("formato=xml","notas_fiscais.xml")};
 $("downloadTableExcel").onclick=exportTableExcel;
-configureOptionalFilters();initSidebarToggle();showLogin("");
+configureOptionalFilters();initSidebarToggle();initReportsMenu();showLogin("");
 (async()=>{if(await ensureAuthenticated()){await loadAll(true);setInterval(()=>{if(!filterProcessing&&!$("searchInput").value.trim())loadAll(true)},4000);}})();
 
 // Reports functionality
