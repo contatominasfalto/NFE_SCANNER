@@ -84,12 +84,31 @@ def get_notas(
     limit: int = 100,
     data_cadastro_inicio: datetime | None = None,
     data_cadastro_fim: datetime | None = None,
+    busca: str | None = None,
 ):
     query = db.query(models.NotaFiscal)
-    if data_cadastro_inicio:
-        query = query.filter(models.NotaFiscal.data_cadastro >= data_cadastro_inicio)
-    if data_cadastro_fim:
-        query = query.filter(models.NotaFiscal.data_cadastro <= data_cadastro_fim)
+    termo = (busca or "").strip()
+    if termo:
+        escaped = termo.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        pattern = f"%{escaped}%"
+        query = query.filter(
+            or_(
+                models.NotaFiscal.chave_acesso.ilike(pattern, escape="\\"),
+                models.NotaFiscal.numero_nf.ilike(pattern, escape="\\"),
+                models.NotaFiscal.nome_fornecedor.ilike(pattern, escape="\\"),
+                models.NotaFiscal.produto.ilike(pattern, escape="\\"),
+                models.NotaFiscal.transportador.ilike(pattern, escape="\\"),
+                models.NotaFiscal.cnpj_fornecedor.ilike(pattern, escape="\\"),
+                models.NotaFiscal.faturista.ilike(pattern, escape="\\"),
+                models.NotaFiscal.local.ilike(pattern, escape="\\"),
+                models.NotaFiscal.observacao.ilike(pattern, escape="\\"),
+            )
+        )
+    else:
+        if data_cadastro_inicio:
+            query = query.filter(models.NotaFiscal.data_cadastro >= data_cadastro_inicio)
+        if data_cadastro_fim:
+            query = query.filter(models.NotaFiscal.data_cadastro <= data_cadastro_fim)
     return (
         query.order_by(models.NotaFiscal.data_cadastro.desc(), models.NotaFiscal.id.desc())
         .offset(skip)

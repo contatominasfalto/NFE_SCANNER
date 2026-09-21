@@ -1039,6 +1039,12 @@ def list_notas(
     limit: int = Query(100, ge=1, le=500, description="Quantidade maxima de notas retornadas."),
     data_cadastro_inicio: datetime | None = Query(None, description="Inicio do periodo de bip."),
     data_cadastro_fim: datetime | None = Query(None, description="Fim do periodo de bip."),
+    busca: str | None = Query(
+        None,
+        min_length=1,
+        max_length=200,
+        description="Pesquisa global independente do periodo de bip.",
+    ),
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -1048,6 +1054,7 @@ def list_notas(
         limit=limit,
         data_cadastro_inicio=data_cadastro_inicio,
         data_cadastro_fim=data_cadastro_fim,
+        busca=busca,
     )
 
 
