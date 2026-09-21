@@ -47,6 +47,7 @@ class GlobalNoteSearchTests(unittest.TestCase):
         self.assertNotIn('async function processGlobalSearch(){if(filterProcessing)return', self.javascript)
         self.assertNotIn('message=query?"Pesquisando em todo o banco de dados', self.javascript)
         self.assertIn("if(q){filtered=sortNotesForTable([...notes])", self.javascript)
+        self.assertIn('if(!filterProcessing&&!$("searchInput").value.trim())loadAll(true)', self.javascript)
 
 
 if __name__ == "__main__":

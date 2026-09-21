@@ -132,7 +132,7 @@ $("tablePageSize").onchange=()=>{tablePageSize=Number($("tablePageSize").value)|
 $("downloadAll").onclick=()=>{if(!getPermissions().download){toast("Acesso nao autorizado.",true);return}downloadReport("formato=xml","notas_fiscais.xml")};
 $("downloadTableExcel").onclick=exportTableExcel;
 configureOptionalFilters();initSidebarToggle();showLogin("");
-(async()=>{if(await ensureAuthenticated()){await loadAll(true);setInterval(()=>{if(!filterProcessing)loadAll(true)},4000);}})();
+(async()=>{if(await ensureAuthenticated()){await loadAll(true);setInterval(()=>{if(!filterProcessing&&!$("searchInput").value.trim())loadAll(true)},4000);}})();
 
 // Reports functionality
 const reportColors=["#f29129","#ffc46b","#f7a94c","#ffd994","#e68a22","#ffe7b8","#cc741c","#fff0cf","#b86212","#f6d08a"];

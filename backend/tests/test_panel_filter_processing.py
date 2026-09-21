@@ -46,7 +46,10 @@ class PanelFilterProcessingTests(unittest.TestCase):
     def test_overlay_blocks_interaction_and_always_closes(self):
         self.assertIn('toggleAttribute("inert",active)', self.javascript)
         self.assertIn("finally{setFilterProcessing(false)}", self.javascript)
-        self.assertIn("if(!filterProcessing)loadAll(true)", self.javascript)
+        self.assertIn(
+            'if(!filterProcessing&&!$("searchInput").value.trim())loadAll(true)',
+            self.javascript,
+        )
         self.assertIn(".filter-processing-overlay", self.styles)
         self.assertIn("z-index:20000", self.styles)
 
