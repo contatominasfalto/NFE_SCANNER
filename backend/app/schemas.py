@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 from datetime import datetime
 from typing import Literal, Optional
 
-ModuleCode = Literal["notes", "reports", "tme", "tmac", "users", "audit", "swagger"]
+ModuleCode = Literal["notes", "reports", "tme", "tmac", "tphb", "tphe", "users", "audit", "swagger"]
 
 class Local(str, Enum):
     CDMA = "CDMA"

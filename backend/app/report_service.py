@@ -579,6 +579,86 @@ def generate_tmac_pdf(report, output):
     doc.build(story, onFirstPage=_draw_pdf_branding, onLaterPages=_draw_pdf_branding)
 
 
+def _throughput_chart_drawing(items, label_key, value_key, title, empty_message="Sem movimento no periodo"):
+    width, height = 720, 255
+    drawing = Drawing(width, height)
+    _add_chart_gradient(drawing, width, height)
+    drawing.add(String(width / 2, 238, title, textAnchor="middle", fontName="Helvetica-Bold", fontSize=13))
+    if not items:
+        drawing.add(String(width / 2, 120, empty_message, textAnchor="middle", fontSize=10))
+        return drawing
+    left, bottom, chart_width, chart_height = 58, 48, 630, 155
+    maximum = max(float(item.get(value_key) or 0) for item in items) or 1
+    slot = chart_width / max(len(items), 1)
+    bar_width = min(max(slot * .58, 2), 24)
+    for index in range(5):
+        y = bottom + chart_height * index / 4
+        drawing.add(Line(left, y, left + chart_width, y, strokeColor=colors.HexColor("#D4DFE8"), strokeWidth=0.5))
+        drawing.add(String(left - 7, y - 2, f"{maximum * index / 4:.1f}", textAnchor="end", fontSize=6, fillColor=BRAND_MUTED))
+    label_step = max(1, len(items) // 15)
+    for index, item in enumerate(items):
+        value = float(item.get(value_key) or 0)
+        x = left + slot * index + slot / 2
+        bar_height = chart_height * value / maximum
+        drawing.add(Rect(x - bar_width / 2, bottom, bar_width, bar_height, strokeColor=None, fillColor=BRAND_ORANGE))
+        if index % label_step == 0 or index == len(items) - 1:
+            drawing.add(String(x, 34, str(item.get(label_key) or "-"), textAnchor="middle", fontSize=6, fillColor=BRAND_MUTED))
+    drawing.add(String(width / 2, 15, "Toneladas", textAnchor="middle", fontSize=7, fillColor=BRAND_MUTED))
+    return drawing
+
+
+def generate_throughput_pdf(report, output):
+    code = report.get("codigo", "TPH")
+    selected = datetime.fromisoformat(report["data"])
+    doc = SimpleDocTemplate(
+        output,
+        pagesize=landscape(A4),
+        leftMargin=14 * mm,
+        rightMargin=14 * mm,
+        topMargin=36 * mm,
+        bottomMargin=24 * mm,
+        title=f"SCAN-NFE MINASFALTO - Relatorio {code}",
+        author="SCAN-NFE MINASFALTO",
+    )
+    kpis = [["Total do dia", "Media por hora", "Pico por hora", "Notas", "Janela operacional"], [
+        format_ton(report.get("total_toneladas_dia")),
+        format_ton(report.get("media_toneladas_hora")),
+        f"{format_ton(report.get('pico_toneladas_hora'))} ({report.get('hora_pico') or '-'})",
+        str(report.get("total_notas_dia", 0)),
+        f"{report.get('horas_analisadas', 0)} hora(s)",
+    ]]
+    hourly = report.get("horas") or []
+    monthly = report.get("dias_mes") or []
+    yearly = report.get("meses_ano") or []
+    month_names = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+    yearly_chart = [{**item, "rotulo": month_names[item["mes"] - 1]} for item in yearly]
+    hourly_rows = [["Hora", "Toneladas", "Notas"]]
+    hourly_rows.extend([[item["rotulo"], format_ton(item["toneladas"]), item["quantidade_notas"]] for item in hourly])
+    if len(hourly_rows) == 1:
+        hourly_rows.append(["-", "0 TON", "0"])
+    subtitle = f"Data analisada: {selected.strftime('%d/%m/%Y')}. Referencia: {report.get('titulo', code)}."
+    story = [
+        _section_heading(f"Relatorio {code}", subtitle),
+        Spacer(1, 10),
+        _pdf_table(kpis, [50 * mm] * 5),
+        Spacer(1, 15),
+        _chart_card(_throughput_chart_drawing(hourly, "rotulo", "toneladas", "Toneladas por hora no dia selecionado")),
+        PageBreak(),
+        _section_heading("Desempenho diario do mes", f"Media dos dias com movimento: {format_ton(report.get('media_diaria_mes'))}."),
+        Spacer(1, 10),
+        _chart_card(_throughput_chart_drawing(monthly, "dia", "toneladas", "Total de toneladas por dia do mes")),
+        PageBreak(),
+        _section_heading("Medias mensais do ano", f"Ano de referencia: {report.get('ano')}. Media calculada pelos dias com movimento."),
+        Spacer(1, 10),
+        _chart_card(_throughput_chart_drawing(yearly_chart, "rotulo", "media_toneladas_dia", "Media de toneladas por dia em cada mes")),
+        PageBreak(),
+        _section_heading("Detalhamento por hora", "Faixa entre o primeiro e o ultimo evento do dia, incluindo horas sem movimento."),
+        Spacer(1, 10),
+        _pdf_table(hourly_rows, [70 * mm, 90 * mm, 70 * mm]),
+    ]
+    doc.build(story, onFirstPage=_draw_pdf_branding, onLaterPages=_draw_pdf_branding)
+
+
 def _style_sheet(sheet, header_row=1):
     orange = PatternFill("solid", fgColor="F29129")
     white_font = Font(color="FFFFFF", bold=True)

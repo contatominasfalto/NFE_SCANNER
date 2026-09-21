@@ -7,7 +7,7 @@
   <link rel="icon" type="image/jpeg" href="/painel-assets/logo.jpg?v=20260723-01">
   <link rel="shortcut icon" type="image/jpeg" href="/painel-assets/logo.jpg?v=20260723-01">
   <link rel="apple-touch-icon" href="/painel-assets/logo.jpg?v=20260723-01">
-  <link rel="stylesheet" href="/painel-assets/styles.css?v=20260921-01">
+  <link rel="stylesheet" href="/painel-assets/styles.css?v=20260921-02">
 </head>
 <body>
   <dialog class="modal compact" id="loginDialog">
@@ -47,6 +47,8 @@
       <button class="nav-item" id="openReports" hidden><span>📊</span> Relatórios</button>
       <button class="nav-item" id="openTmeReport" hidden><span>◷</span> Relatório TME</button>
       <button class="nav-item" id="openTmacReport" hidden><span>◴</span> Relatório TMAC Recebimento</button>
+      <button class="nav-item" id="openTphbReport" hidden><span>▥</span> Relatório TPHB</button>
+      <button class="nav-item" id="openTpheReport" hidden><span>▤</span> Relatório TPHE</button>
       <button class="nav-item" id="openAudit" hidden><span>⏱</span> Rastreabilidade</button>
       <a class="nav-item" id="openSwagger" href="/docs" target="_blank" hidden><span>↗</span> Swagger API</a>
     </nav>    
@@ -175,7 +177,7 @@
         <button type="submit" class="primary" id="billingSubmit">＋ Cadastrar usuário</button>
         </div>
         <fieldset class="billing-modules"><legend>Módulos permitidos</legend>
-          <label class="module-option"><input type="checkbox" name="billingModule" value="notes"><span><strong>Notas Fiscais</strong><small>Consulta e operação de notas</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="reports"><span><strong>Relatórios</strong><small>Indicadores operacionais</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="tme"><span><strong>Relatório TME</strong><small>Intervalo entre emissões</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="tmac"><span><strong>Relatório TMAC</strong><small>Tempo até o recebimento</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="users"><span><strong>Usuários</strong><small>Gestão de acessos</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="audit"><span><strong>Rastreabilidade</strong><small>Histórico de alterações</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="swagger"><span><strong>Swagger API</strong><small>Documentação dos endpoints</small></span></label>
+          <label class="module-option"><input type="checkbox" name="billingModule" value="notes"><span><strong>Notas Fiscais</strong><small>Consulta e operação de notas</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="reports"><span><strong>Relatórios</strong><small>Indicadores operacionais</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="tme"><span><strong>Relatório TME</strong><small>Intervalo entre emissões</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="tmac"><span><strong>Relatório TMAC</strong><small>Tempo até o recebimento</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="tphb"><span><strong>Relatório TPHB</strong><small>Toneladas por hora bipada</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="tphe"><span><strong>Relatório TPHE</strong><small>Toneladas por hora emitida</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="users"><span><strong>Usuários</strong><small>Gestão de acessos</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="audit"><span><strong>Rastreabilidade</strong><small>Histórico de alterações</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="swagger"><span><strong>Swagger API</strong><small>Documentação dos endpoints</small></span></label>
         </fieldset>
       </form>
       <section class="users-list-panel"><div class="users-list-title"><div><h3>Usuários cadastrados</h3><p>Consulte perfil, situação e permissões de acesso.</p></div></div><div class="users-list-heading"><span>Usuário</span><span>Perfil</span><span>Situação</span><span>Módulos permitidos</span><span>Ações</span></div><div class="billing-list" id="billingList"></div></section>
@@ -344,6 +346,40 @@
       <footer><button class="secondary" type="button" data-close="tmacDialog">Fechar</button></footer>
     </section>
   </dialog>
+  <dialog id="tphbDialog">
+    <section class="modal xlarge tme-modal" id="tphbModalSection">
+      <header>
+        <div><p class="eyebrow">PRODUTIVIDADE DE RECEBIMENTO</p><h2>Relatório TPHB</h2><small>Toneladas por hora calculadas pela data e hora do Bip</small></div>
+        <div class="tme-header-actions"><button class="secondary export-pdf" id="exportTphbPdf" type="button">↓ Baixar PDF</button><button class="icon-button tme-maximize" type="button" data-maximize="tphbModalSection" title="Maximizar relatório" aria-label="Maximizar relatório" aria-pressed="false">□</button><button class="icon-button close" type="button" data-close="tphbDialog" aria-label="Fechar relatório">×</button></div>
+      </header>
+      <div class="tme-scroll">
+        <form id="tphbFilterForm" class="throughput-filter"><label>Data do Bip<input id="tphbDate" type="date" required></label><button class="primary" id="applyTphbFilter" type="submit">Calcular</button></form>
+        <div class="tme-context" id="tphbContext">Escolha uma data para calcular as toneladas por hora bipada.</div>
+        <section class="tme-kpis" aria-label="Indicadores TPHB"><article><span>Total do dia</span><strong id="tphbTotal">0 TON</strong><small>toneladas bipadas</small></article><article><span>Média por hora</span><strong id="tphbAverage">0 TON</strong><small>da primeira à última hora</small></article><article><span>Pico por hora</span><strong id="tphbPeak">0 TON</strong><small id="tphbPeakHour">sem movimento</small></article><article><span>Notas analisadas</span><strong id="tphbNotes">0</strong><small>notas válidas</small></article><article><span>Janela operacional</span><strong id="tphbWindow">0h</strong><small id="tphbEvents">sem eventos</small></article></section>
+        <section class="tme-card"><div class="tme-card-heading"><div><p class="eyebrow">DIA SELECIONADO</p><h3>Toneladas por hora bipada</h3></div><small>Da primeira hora com Bip até a última, incluindo intervalos sem movimento.</small></div><div class="tme-chart-wrap"><canvas id="tphbHourlyChart"></canvas><div class="chart-empty" id="tphbHourlyEmpty">Nenhum Bip válido encontrado na data.</div></div></section>
+        <section class="tme-card"><div class="tme-card-heading"><div><p class="eyebrow">VISÃO MENSAL</p><h3>Toneladas por dia do mês</h3></div><small id="tphbMonthCaption">Média calculada pelos dias com movimento.</small></div><div class="tme-chart-wrap"><canvas id="tphbMonthChart"></canvas><div class="chart-empty" id="tphbMonthEmpty">Nenhum movimento encontrado no mês.</div></div></section>
+        <section class="tme-card"><div class="tme-card-heading"><div><p class="eyebrow">VISÃO ANUAL</p><h3>Média diária de cada mês</h3></div><small>Média de toneladas por dia com movimento em todos os meses do ano escolhido.</small></div><div class="tme-chart-wrap"><canvas id="tphbYearChart"></canvas><div class="chart-empty" id="tphbYearEmpty">Nenhum movimento encontrado no ano.</div></div></section>
+      </div>
+      <footer><button class="secondary" type="button" data-close="tphbDialog">Fechar</button></footer>
+    </section>
+  </dialog>
+  <dialog id="tpheDialog">
+    <section class="modal xlarge tme-modal" id="tpheModalSection">
+      <header>
+        <div><p class="eyebrow">PRODUTIVIDADE DE EMISSÃO</p><h2>Relatório TPHE</h2><small>Toneladas por hora calculadas pela data e hora de emissão</small></div>
+        <div class="tme-header-actions"><button class="secondary export-pdf" id="exportTphePdf" type="button">↓ Baixar PDF</button><button class="icon-button tme-maximize" type="button" data-maximize="tpheModalSection" title="Maximizar relatório" aria-label="Maximizar relatório" aria-pressed="false">□</button><button class="icon-button close" type="button" data-close="tpheDialog" aria-label="Fechar relatório">×</button></div>
+      </header>
+      <div class="tme-scroll">
+        <form id="tpheFilterForm" class="throughput-filter"><label>Data de emissão<input id="tpheDate" type="date" required></label><button class="primary" id="applyTpheFilter" type="submit">Calcular</button></form>
+        <div class="tme-context" id="tpheContext">Escolha uma data para calcular as toneladas por hora emitida.</div>
+        <section class="tme-kpis" aria-label="Indicadores TPHE"><article><span>Total do dia</span><strong id="tpheTotal">0 TON</strong><small>toneladas emitidas</small></article><article><span>Média por hora</span><strong id="tpheAverage">0 TON</strong><small>da primeira à última hora</small></article><article><span>Pico por hora</span><strong id="tphePeak">0 TON</strong><small id="tphePeakHour">sem movimento</small></article><article><span>Notas analisadas</span><strong id="tpheNotes">0</strong><small>notas válidas</small></article><article><span>Janela operacional</span><strong id="tpheWindow">0h</strong><small id="tpheEvents">sem eventos</small></article></section>
+        <section class="tme-card"><div class="tme-card-heading"><div><p class="eyebrow">DIA SELECIONADO</p><h3>Toneladas por hora emitida</h3></div><small>Da primeira hora com emissão até a última, incluindo intervalos sem movimento.</small></div><div class="tme-chart-wrap"><canvas id="tpheHourlyChart"></canvas><div class="chart-empty" id="tpheHourlyEmpty">Nenhuma emissão válida encontrada na data.</div></div></section>
+        <section class="tme-card"><div class="tme-card-heading"><div><p class="eyebrow">VISÃO MENSAL</p><h3>Toneladas por dia do mês</h3></div><small id="tpheMonthCaption">Média calculada pelos dias com movimento.</small></div><div class="tme-chart-wrap"><canvas id="tpheMonthChart"></canvas><div class="chart-empty" id="tpheMonthEmpty">Nenhum movimento encontrado no mês.</div></div></section>
+        <section class="tme-card"><div class="tme-card-heading"><div><p class="eyebrow">VISÃO ANUAL</p><h3>Média diária de cada mês</h3></div><small>Média de toneladas por dia com movimento em todos os meses do ano escolhido.</small></div><div class="tme-chart-wrap"><canvas id="tpheYearChart"></canvas><div class="chart-empty" id="tpheYearEmpty">Nenhum movimento encontrado no ano.</div></div></section>
+      </div>
+      <footer><button class="secondary" type="button" data-close="tpheDialog">Fechar</button></footer>
+    </section>
+  </dialog>
   <dialog id="confirmDialog">
     <section class="modal compact">
       <header><div><p class="eyebrow">CONFIRMAÇÃO</p><h2 id="confirmTitle">Confirmar ação</h2></div></header>
@@ -384,6 +420,6 @@
   </div>
   <div id="toast" role="status"></div>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="/painel-assets/app.js?v=20260921-04"></script>
+  <script src="/painel-assets/app.js?v=20260921-06"></script>
 </body>
 </html>

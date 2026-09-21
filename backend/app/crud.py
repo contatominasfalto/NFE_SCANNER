@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 from .time_utils import local_now
 from .tme_service import build_tme_report
 from .tmac_service import build_tmac_report
+from .throughput_service import build_throughput_report
 from .access_control import DEFAULT_MODULES, serialize_modules
 
 def _nota_sem_erro():
@@ -591,6 +592,27 @@ def get_relatorio_tmac(db: Session, inicio: datetime, fim: datetime):
         .all()
     )
     return build_tmac_report(notas, inicio, fim)
+
+
+def get_relatorio_throughput(db: Session, selected_date, timestamp_field: str, code: str, title: str):
+    if timestamp_field not in {"data_cadastro", "data_emissao"}:
+        raise ValueError("Campo de referencia invalido para relatorio de toneladas por hora.")
+    timestamp_column = getattr(models.NotaFiscal, timestamp_field)
+    year_start = datetime(selected_date.year, 1, 1)
+    year_end = datetime(selected_date.year + 1, 1, 1)
+    notas = (
+        db.query(models.NotaFiscal)
+        .filter(
+            timestamp_column.isnot(None),
+            timestamp_column >= year_start,
+            timestamp_column < year_end,
+            models.NotaFiscal.quantidade.isnot(None),
+            _nota_sem_erro(),
+        )
+        .order_by(timestamp_column.asc(), models.NotaFiscal.id.asc())
+        .all()
+    )
+    return build_throughput_report(notas, selected_date, timestamp_field, code, title)
 
 
 def create_faturista(db: Session, faturista: schemas.FaturistaCreate):
