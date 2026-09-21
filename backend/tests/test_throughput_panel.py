@@ -43,7 +43,7 @@ class ThroughputPanelTests(unittest.TestCase):
         self.assertLess(self.html.index('id="openReports"'), self.html.index('id="openTmacReport"'))
         self.assertLess(self.html.index('id="openTmacReport"'), self.html.index('id="openTphbReport"'))
         self.assertLess(self.html.index('id="openTphbReport"'), self.html.index('id="openTpheReport"'))
-        self.assertIn('const hasGroupedReport=p.reports||p.tmac||p.tphb||p.tphe', self.javascript)
+        self.assertIn('const hasGroupedReport=p.reports||p.tme||p.tmac||p.tphb||p.tphe', self.javascript)
         self.assertIn('setVisible("reportsMenu",hasGroupedReport)', self.javascript)
         self.assertIn('initReportsMenu()', self.javascript)
 

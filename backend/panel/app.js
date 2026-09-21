@@ -28,7 +28,7 @@ function applyAccessRules(){
 	$("mainPanel").hidden=false;
 	setVisible("openNotes",p.notes);
 	setVisible("openFaturistas",p.users);
-	const hasGroupedReport=p.reports||p.tmac||p.tphb||p.tphe;
+	const hasGroupedReport=p.reports||p.tme||p.tmac||p.tphb||p.tphe;
 	setVisible("reportsMenu",hasGroupedReport);
 	setVisible("openReports",p.reports);
 	setVisible("openTmeReport",p.tme);
