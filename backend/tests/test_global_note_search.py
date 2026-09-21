@@ -22,21 +22,30 @@ class GlobalNoteSearchTests(unittest.TestCase):
         for field in (
             "chave_acesso",
             "numero_nf",
+            "serie",
             "nome_fornecedor",
             "produto",
             "transportador",
             "cnpj_fornecedor",
             "faturista",
+            "lider_operacional",
             "local",
             "observacao",
         ):
             self.assertIn(f"NotaFiscal.{field}.ilike", self.crud)
+        for field in ("data_cadastro", "data_emissao", "quantidade", "valor_total"):
+            self.assertIn(f"cast(models.NotaFiscal.{field}, String).ilike", self.crud)
         self.assertIn("else:\n        if data_cadastro_inicio:", self.crud)
 
     def test_frontend_uses_server_search_without_date_parameters(self):
         self.assertIn("busca:query", self.javascript)
         self.assertIn('$("searchInput").oninput=scheduleGlobalSearch', self.javascript)
-        self.assertIn("setTimeout(()=>processGlobalSearch(),420)", self.javascript)
+        self.assertIn("scheduleGlobalSearch(wait=700)", self.javascript)
+        self.assertIn("setTimeout(()=>processGlobalSearch(),wait)", self.javascript)
+        self.assertIn("if(refreshing){scheduleGlobalSearch(150);return}", self.javascript)
+        self.assertIn("!==requestedQuery)scheduleGlobalSearch(0)", self.javascript)
+        self.assertNotIn('async function processGlobalSearch(){if(filterProcessing)return', self.javascript)
+        self.assertNotIn('message=query?"Pesquisando em todo o banco de dados', self.javascript)
         self.assertIn("if(q){filtered=sortNotesForTable([...notes])", self.javascript)
 
 
