@@ -7,7 +7,7 @@
   <link rel="icon" type="image/jpeg" href="/painel-assets/logo.jpg?v=20260723-01">
   <link rel="shortcut icon" type="image/jpeg" href="/painel-assets/logo.jpg?v=20260723-01">
   <link rel="apple-touch-icon" href="/painel-assets/logo.jpg?v=20260723-01">
-  <link rel="stylesheet" href="/painel-assets/styles.css?v=20260921-02">
+  <link rel="stylesheet" href="/painel-assets/styles.css?v=20260921-03">
 </head>
 <body>
   <dialog class="modal compact" id="loginDialog">
@@ -44,11 +44,16 @@
     <nav>
       <button class="nav-item active" id="openNotes" data-view="notas"><span>▦</span> Notas fiscais</button>
       <button class="nav-item" id="openFaturistas" hidden><span>◉</span> Usuários</button>
-      <button class="nav-item" id="openReports" hidden><span>📊</span> Relatórios</button>
-      <button class="nav-item" id="openTmeReport" hidden><span>◷</span> Relatório TME</button>
-      <button class="nav-item" id="openTmacReport" hidden><span>◴</span> Relatório TMAC Recebimento</button>
-      <button class="nav-item" id="openTphbReport" hidden><span>▥</span> Relatório TPHB</button>
-      <button class="nav-item" id="openTpheReport" hidden><span>▤</span> Relatório TPHE</button>
+      <div class="nav-group" id="reportsMenu" hidden>
+        <button class="nav-item nav-group-toggle" id="reportsMenuToggle" type="button" aria-expanded="false" aria-controls="reportsSubmenu"><span>📊</span><span class="nav-label">Relatórios</span><span class="nav-chevron" aria-hidden="true">›</span></button>
+        <div class="nav-submenu" id="reportsSubmenu" hidden>
+          <button class="nav-item nav-subitem" id="openReports" hidden><span>•</span> Relatório Standard</button>
+          <button class="nav-item nav-subitem" id="openTmeReport" hidden><span>◷</span> Relatório TME</button>
+          <button class="nav-item nav-subitem" id="openTmacReport" hidden><span>◴</span> Relatório TMAC Recebimento</button>
+          <button class="nav-item nav-subitem" id="openTphbReport" hidden><span>▥</span> Relatório TPHB</button>
+          <button class="nav-item nav-subitem" id="openTpheReport" hidden><span>▤</span> Relatório TPHE</button>
+        </div>
+      </div>
       <button class="nav-item" id="openAudit" hidden><span>⏱</span> Rastreabilidade</button>
       <a class="nav-item" id="openSwagger" href="/docs" target="_blank" hidden><span>↗</span> Swagger API</a>
     </nav>    
@@ -177,7 +182,7 @@
         <button type="submit" class="primary" id="billingSubmit">＋ Cadastrar usuário</button>
         </div>
         <fieldset class="billing-modules"><legend>Módulos permitidos</legend>
-          <label class="module-option"><input type="checkbox" name="billingModule" value="notes"><span><strong>Notas Fiscais</strong><small>Consulta e operação de notas</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="reports"><span><strong>Relatórios</strong><small>Indicadores operacionais</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="tme"><span><strong>Relatório TME</strong><small>Intervalo entre emissões</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="tmac"><span><strong>Relatório TMAC</strong><small>Tempo até o recebimento</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="tphb"><span><strong>Relatório TPHB</strong><small>Toneladas por hora bipada</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="tphe"><span><strong>Relatório TPHE</strong><small>Toneladas por hora emitida</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="users"><span><strong>Usuários</strong><small>Gestão de acessos</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="audit"><span><strong>Rastreabilidade</strong><small>Histórico de alterações</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="swagger"><span><strong>Swagger API</strong><small>Documentação dos endpoints</small></span></label>
+          <label class="module-option"><input type="checkbox" name="billingModule" value="notes"><span><strong>Notas Fiscais</strong><small>Consulta e operação de notas</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="reports"><span><strong>Relatório Standard</strong><small>Indicadores operacionais</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="tme"><span><strong>Relatório TME</strong><small>Intervalo entre emissões</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="tmac"><span><strong>Relatório TMAC</strong><small>Tempo até o recebimento</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="tphb"><span><strong>Relatório TPHB</strong><small>Toneladas por hora bipada</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="tphe"><span><strong>Relatório TPHE</strong><small>Toneladas por hora emitida</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="users"><span><strong>Usuários</strong><small>Gestão de acessos</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="audit"><span><strong>Rastreabilidade</strong><small>Histórico de alterações</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="swagger"><span><strong>Swagger API</strong><small>Documentação dos endpoints</small></span></label>
         </fieldset>
       </form>
       <section class="users-list-panel"><div class="users-list-title"><div><h3>Usuários cadastrados</h3><p>Consulte perfil, situação e permissões de acesso.</p></div></div><div class="users-list-heading"><span>Usuário</span><span>Perfil</span><span>Situação</span><span>Módulos permitidos</span><span>Ações</span></div><div class="billing-list" id="billingList"></div></section>
@@ -187,7 +192,7 @@
 
   <dialog id="reportsDialog">
     <section class="modal xlarge" id="reportsModalSection">
-      <header><div><p class="eyebrow">RELATÓRIOS</p><h2>Acumulado operacional</h2></div><div class="report-export-actions"><button class="secondary export-pdf" id="exportReportPdf" type="button">↓ Baixar PDF</button><button class="secondary export-excel" id="exportReportExcel" type="button">↓ Baixar Excel</button><button class="icon-button close" type="button" data-close="reportsDialog">×</button></div></header>
+      <header><div><p class="eyebrow">RELATÓRIO STANDARD</p><h2>Acumulado operacional</h2></div><div class="report-export-actions"><button class="secondary export-pdf" id="exportReportPdf" type="button">↓ Baixar PDF</button><button class="secondary export-excel" id="exportReportExcel" type="button">↓ Baixar Excel</button><button class="icon-button close" type="button" data-close="reportsDialog">×</button></div></header>
       <div class="reports-scroll">
         <form id="globalReportFilterForm" class="global-report-filter">
           <label>Data Início<input id="reportGlobalStart" type="datetime-local" required></label>
@@ -420,6 +425,6 @@
   </div>
   <div id="toast" role="status"></div>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="/painel-assets/app.js?v=20260921-06"></script>
+  <script src="/painel-assets/app.js?v=20260921-08"></script>
 </body>
 </html>

@@ -50,7 +50,7 @@ class TmePanelTests(unittest.TestCase):
         self.assertTrue(expected.issubset(set(self.ids)))
         self.assertEqual(len(self.ids), len(set(self.ids)), "O painel possui IDs HTML duplicados.")
 
-    def test_tme_menu_is_immediately_after_reports(self):
+    def test_tme_is_inside_grouped_reports_menu(self):
         reports_position = self.html.index('id="openReports"')
         tme_position = self.html.index('id="openTmeReport"')
         tmac_position = self.html.index('id="openTmacReport"')
@@ -70,8 +70,8 @@ class TmePanelTests(unittest.TestCase):
     def test_tme_styles_and_cache_versions_are_present(self):
         self.assertIn(".tme-kpis", self.styles)
         self.assertIn(".tme-chart-wrap", self.styles)
-        self.assertRegex(self.html, re.compile(r"styles\.css\?v=20260921-02"))
-        self.assertRegex(self.html, re.compile(r"app\.js\?v=20260921-06"))
+        self.assertRegex(self.html, re.compile(r"styles\.css\?v=20260921-03"))
+        self.assertRegex(self.html, re.compile(r"app\.js\?v=20260921-08"))
 
     def test_tme_modal_can_be_maximized_and_resets_when_closed(self):
         self.assertIn('data-maximize="tmeModalSection"', self.html)
