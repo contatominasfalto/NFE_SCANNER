@@ -201,6 +201,18 @@ A aba **Relatorios** apresenta:
 
 Os filtros ficam no topo e controlam todos os graficos e tabelas abaixo.
 
+O painel também possui dois relatórios de produtividade por hora:
+
+- **TPHB — Tonelada por Hora Bipada:** usa `data_cadastro`, que representa a data e hora do Bip;
+- **TPHE — Tonelada por Hora Emitida:** usa `data_emissao` da nota fiscal.
+
+Em ambos, o usuário escolhe uma data. O painel apresenta as toneladas de cada
+hora entre o primeiro e o último evento do dia, o total diário, a média por
+hora, o pico, as toneladas de cada dia do mês e a média diária de todos os
+meses do ano escolhido. As médias mensais consideram somente os dias que
+possuem movimento. Notas sinalizadas com erro e quantidades inválidas são
+desconsideradas. Os resultados também podem ser exportados em PDF.
+
 ## Rastreabilidade
 
 A aba **Rastreabilidade** registra eventos administrativos e operacionais, incluindo:

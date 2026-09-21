@@ -53,6 +53,8 @@ class AccessControlTests(unittest.TestCase):
     def test_route_scope_distinguishes_view_download_and_manage(self):
         self.assertEqual(request_scope("/relatorios/tme/", "GET"), ("tme", "view"))
         self.assertEqual(request_scope("/relatorios/tme/exportar/", "GET"), ("tme", "download"))
+        self.assertEqual(request_scope("/relatorios/tphb/", "GET"), ("reports", "view"))
+        self.assertEqual(request_scope("/relatorios/tphe/exportar/", "GET"), ("reports", "download"))
         self.assertEqual(request_scope("/faturistas/", "POST"), ("users", "manage"))
         self.assertEqual(request_scope("/faturistas/", "GET"), ("users", "view"))
 

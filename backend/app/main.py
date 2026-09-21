@@ -1,4 +1,4 @@
-from datetime import datetime, time as time_cls
+from datetime import date, datetime, time as time_cls
 from calendar import monthrange
 import base64
 import hashlib
@@ -229,6 +229,11 @@ def ensure_tme_access(user: models.User):
 
 def ensure_time_report_access(user: models.User):
     if not has_access(user, "tmac", "view"):
+        raise HTTPException(status_code=403, detail="Acesso nao autorizado ao relatorio solicitado.")
+
+
+def ensure_operational_report_access(user: models.User, action: str = "view"):
+    if not has_access(user, "reports", action):
         raise HTTPException(status_code=403, detail="Acesso nao autorizado ao relatorio solicitado.")
 
 
@@ -1246,6 +1251,65 @@ def exportar_relatorio_tmac_recebimento(
     report_service.generate_tmac_pdf(report, output)
     output.seek(0)
     filename = f"relatorio_tmac_recebimento_{local_now().strftime('%Y%m%d_%H%M%S')}.pdf"
+    return StreamingResponse(output, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+
+
+def _throughput_report(db: Session, selected_date: date, code: str):
+    settings = {
+        "tphb": ("data_cadastro", "Tonelada por Hora Bipada"),
+        "tphe": ("data_emissao", "Tonelada por Hora Emitida"),
+    }
+    timestamp_field, title = settings[code]
+    return crud.get_relatorio_throughput(db, selected_date, timestamp_field, code.upper(), title)
+
+
+@app.get("/relatorios/tphb/", tags=["Sistema"], summary="Calcular toneladas por hora bipada")
+def relatorio_tphb(
+    data: date = Query(description="Data operacional analisada."),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    ensure_operational_report_access(current_user)
+    return _throughput_report(db, data, "tphb")
+
+
+@app.get("/relatorios/tphe/", tags=["Sistema"], summary="Calcular toneladas por hora emitida")
+def relatorio_tphe(
+    data: date = Query(description="Data de emissao analisada."),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    ensure_operational_report_access(current_user)
+    return _throughput_report(db, data, "tphe")
+
+
+@app.get("/relatorios/tphb/exportar/", response_class=StreamingResponse, tags=["Sistema"], summary="Exportar TPHB em PDF")
+def exportar_relatorio_tphb(
+    data: date = Query(description="Data operacional analisada."),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    ensure_operational_report_access(current_user, "download")
+    report = _throughput_report(db, data, "tphb")
+    output = BytesIO()
+    report_service.generate_throughput_pdf(report, output)
+    output.seek(0)
+    filename = f"relatorio_tphb_{data.isoformat()}.pdf"
+    return StreamingResponse(output, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+
+
+@app.get("/relatorios/tphe/exportar/", response_class=StreamingResponse, tags=["Sistema"], summary="Exportar TPHE em PDF")
+def exportar_relatorio_tphe(
+    data: date = Query(description="Data de emissao analisada."),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    ensure_operational_report_access(current_user, "download")
+    report = _throughput_report(db, data, "tphe")
+    output = BytesIO()
+    report_service.generate_throughput_pdf(report, output)
+    output.seek(0)
+    filename = f"relatorio_tphe_{data.isoformat()}.pdf"
     return StreamingResponse(output, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="{filename}"'})
 
 
