@@ -7,7 +7,7 @@
   <link rel="icon" type="image/jpeg" href="/painel-assets/logo.jpg?v=20260723-01">
   <link rel="shortcut icon" type="image/jpeg" href="/painel-assets/logo.jpg?v=20260723-01">
   <link rel="apple-touch-icon" href="/painel-assets/logo.jpg?v=20260723-01">
-  <link rel="stylesheet" href="/painel-assets/styles.css?v=20260921-03">
+  <link rel="stylesheet" href="/painel-assets/styles.css?v=20261030-01">
 </head>
 <body>
   <dialog class="modal compact" id="loginDialog">
@@ -88,11 +88,11 @@
     <section class="workspace">
       <div class="toolbar">
         <label class="search"><span>⌕</span><input id="searchInput" placeholder="Buscar NF, chave, produto, fornecedor, transportador..."></label>
-        <label class="flag-filter"><input id="errorOnlyFilter" type="checkbox" onchange="applyFilters()" onclick="applyFilters()"><span>Com erro</span></label>
         <label class="date-filter"><span>Bip inicial</span><input id="bipStartDateFilter" type="date" aria-label="Data bip inicial"></label>
         <label class="date-filter"><span>Bip final</span><input id="bipEndDateFilter" type="date" aria-label="Data bip final"></label>
         <label class="date-filter"><span>Emissão inicial</span><input id="issueStartDateFilter" type="date" aria-label="Data emissão inicial"></label>
         <label class="date-filter"><span>Emissão final</span><input id="issueEndDateFilter" type="date" aria-label="Data emissão final"></label>
+        <select id="productFilter" aria-label="Filtrar por produto"><option value="">Todos os produtos</option></select>
         <select id="localFilter" aria-label="Filtrar por local">
           <option value="">Todos os locais</option>
           <option>CDMA</option><option>PRU</option>
@@ -425,6 +425,6 @@
   </div>
   <div id="toast" role="status"></div>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="/painel-assets/app.js?v=20260921-08"></script>
+  <script src="/painel-assets/app.js?v=20261030-01"></script>
 </body>
 </html>

@@ -70,8 +70,8 @@ class TmePanelTests(unittest.TestCase):
     def test_tme_styles_and_cache_versions_are_present(self):
         self.assertIn(".tme-kpis", self.styles)
         self.assertIn(".tme-chart-wrap", self.styles)
-        self.assertRegex(self.html, re.compile(r"styles\.css\?v=20260921-03"))
-        self.assertRegex(self.html, re.compile(r"app\.js\?v=20260921-08"))
+        self.assertRegex(self.html, re.compile(r"styles\.css\?v=\d{8}-\d{2}"))
+        self.assertRegex(self.html, re.compile(r"app\.js\?v=\d{8}-\d{2}"))
 
     def test_tme_modal_can_be_maximized_and_resets_when_closed(self):
         self.assertIn('data-maximize="tmeModalSection"', self.html)
