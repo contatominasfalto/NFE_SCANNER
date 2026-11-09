@@ -27,10 +27,12 @@ from .time_utils import local_now
 from .access_control import PROFILE_LABELS, effective_modules, has_access, is_protected_user, normalize_profile, permission_payload, profile_allows, request_scope
 
 from .metas_api import create_metas_router
+from .metas_bi import ensure_metas_bi_views
 
 logger = configure_logging()
 models.Base.metadata.create_all(bind=engine)
 ensure_schema()
+ensure_metas_bi_views(engine)
 
 VIEWER_USERNAME = "viewer_user"
 VIEWER_ROLE = "viewer"

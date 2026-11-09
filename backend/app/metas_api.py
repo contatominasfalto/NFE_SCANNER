@@ -5,8 +5,9 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
 from sqlalchemy.orm import Session
 
-from .access_control import has_access
+from .access_control import has_access, profile_allows
 from .database import get_db
+from .metas_bi import metas_bi_status
 from .metas_models import MetaMes
 from .metas_schemas import MetaMesInput, MetaMesResponse, MetaMesSummary, MetaMesUpdate, MetaTipo
 from .metas_service import delete_month, find_month, month_payload, save_month, summary
@@ -24,6 +25,15 @@ def create_metas_router(authenticate):
         if not has_access(user, "metas", action):
             raise HTTPException(403, "Usuário sem permissão para esta operação no módulo Metas.")
         return user
+
+    @router.get("/bi/status/", summary="Verificar views de Metas para Power BI (Admin)")
+    def bi_status(user=Depends(authenticate), db: Session = Depends(get_db)):
+        if not profile_allows(user, "manage"):
+            raise HTTPException(403, "Verificação da integração BI restrita ao administrador.")
+        try:
+            return metas_bi_status(db)
+        except ValueError as error:
+            raise HTTPException(501, str(error)) from error
 
     @router.get("/{tipo}/meses/", response_model=list[MetaMesSummary])
     def list_months(tipo: MetaTipo, user=Depends(permitted_user), db: Session = Depends(get_db)):

@@ -416,6 +416,9 @@ Arquivos:
 | --- | --- |
 | `docs/powerbi_setup.sql` | Cria o schema `powerbi` e as views de indicadores |
 | `docs/powerbi_guia.md` | Passo a passo para conectar o Power BI ao PostgreSQL Render |
+| `tuto_conect_metas_bi.md` | Tutorial completo de Metas, credencial de leitura e conexão Desktop/Service |
+| `backend/app/metas_bi.sql` | Views exclusivas de Metas, preparadas na inicialização PostgreSQL |
+| `scripts/preparar_metas_bi.py` | Provisionamento protegido de login somente leitura para as views de Metas |
 
 Fluxo recomendado:
 
