@@ -7,7 +7,7 @@ PROFILE_ADMIN = "admin"
 PROFILE_STANDARD = "user"
 PROFILE_VIEWER = "viewer"
 VALID_PROFILES = {PROFILE_ADMIN, PROFILE_STANDARD, PROFILE_VIEWER}
-MODULES = ("notes", "reports", "tme", "tmac", "tphb", "tphe", "users", "audit", "swagger")
+MODULES = ("notes", "reports", "tme", "tmac", "tphb", "tphe", "users", "audit", "swagger", "metas")
 DOWNLOAD_MODULES = {"notes", "reports", "tme", "tmac", "tphb", "tphe"}
 PROFILE_LABELS = {PROFILE_ADMIN: "Admin", PROFILE_STANDARD: "Standard", PROFILE_VIEWER: "Viewer"}
 DEFAULT_MODULES = {
@@ -67,6 +67,8 @@ def has_access(user, module: str, action: str = "view") -> bool:
 
 def request_scope(path: str, method: str) -> tuple[str, str] | None:
     action = "view" if method.upper() == "GET" else "operate"
+    if path.startswith("/metas/"):
+        return "metas", action
     if path.startswith("/relatorios/tmac-recebimento"):
         return "tmac", "download" if "/exportar/" in path else action
     if path.startswith("/relatorios/tphb"):

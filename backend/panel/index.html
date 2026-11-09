@@ -7,7 +7,7 @@
   <link rel="icon" type="image/jpeg" href="/painel-assets/logo.jpg?v=20260723-01">
   <link rel="shortcut icon" type="image/jpeg" href="/painel-assets/logo.jpg?v=20260723-01">
   <link rel="apple-touch-icon" href="/painel-assets/logo.jpg?v=20260723-01">
-  <link rel="stylesheet" href="/painel-assets/styles.css?v=20261030-01">
+  <link rel="stylesheet" href="/painel-assets/styles.css?v=20261109-01">
 </head>
 <body>
   <dialog class="modal compact" id="loginDialog">
@@ -55,6 +55,13 @@
         </div>
       </div>
       <button class="nav-item" id="openAudit" hidden><span>⏱</span> Rastreabilidade</button>
+      <div class="nav-group" id="metasMenu" hidden>
+        <button class="nav-item nav-group-toggle" id="metasMenuToggle" type="button" aria-expanded="false" aria-controls="metasSubmenu"><span>◎</span><span class="nav-label">Meta</span><span class="nav-chevron" aria-hidden="true">›</span></button>
+        <div class="nav-submenu" id="metasSubmenu" hidden>
+          <button class="nav-item nav-subitem" id="openMetasExpedicao" type="button"><span>•</span> Expedição</button>
+          <button class="nav-item nav-subitem" id="openMetasRecebimento" type="button"><span>•</span> Recebimento</button>
+        </div>
+      </div>
       <a class="nav-item" id="openSwagger" href="/docs" target="_blank" hidden><span>↗</span> Swagger API</a>
     </nav>    
     <div class="connection"><i></i><span>Atualização automática ativa</span></div>
@@ -183,6 +190,7 @@
         </div>
         <fieldset class="billing-modules"><legend>Módulos permitidos</legend>
           <label class="module-option"><input type="checkbox" name="billingModule" value="notes"><span><strong>Notas Fiscais</strong><small>Consulta e operação de notas</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="reports"><span><strong>Relatório Standard</strong><small>Indicadores operacionais</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="tme"><span><strong>Relatório TME</strong><small>Intervalo entre emissões</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="tmac"><span><strong>Relatório TMAC</strong><small>Tempo até o recebimento</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="tphb"><span><strong>Relatório TPHB</strong><small>Toneladas por hora bipada</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="tphe"><span><strong>Relatório TPHE</strong><small>Toneladas por hora emitida</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="users"><span><strong>Usuários</strong><small>Gestão de acessos</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="audit"><span><strong>Rastreabilidade</strong><small>Histórico de alterações</small></span></label><label class="module-option"><input type="checkbox" name="billingModule" value="swagger"><span><strong>Swagger API</strong><small>Documentação dos endpoints</small></span></label>
+          <label class="module-option"><input type="checkbox" name="billingModule" value="metas"><span><strong>Metas</strong><small>Planejamento de expedição e recebimento</small></span></label>
         </fieldset>
       </form>
       <section class="users-list-panel"><div class="users-list-title"><div><h3>Usuários cadastrados</h3><p>Consulte perfil, situação e permissões de acesso.</p></div></div><div class="users-list-heading"><span>Usuário</span><span>Perfil</span><span>Situação</span><span>Módulos permitidos</span><span>Ações</span></div><div class="billing-list" id="billingList"></div></section>
@@ -385,6 +393,30 @@
       <footer><button class="secondary" type="button" data-close="tpheDialog">Fechar</button></footer>
     </section>
   </dialog>
+  <dialog id="metasDialog" aria-labelledby="metasTitle">
+    <section class="modal xlarge metas-modal" id="metasModalSection">
+      <header>
+        <div><p class="eyebrow">PLANEJAMENTO MENSAL · TONELADAS</p><h2 id="metasTitle">Meta Expedição</h2><small id="metasStatus" role="status" aria-live="polite">Selecione um mês cadastrado ou crie um planejamento.</small></div>
+        <div class="modal-actions"><button class="icon-button" type="button" data-maximize="metasModalSection" aria-label="Maximizar metas" title="Maximizar metas">□</button><button class="icon-button" id="metasClose" type="button" aria-label="Fechar metas">×</button></div>
+      </header>
+      <div class="metas-toolbar">
+        <label>Meses cadastrados<select id="metasSavedMonth" aria-label="Consultar mês cadastrado"><option value="">Selecione um mês</option></select></label>
+        <button class="secondary" type="button" id="metasReload">Atualizar lista</button>
+        <form id="metasNewForm" class="metas-new-form">
+          <label>Mês de referência<input id="metasReference" type="month" min="2000-01" max="2100-12" required aria-label="Mês e ano de referência"></label>
+          <button class="primary" type="submit" id="metasNew">＋ Criar mês</button>
+        </form>
+      </div>
+      <p class="metas-help" id="metasHelp">Valores em toneladas, com até três casas decimais. Campos vazios representam dias sem meta informada.</p>
+      <div id="metasMessage" class="metas-message" role="status" aria-live="polite"></div>
+      <div id="metasEmpty" class="metas-empty">Nenhum mês selecionado. Consulte os meses cadastrados ou crie um planejamento.</div>
+      <div class="metas-table-wrap" id="metasTableWrap" hidden>
+        <table class="metas-table"><caption id="metasCaption">Planejamento mensal em toneladas</caption><thead id="metasTableHead"></thead><tbody id="metasTableBody"></tbody><tfoot id="metasTableFoot"></tfoot></table>
+      </div>
+      <footer class="metas-footer"><span id="metasDirty" role="status" aria-live="polite"></span><button class="secondary" id="metasCancel" type="button" hidden>Cancelar edição</button><button class="secondary" id="metasEdit" type="button" hidden>Editar mês</button><button class="danger" id="metasDelete" type="button" hidden>Excluir mês</button><button class="primary" id="metasSave" type="button" hidden>Salvar metas</button><button class="secondary" id="metasFooterClose" type="button">Fechar</button></footer>
+    </section>
+  </dialog>
+
   <dialog id="confirmDialog">
     <section class="modal compact">
       <header><div><p class="eyebrow">CONFIRMAÇÃO</p><h2 id="confirmTitle">Confirmar ação</h2></div></header>
@@ -425,6 +457,7 @@
   </div>
   <div id="toast" role="status"></div>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="/painel-assets/app.js?v=20261030-01"></script>
+  <script src="/painel-assets/app.js?v=20261109-01"></script>
+  <script src="/painel-assets/metas.js?v=20261109-01"></script>
 </body>
 </html>
