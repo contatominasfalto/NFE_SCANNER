@@ -26,9 +26,13 @@ from .note_author import aplicar_usuario_lancamento, usuario_efetivo_erro, usuar
 from .time_utils import local_now
 from .access_control import PROFILE_LABELS, effective_modules, has_access, is_protected_user, normalize_profile, permission_payload, profile_allows, request_scope
 
+from .metas_api import create_metas_router
+from .metas_bi import ensure_metas_bi_views
+
 logger = configure_logging()
 models.Base.metadata.create_all(bind=engine)
 ensure_schema()
+ensure_metas_bi_views(engine)
 
 VIEWER_USERNAME = "viewer_user"
 VIEWER_ROLE = "viewer"
@@ -215,6 +219,9 @@ def get_current_user(request: Request, db: Session = Depends(get_db), session_to
     if scope and not has_access(user, *scope):
         raise HTTPException(status_code=403, detail="Usuario sem permissao para este modulo ou operacao.")
     return user
+
+
+app.include_router(create_metas_router(get_current_user))
 
 
 def ensure_admin(user: models.User):
